@@ -1,0 +1,723 @@
+/**
+ * Admin Controller - Section 8
+ * HTTP request handlers for admin dashboard endpoints
+ * 
+ * CRITICAL: All methods enforce RBAC via verifyToken + verifyRole middleware
+ * CRITICAL: All responses follow consistent error/success format
+ */
+
+const AdminService = require('../services/adminService');
+const adminService = new AdminService();
+
+/**
+ * AdminController - Handles all HTTP requests for admin operations
+ */
+class AdminController {
+  /**
+   * ========== USER MANAGEMENT ENDPOINTS (5 methods) ==========
+   */
+
+  /**
+   * GET /api/admin/users/:userId
+   * Get user details with authorization check
+   */
+  async getUserById(req, res) {
+    try {
+      const { userId } = req.params;
+      const adminId = req.user.id; // Set by verifyToken middleware
+
+      // Validate input
+      if (!userId || userId.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'USER_ID_REQUIRED'
+        });
+      }
+
+      const user = await adminService.getUserById(userId, adminId);
+
+      return res.status(200).json({
+        success: true,
+        user
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * GET /api/admin/users
+   * List users with pagination and filtering
+   */
+  async listUsers(req, res) {
+    try {
+      const adminId = req.user.id;
+      const { role, status, search, page = 1, limit = 20 } = req.query;
+
+      const filters = {
+        role: role || null,
+        status: status || null,
+        search: search || null,
+        page: parseInt(page),
+        limit: parseInt(limit)
+      };
+
+      // Validate pagination
+      if (filters.page < 1 || filters.limit < 1 || filters.limit > 100) {
+        return res.status(400).json({
+          success: false,
+          error: 'INVALID_PAGINATION'
+        });
+      }
+
+      const result = await adminService.listUsers(filters, adminId);
+
+      return res.status(200).json({
+        success: true,
+        ...result
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * PUT /api/admin/users/:userId/role
+   * Change user role (SITE_ADMIN only)
+   */
+  async updateUserRole(req, res) {
+    try {
+      const { userId } = req.params;
+      const { newRole } = req.body;
+      const adminId = req.user.id;
+
+      if (!userId || !newRole) {
+        return res.status(400).json({
+          success: false,
+          error: 'USERID_AND_NEWROLE_REQUIRED'
+        });
+      }
+
+      const result = await adminService.updateUserRole(userId, newRole, adminId);
+
+      return res.status(200).json({
+        success: true,
+        result
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * DELETE /api/admin/users/:userId
+   * Deactivate user
+   */
+  async deactivateUser(req, res) {
+    try {
+      const { userId } = req.params;
+      const { reason } = req.body;
+      const adminId = req.user.id;
+
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          error: 'USER_ID_REQUIRED'
+        });
+      }
+
+      const result = await adminService.deactivateUser(userId, reason, adminId);
+
+      return res.status(200).json({
+        success: true,
+        result
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * GET /api/admin/users/:userId/data
+   * Export user data in GDPR format
+   */
+  async exportUserData(req, res) {
+    try {
+      const { userId } = req.params;
+
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          error: 'USER_ID_REQUIRED'
+        });
+      }
+
+      const userData = await adminService.exportUserData(userId);
+
+      // Set headers for GDPR data export
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="user-data-${userId}.json"`);
+
+      return res.status(200).json(userData);
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * ========== AUCTION MANAGEMENT ENDPOINTS (7 methods) ==========
+   */
+
+  /**
+   * GET /api/admin/auctions/:auctionId
+   * Get auction details
+   */
+  async getAuctionById(req, res) {
+    try {
+      const { auctionId } = req.params;
+      const adminId = req.user.id;
+
+      if (!auctionId) {
+        return res.status(400).json({
+          success: false,
+          error: 'AUCTION_ID_REQUIRED'
+        });
+      }
+
+      const auction = await adminService.getAuctionById(auctionId, adminId);
+
+      return res.status(200).json({
+        success: true,
+        auction
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * GET /api/admin/auctions
+   * List auctions by status
+   */
+  async listAuctionsByStatus(req, res) {
+    try {
+      const { status } = req.query;
+      const adminId = req.user.id;
+
+      if (!status) {
+        return res.status(400).json({
+          success: false,
+          error: 'STATUS_REQUIRED'
+        });
+      }
+
+      const auctions = await adminService.listAuctionsByStatus(status, adminId);
+
+      return res.status(200).json({
+        success: true,
+        auctions,
+        count: auctions.length
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * POST /api/admin/auctions/:auctionId/approve
+   * Approve auction
+   */
+  async approveAuction(req, res) {
+    try {
+      const { auctionId } = req.params;
+      const adminId = req.user.id;
+
+      if (!auctionId) {
+        return res.status(400).json({
+          success: false,
+          error: 'AUCTION_ID_REQUIRED'
+        });
+      }
+
+      const result = await adminService.approveAuction(auctionId, adminId);
+
+      return res.status(200).json({
+        success: true,
+        result
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * POST /api/admin/auctions/:auctionId/reject
+   * Reject auction
+   */
+  async rejectAuction(req, res) {
+    try {
+      const { auctionId } = req.params;
+      const { reason } = req.body;
+      const adminId = req.user.id;
+
+      if (!auctionId) {
+        return res.status(400).json({
+          success: false,
+          error: 'AUCTION_ID_REQUIRED'
+        });
+      }
+
+      const result = await adminService.rejectAuction(auctionId, reason, adminId);
+
+      return res.status(200).json({
+        success: true,
+        result
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * PUT /api/admin/auctions/:auctionId/fee
+   * Set custom auction fee
+   */
+  async setAuctionFee(req, res) {
+    try {
+      const { auctionId } = req.params;
+      const { feePercent } = req.body;
+      const adminId = req.user.id;
+
+      if (!auctionId || typeof feePercent !== 'number') {
+        return res.status(400).json({
+          success: false,
+          error: 'AUCTIONID_AND_FEEPERCENT_REQUIRED'
+        });
+      }
+
+      const result = await adminService.setAuctionFee(auctionId, feePercent, adminId);
+
+      return res.status(200).json({
+        success: true,
+        result
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * PUT /api/admin/auctions/:auctionId/extend
+   * Extend auction end time
+   */
+  async extendAuction(req, res) {
+    try {
+      const { auctionId } = req.params;
+      const { hours } = req.body;
+      const adminId = req.user.id;
+
+      if (!auctionId || typeof hours !== 'number') {
+        return res.status(400).json({
+          success: false,
+          error: 'AUCTIONID_AND_HOURS_REQUIRED'
+        });
+      }
+
+      const result = await adminService.extendAuction(auctionId, hours, adminId);
+
+      return res.status(200).json({
+        success: true,
+        result
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * POST /api/admin/auctions/:auctionId/close
+   * Force close auction
+   */
+  async closeForcibly(req, res) {
+    try {
+      const { auctionId } = req.params;
+      const { reason } = req.body;
+      const adminId = req.user.id;
+
+      if (!auctionId) {
+        return res.status(400).json({
+          success: false,
+          error: 'AUCTION_ID_REQUIRED'
+        });
+      }
+
+      const result = await adminService.closeForcibly(auctionId, reason, adminId);
+
+      return res.status(200).json({
+        success: true,
+        result
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * ========== PAYMENT MANAGEMENT ENDPOINTS (4 methods) ==========
+   */
+
+  /**
+   * GET /api/admin/payments/:paymentId
+   * Get payment details
+   */
+  async getPaymentById(req, res) {
+    try {
+      const { paymentId } = req.params;
+      const adminId = req.user.id;
+
+      if (!paymentId) {
+        return res.status(400).json({
+          success: false,
+          error: 'PAYMENT_ID_REQUIRED'
+        });
+      }
+
+      const payment = await adminService.getPaymentById(paymentId, adminId);
+
+      return res.status(200).json({
+        success: true,
+        payment
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * GET /api/admin/payments
+   * List payments with filtering
+   */
+  async listPayments(req, res) {
+    try {
+      const adminId = req.user.id;
+      const { status, gateway, minAmount, maxAmount, page = 1, limit = 20 } = req.query;
+
+      const filters = {
+        status: status || null,
+        gateway: gateway || null,
+        minAmount: minAmount ? parseFloat(minAmount) : null,
+        maxAmount: maxAmount ? parseFloat(maxAmount) : null,
+        page: parseInt(page),
+        limit: parseInt(limit)
+      };
+
+      const payments = await adminService.listPayments(filters, adminId);
+
+      return res.status(200).json({
+        success: true,
+        payments,
+        count: payments.length
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * POST /api/admin/payments/:paymentId/refund
+   * Process refund
+   */
+  async processRefund(req, res) {
+    try {
+      const { paymentId } = req.params;
+      const { amount, reason } = req.body;
+      const adminId = req.user.id;
+
+      if (!paymentId || typeof amount !== 'number' || amount <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'PAYMENTID_AND_AMOUNT_REQUIRED'
+        });
+      }
+
+      const result = await adminService.processRefund(paymentId, amount, reason, adminId);
+
+      return res.status(200).json({
+        success: true,
+        result
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * GET /api/admin/payments/statistics
+   * Get payment statistics
+   */
+  async getPaymentStatistics(req, res) {
+    try {
+      const adminId = req.user.id;
+      const { period = 'month' } = req.query;
+
+      const statistics = await adminService.getPaymentStatistics(period, adminId);
+
+      return res.status(200).json({
+        success: true,
+        statistics
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * ========== COMPLIANCE ENDPOINTS (4 methods) ==========
+   */
+
+  /**
+   * GET /api/admin/reports/gdpr
+   * Generate GDPR compliance report
+   */
+  async generateGDPRReport(req, res) {
+    try {
+      const { startDate, endDate, schoolId } = req.query;
+      const adminId = req.user.id;
+
+      if (!startDate || !endDate) {
+        return res.status(400).json({
+          success: false,
+          error: 'START_DATE_AND_END_DATE_REQUIRED'
+        });
+      }
+
+      const report = await adminService.generateGDPRReport(
+        new Date(startDate),
+        new Date(endDate),
+        schoolId,
+        adminId
+      );
+
+      return res.status(200).json({
+        success: true,
+        report
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * GET /api/admin/reports/coppa
+   * Generate COPPA compliance report
+   */
+  async generateCOPPAReport(req, res) {
+    try {
+      const { startDate, endDate, schoolId } = req.query;
+      const adminId = req.user.id;
+
+      if (!startDate || !endDate) {
+        return res.status(400).json({
+          success: false,
+          error: 'START_DATE_AND_END_DATE_REQUIRED'
+        });
+      }
+
+      const report = await adminService.generateCOPPAReport(
+        new Date(startDate),
+        new Date(endDate),
+        schoolId,
+        adminId
+      );
+
+      return res.status(200).json({
+        success: true,
+        report
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * GET /api/admin/reports/ferpa
+   * Generate FERPA compliance report
+   */
+  async generateFERPAReport(req, res) {
+    try {
+      const { startDate, endDate, schoolId } = req.query;
+      const adminId = req.user.id;
+
+      if (!startDate || !endDate) {
+        return res.status(400).json({
+          success: false,
+          error: 'START_DATE_AND_END_DATE_REQUIRED'
+        });
+      }
+
+      const report = await adminService.generateFERPAReport(
+        new Date(startDate),
+        new Date(endDate),
+        schoolId,
+        adminId
+      );
+
+      return res.status(200).json({
+        success: true,
+        report
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * GET /api/admin/reports/ccpa
+   * Generate CCPA compliance report
+   */
+  async generateCCPAReport(req, res) {
+    try {
+      const { startDate, endDate, schoolId } = req.query;
+      const adminId = req.user.id;
+
+      if (!startDate || !endDate) {
+        return res.status(400).json({
+          success: false,
+          error: 'START_DATE_AND_END_DATE_REQUIRED'
+        });
+      }
+
+      const report = await adminService.generateCCPAReport(
+        new Date(startDate),
+        new Date(endDate),
+        schoolId,
+        adminId
+      );
+
+      return res.status(200).json({
+        success: true,
+        report
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * ========== AUDIT LOG & DASHBOARD ENDPOINTS (3 methods) ==========
+   */
+
+  /**
+   * GET /api/admin/audit-logs
+   * Get audit logs with filtering
+   */
+  async getAuditLogs(req, res) {
+    try {
+      const { adminId, action, resourceType, startDate, endDate, page = 1, limit = 50 } = req.query;
+
+      const filters = {
+        adminId: adminId || null,
+        action: action || null,
+        resourceType: resourceType || null,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
+        page: parseInt(page),
+        limit: parseInt(limit)
+      };
+
+      const result = await adminService.getAuditLog(filters);
+
+      return res.status(200).json({
+        success: true,
+        ...result
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * GET /api/admin/dashboard/stats
+   * Get dashboard statistics
+   */
+  async getDashboardStats(req, res) {
+    try {
+      const { schoolId } = req.query;
+      const adminId = req.user.id;
+
+      // Verify school access
+      const admin = await adminService.verifyAdminAccess(adminId);
+      const targetSchoolId = schoolId || admin.school_id;
+
+      if (admin.role === 'SCHOOL_ADMIN' && targetSchoolId !== admin.school_id) {
+        return res.status(403).json({
+          success: false,
+          error: 'CROSS_SCHOOL_ACCESS_DENIED'
+        });
+      }
+
+      const stats = await adminService.getDashboardStats(targetSchoolId);
+
+      return res.status(200).json({
+        success: true,
+        stats
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * GET /api/admin/dashboard/health
+   * Get system health status
+   */
+  async getSystemHealth(req, res) {
+    try {
+      const health = await adminService.getSystemHealth();
+
+      return res.status(200).json({
+        success: true,
+        health
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * ========== ERROR HANDLING ==========
+   */
+
+  /**
+   * Handle service errors and return appropriate HTTP status codes
+   */
+  handleError(error, res) {
+    const errorMap = {
+      'USER_NOT_FOUND': { status: 404, message: 'User not found' },
+      'AUCTION_NOT_FOUND': { status: 404, message: 'Auction not found' },
+      'PAYMENT_NOT_FOUND': { status: 404, message: 'Payment not found' },
+      'INSUFFICIENT_PERMISSIONS': { status: 403, message: 'Insufficient permissions' },
+      'CROSS_SCHOOL_ACCESS_DENIED': { status: 403, message: 'Cross-school access denied' },
+      'INVALID_ROLE': { status: 400, message: 'Invalid role' },
+      'INVALID_STATUS': { status: 400, message: 'Invalid status' },
+      'INVALID_STATE_TRANSITION': { status: 400, message: 'Invalid state transition' },
+      'INVALID_FEE_PERCENT': { status: 400, message: 'Fee must be between 0 and 100' },
+      'INVALID_EXTENSION_HOURS': { status: 400, message: 'Extension hours must be between 1 and 720' },
+      'REFUND_EXCEEDS_PAYMENT': { status: 400, message: 'Refund amount exceeds payment' },
+      'AUCTION_ALREADY_CLOSED': { status: 400, message: 'Auction is already closed' },
+      'ADMIN_NOT_FOUND': { status: 401, message: 'Admin credentials invalid' }
+    };
+
+    const errorType = error.message;
+    const mapping = errorMap[errorType] || { status: 500, message: 'Internal server error' };
+
+    return res.status(mapping.status).json({
+      success: false,
+      error: errorType,
+      message: mapping.message
+    });
+  }
+}
+
+// Export controller instance
+module.exports = new AdminController();

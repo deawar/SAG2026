@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="View auction details and place bids">
+    <title>Auction Details - Silent Auction Gallery</title>
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+</head>
+<body>
+    <!-- Skip link -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <!-- Navigation Header -->
+    <header class="navbar" role="banner">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="logo" aria-label="Silent Auction Gallery Home">
+                    <span class="logo-text">SAG</span>
+                </a>
+            </div>
+            <nav class="navbar-nav" role="navigation" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="/auctions.html" class="nav-link">Auctions</a></li>
+                    <li><a href="/" class="nav-link">Home</a></li>
+                    <li><a href="#help" class="nav-link">Help</a></li>
+                </ul>
+            </nav>
+            <div class="navbar-auth">
+                <button class="btn btn-secondary" id="login-btn">Login</button>
+                <button class="btn btn-profile" id="user-menu-btn" style="display:none;">
+                    <span id="user-name"></span>
+                </button>
+            </div>
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content">
+        <div class="container">
+            <!-- Breadcrumb Navigation -->
+            <nav class="breadcrumb" role="navigation" aria-label="Breadcrumb navigation">
+                <a href="/">Home</a>
+                <span aria-hidden="true">/</span>
+                <a href="/auctions.html">Auctions</a>
+                <span aria-hidden="true">/</span>
+                <span id="breadcrumb-title">Auction Details</span>
+            </nav>
+
+            <!-- Auction Detail Section -->
+            <section id="auction-section" role="region" aria-label="Auction Details">
+                <div class="auction-detail-container">
+                    <!-- Artwork Image -->
+                    <div class="artwork-image-section">
+                        <img id="artwork-image" src="" alt="Artwork" class="artwork-image">
+                        <div class="artwork-info-small">
+                            <p id="artwork-title-small"></p>
+                            <p id="artwork-artist-small" class="artist-name"></p>
+                        </div>
+                    </div>
+
+                    <!-- Auction Details and Bidding -->
+                    <div class="auction-details-section">
+                        <!-- Artwork Info -->
+                        <div class="artwork-info">
+                            <h1 id="artwork-title"></h1>
+                            <p id="artwork-artist" class="artist-name"></p>
+                            <p id="artwork-description" class="artwork-description"></p>
+
+                            <dl class="artwork-specs">
+                                <dt>Medium:</dt>
+                                <dd id="artwork-medium"></dd>
+                                <dt>Year:</dt>
+                                <dd id="artwork-year"></dd>
+                                <dt>Dimensions:</dt>
+                                <dd id="artwork-dimensions"></dd>
+                                <dt>School:</dt>
+                                <dd id="school-name"></dd>
+                            </dl>
+                        </div>
+
+                        <!-- Auction Status -->
+                        <div class="auction-status" role="region" aria-label="Auction Status">
+                            <h2>Auction Information</h2>
+
+                            <!-- Timer -->
+                            <div class="auction-timer">
+                                <div class="timer-display" id="timer-display" aria-live="polite">
+                                    <div class="timer-label">Time Remaining</div>
+                                    <div class="timer-value" id="timer-value">--:--:--</div>
+                                </div>
+                            </div>
+
+                            <!-- Price Information -->
+                            <div class="price-info">
+                                <div class="price-item">
+                                    <label>Opening Bid</label>
+                                    <span id="opening-bid" class="price-value">-</span>
+                                </div>
+                                <div class="price-item">
+                                    <label>Current Bid</label>
+                                    <span id="current-bid" class="price-value">-</span>
+                                </div>
+                                <div class="price-item">
+                                    <label>Minimum Increment</label>
+                                    <span id="minimum-increment" class="price-value">-</span>
+                                </div>
+                                <div class="price-item">
+                                    <label>Number of Bids</label>
+                                    <span id="bid-count">0</span>
+                                </div>
+                            </div>
+
+                            <!-- Bidding Form -->
+                            <form id="bidding-form" class="bidding-form">
+                                <div class="form-group">
+                                    <label for="bid-amount">Place Your Bid</label>
+                                    <input 
+                                        type="number" 
+                                        id="bid-amount" 
+                                        class="form-control" 
+                                        placeholder="Enter bid amount"
+                                        step="0.01"
+                                        min="0"
+                                        aria-required="true"
+                                    >
+                                    <small id="bid-error" class="error-message" role="alert"></small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="payment-method">Payment Method</label>
+                                    <select id="payment-method" class="form-control" aria-required="true">
+                                        <option value="">Select payment method</option>
+                                        <option value="credit_card">Credit Card</option>
+                                        <option value="debit_card">Debit Card</option>
+                                        <option value="bank_transfer">Bank Transfer</option>
+                                    </select>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary btn-large" id="place-bid-btn">
+                                    Place Bid
+                                </button>
+                                <p class="bid-note">
+                                    By placing a bid, you commit to purchase this item if you win the auction.
+                                </p>
+                            </form>
+
+                            <!-- Authentication Required Message -->
+                            <div id="auth-required" class="alert alert-info" style="display:none;">
+                                <p>You must be logged in to place a bid. 
+                                    <button type="button" class="btn-link" id="login-from-auction">Log in here</button>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bid History -->
+                <section class="bid-history" role="region" aria-label="Bid History">
+                    <h2>Bid History</h2>
+                    <div id="bid-history-container" class="bid-history-list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </section>
+            </section>
+        </div>
+    </main>
+
+    <!-- Modal: Login (Displayed when placing bid while logged out) -->
+    <div id="login-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="login-title" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" aria-label="Close login modal">&times;</button>
+            
+            <h2 id="login-title">Login to Your Account</h2>
+            <form id="login-form" class="auth-form">
+                <div class="form-group">
+                    <label for="login-email">Email Address</label>
+                    <input 
+                        type="email" 
+                        id="login-email" 
+                        class="form-control" 
+                        placeholder="your@email.com"
+                        required
+                        aria-required="true"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input 
+                        type="password" 
+                        id="login-password" 
+                        class="form-control" 
+                        placeholder="••••••••"
+                        required
+                        aria-required="true"
+                    >
+                </div>
+
+                <div class="form-group checkbox">
+                    <input type="checkbox" id="login-remember" class="checkbox-control">
+                    <label for="login-remember">Remember me</label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite"></div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/accessibility.js"></script>
+    <script src="/js/api-client.js"></script>
+    <script src="/js/websocket-client.js"></script>
+    <script src="/js/auth-manager.js"></script>
+    <script src="/js/ui-components.js"></script>
+    <script src="/js/auction-detail.js"></script>
+</body>
+</html>

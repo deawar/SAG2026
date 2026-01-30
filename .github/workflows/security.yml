@@ -1,0 +1,86 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 2 * * *'  # Nightly security scan
+
+jobs:
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: |
+          npm audit --production --json > npm-audit-report.json || true
+          npm audit --production
+        continue-on-error: true
+
+      - name: Upload npm audit report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: npm-audit-report
+          path: npm-audit-report.json
+
+      - name: Run Snyk scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+        continue-on-error: true
+
+      - name: OWASP Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'Silent-Auction-Gallery'
+          path: '.'
+          format: 'JSON'
+          args: >-
+            --enableExperimental
+        continue-on-error: true
+
+      - name: Upload OWASP report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: dependency-check-report
+          path: reports/
+
+      - name: Scan Node.js known vulnerabilities
+        run: npx audit-ci --moderate
+        continue-on-error: true
+
+      - name: License check
+        run: |
+          npx license-checker --production --unknown --onlyAllow "MIT,Apache-2.0,Apache 2.0,ISC,BSD,BSD-2-Clause,BSD-3-Clause,0BSD"
+        continue-on-error: true
+
+    permissions:
+      contents: read
+      security-events: write
+
+# ============================================================================
+# This workflow runs security scans
+# Checks for vulnerable dependencies
+# Runs on schedule (nightly) and on every push
+# Reports all vulnerabilities for review
+# ============================================================================
