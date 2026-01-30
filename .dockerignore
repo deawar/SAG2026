@@ -81,11 +81,6 @@ logs/
 # Optional REPL history
 .node_repl_history
 
-# Lock files (use one strategy)
-# Option 1: Include for reproducible builds
-# Option 2: Exclude and let npm ci handle it
-package-lock.json
-
 # Miscellaneous
 .env.example
 setup-db.js
