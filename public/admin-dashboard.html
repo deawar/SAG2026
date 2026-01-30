@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Admin dashboard for Silent Auction Gallery management">
+    <title>Admin Dashboard - Silent Auction Gallery</title>
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+</head>
+<body>
+    <!-- Skip link -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <!-- Navigation Header -->
+    <header class="navbar navbar-admin" role="banner">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/admin-dashboard.html" class="logo" aria-label="Admin Dashboard">
+                    <span class="logo-text">SAG Admin</span>
+                </a>
+            </div>
+            <nav class="navbar-nav" role="navigation" aria-label="Admin Navigation">
+                <ul class="nav-list">
+                    <li><a href="/admin-dashboard.html" class="nav-link active">Dashboard</a></li>
+                    <li><a href="#users" class="nav-link">Users</a></li>
+                    <li><a href="#auctions" class="nav-link">Auctions</a></li>
+                    <li><a href="#reports" class="nav-link">Reports</a></li>
+                </ul>
+            </nav>
+            <div class="navbar-auth">
+                <button class="btn btn-profile" id="admin-user-btn">
+                    <span id="admin-name"></span>
+                </button>
+                <div class="user-dropdown" id="admin-dropdown" style="display:none;">
+                    <a href="#settings" class="dropdown-item">Settings</a>
+                    <button class="dropdown-item" id="admin-logout-btn">Logout</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content">
+        <div class="container-admin">
+            <!-- Page Header -->
+            <div class="admin-header">
+                <h1>Admin Dashboard</h1>
+                <p>Manage auctions, users, and monitor system performance</p>
+            </div>
+
+            <!-- Stats Overview -->
+            <section class="stats-overview" role="region" aria-label="System Statistics">
+                <h2 class="sr-only">System Statistics</h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Active Auctions</h3>
+                        <p class="stat-value" id="stat-active-auctions">0</p>
+                        <p class="stat-label">Live bidding</p>
+                    </div>
+
+                    <div class="stat-card">
+                        <h3>Total Bids</h3>
+                        <p class="stat-value" id="stat-total-bids">0</p>
+                        <p class="stat-label">This month</p>
+                    </div>
+
+                    <div class="stat-card">
+                        <h3>Total Revenue</h3>
+                        <p class="stat-value" id="stat-total-revenue">$0</p>
+                        <p class="stat-label">From auctions</p>
+                    </div>
+
+                    <div class="stat-card">
+                        <h3>Active Users</h3>
+                        <p class="stat-value" id="stat-active-users">0</p>
+                        <p class="stat-label">Right now</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Admin Tabs -->
+            <div class="admin-tabs">
+                <nav role="tablist" aria-label="Admin sections" class="tabs-list">
+                    <button role="tab" aria-selected="true" aria-controls="overview" class="tab-button active" id="tab-overview">
+                        Overview
+                    </button>
+                    <button role="tab" aria-selected="false" aria-controls="auctions" class="tab-button" id="tab-auctions-mgmt">
+                        Auctions
+                    </button>
+                    <button role="tab" aria-selected="false" aria-controls="users" class="tab-button" id="tab-users-mgmt">
+                        Users
+                    </button>
+                    <button role="tab" aria-selected="false" aria-controls="payments" class="tab-button" id="tab-payments">
+                        Payments
+                    </button>
+                    <button role="tab" aria-selected="false" aria-controls="reports" class="tab-button" id="tab-reports">
+                        Reports
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="admin-content">
+                <!-- Overview Tab -->
+                <section role="tabpanel" id="overview" aria-labelledby="tab-overview" class="tab-content active">
+                    <h2>System Overview</h2>
+
+                    <!-- Recent Activity -->
+                    <div class="section-box">
+                        <h3>Recent Activity</h3>
+                        <div id="recent-activity" class="activity-log">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- System Health -->
+                    <div class="section-box">
+                        <h3>System Health</h3>
+                        <div id="system-health" class="health-indicators">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Auctions Management Tab -->
+                <section role="tabpanel" id="auctions" aria-labelledby="tab-auctions-mgmt" class="tab-content" style="display:none;">
+                    <h2>Manage Auctions</h2>
+
+                    <div class="admin-actions">
+                        <button class="btn btn-primary" id="create-auction-btn">Create New Auction</button>
+                        <input type="search" id="auction-search" class="form-control" placeholder="Search auctions..." style="flex:1;">
+                    </div>
+
+                    <table class="admin-table" role="grid">
+                        <thead>
+                            <tr>
+                                <th scope="col">Title</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Bids</th>
+                                <th scope="col">Current Bid</th>
+                                <th scope="col">Ends</th>
+                                <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auctions-table-body">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- Users Management Tab -->
+                <section role="tabpanel" id="users" aria-labelledby="tab-users-mgmt" class="tab-content" style="display:none;">
+                    <h2>Manage Users</h2>
+
+                    <div class="admin-actions">
+                        <button class="btn btn-primary" id="create-user-btn">Add User</button>
+                        <input type="search" id="user-search" class="form-control" placeholder="Search users..." style="flex:1;">
+                        <select id="user-role-filter" class="form-control" style="width:200px;">
+                            <option value="">All Roles</option>
+                            <option value="admin">Admin</option>
+                            <option value="school_admin">School Admin</option>
+                            <option value="bidder">Bidder</option>
+                            <option value="donor">Donor</option>
+                        </select>
+                    </div>
+
+                    <table class="admin-table" role="grid">
+                        <thead>
+                            <tr>
+                                <th scope="col">Name</th>
+                                <th scope="col">Email</th>
+                                <th scope="col">Role</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Bids</th>
+                                <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- Payments Tab -->
+                <section role="tabpanel" id="payments" aria-labelledby="tab-payments" class="tab-content" style="display:none;">
+                    <h2>Payment Management</h2>
+
+                    <div class="admin-actions">
+                        <select id="payment-status-filter" class="form-control">
+                            <option value="">All Statuses</option>
+                            <option value="pending">Pending</option>
+                            <option value="completed">Completed</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                        <input type="search" id="payment-search" class="form-control" placeholder="Search payments..." style="flex:1;">
+                    </div>
+
+                    <table class="admin-table" role="grid">
+                        <thead>
+                            <tr>
+                                <th scope="col">User</th>
+                                <th scope="col">Amount</th>
+                                <th scope="col">Method</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Date</th>
+                                <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payments-table-body">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- Reports Tab -->
+                <section role="tabpanel" id="reports" aria-labelledby="tab-reports" class="tab-content" style="display:none;">
+                    <h2>Reports</h2>
+
+                    <div class="reports-grid">
+                        <div class="report-card">
+                            <h3>Revenue Report</h3>
+                            <p>Track auction revenue and payments</p>
+                            <button class="btn btn-secondary" id="revenue-report-btn">View Report</button>
+                        </div>
+
+                        <div class="report-card">
+                            <h3>User Activity Report</h3>
+                            <p>Monitor bidder and school activity</p>
+                            <button class="btn btn-secondary" id="activity-report-btn">View Report</button>
+                        </div>
+
+                        <div class="report-card">
+                            <h3>Auction Performance</h3>
+                            <p>Analyze auction success rates</p>
+                            <button class="btn btn-secondary" id="performance-report-btn">View Report</button>
+                        </div>
+
+                        <div class="report-card">
+                            <h3>Compliance Report</h3>
+                            <p>Review system logs and audit trail</p>
+                            <button class="btn btn-secondary" id="compliance-report-btn">View Report</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal: Create/Edit Auction -->
+    <div id="auction-form-modal" class="modal" role="dialog" aria-modal="true" style="display:none;">
+        <div class="modal-content modal-large">
+            <button class="modal-close" aria-label="Close auction form">&times;</button>
+            
+            <h2>Create New Auction</h2>
+            <form id="auction-form" class="admin-form">
+                <!-- Form content will be populated by JavaScript -->
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: User Details -->
+    <div id="user-detail-modal" class="modal" role="dialog" aria-modal="true" style="display:none;">
+        <div class="modal-content modal-medium">
+            <button class="modal-close" aria-label="Close user details">&times;</button>
+            
+            <h2>User Details</h2>
+            <div id="user-detail-content">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite"></div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <p>&copy; 2026 Silent Auction Gallery Admin. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/accessibility.js"></script>
+    <script src="/js/api-client.js"></script>
+    <script src="/js/websocket-client.js"></script>
+    <script src="/js/auth-manager.js"></script>
+    <script src="/js/ui-components.js"></script>
+    <script src="/js/admin-dashboard.js"></script>
+</body>
+</html>

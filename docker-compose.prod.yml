@@ -1,0 +1,289 @@
+# Silent Auction Gallery - Docker Compose Production Environment
+# Use this for production-like deployment with optimization and security
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database Service (Production)
+  postgres:
+    image: postgres:15-alpine
+    container_name: sag-postgres-prod
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+      # Performance tuning
+      POSTGRES_MAX_CONNECTIONS: 100
+      POSTGRES_SHARED_BUFFERS: 256MB
+    ports:
+      - "5432:5432"  # Restrict this to localhost in production
+    volumes:
+      # Schema initialization
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      # Data persistence volume (critical for production)
+      - postgres-data-prod:/var/lib/postgresql/data
+      # Backup volume (optional)
+      - ./backups:/backups
+    networks:
+      - sag-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER}"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+        reservations:
+          cpus: '0.5'
+          memory: 128M
+
+  # Node.js Application Service (Production)
+  app:
+    image: ${DOCKER_REGISTRY:-docker.io}/${DOCKER_IMAGE:-sag2026}:${DOCKER_TAG:-latest}
+    container_name: sag-app-prod
+    environment:
+      # Server
+      NODE_ENV: production
+      PORT: ${PORT:-5000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      
+      # Database
+      DATABASE_HOST: postgres
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_SSL: ${DATABASE_SSL:-true}
+      
+      # JWT Configuration (from secrets/env)
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
+      
+      # TOTP Configuration
+      TOTP_ISSUER: ${TOTP_ISSUER:-SAG2026}
+      TOTP_WINDOW: ${TOTP_WINDOW:-1}
+      
+      # SMTP Configuration
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      
+      # Stripe Configuration
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_PUBLIC_KEY: ${STRIPE_PUBLIC_KEY}
+      
+      # API Keys
+      WEATHER_API_KEY: ${WEATHER_API_KEY}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET}
+      
+      # Monitoring & Error Tracking
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      NEW_RELIC_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY:-}
+    
+    ports:
+      - "${PORT:-5000}:${PORT:-5000}"
+    
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    
+    networks:
+      - sag-network
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-5000}/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    
+    restart: unless-stopped
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    
+    # Resource limits for production
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 512M
+        reservations:
+          cpus: '1.0'
+          memory: 256M
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/logs
+
+  # Redis Caching Service (Production)
+  redis:
+    image: redis:7-alpine
+    container_name: sag-redis-prod
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data-prod:/data
+    networks:
+      - sag-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.25'
+          memory: 64M
+    security_opt:
+      - no-new-privileges:true
+
+  # Nginx Reverse Proxy (Production)
+  nginx:
+    image: nginx:alpine
+    container_name: sag-nginx-prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Nginx configuration
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      # SSL certificates (mount from host)
+      - ./certs:/etc/nginx/certs:ro
+      # Static files
+      - ./public:/usr/share/nginx/html:ro
+      # Cache directory
+      - nginx-cache-prod:/var/cache/nginx
+    networks:
+      - sag-network
+    depends_on:
+      - app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+        reservations:
+          cpus: '0.5'
+          memory: 128M
+
+# Named volumes for production data persistence
+volumes:
+  postgres-data-prod:
+    driver: local
+  redis-data-prod:
+    driver: local
+  nginx-cache-prod:
+    driver: local
+
+# Network for service communication
+networks:
+  sag-network:
+    driver: bridge
+
+# ============================================================================
+# Production Deployment Commands
+# ============================================================================
+# Start production environment:
+#   docker-compose -f docker-compose.prod.yml up -d
+#
+# Stop production environment:
+#   docker-compose -f docker-compose.prod.yml down
+#
+# View production logs:
+#   docker-compose -f docker-compose.prod.yml logs -f app
+#
+# Database backup (before deployment):
+#   docker-compose -f docker-compose.prod.yml exec postgres pg_dump -U ${DATABASE_USER} ${DATABASE_NAME} > backup.sql
+#
+# Database restore (if needed):
+#   cat backup.sql | docker-compose -f docker-compose.prod.yml exec -T postgres psql -U ${DATABASE_USER} ${DATABASE_NAME}
+#
+# Check production health:
+#   curl http://localhost/health
+#
+# View resource usage:
+#   docker stats
+#
+# Restart specific service:
+#   docker-compose -f docker-compose.prod.yml restart app
+#
+# ============================================================================
+# Environment Variables Required (.env.production)
+# ============================================================================
+# DATABASE_NAME=sag_prod
+# DATABASE_USER=sag_user
+# DATABASE_PASSWORD=<secure_password>
+# DATABASE_PORT=5432
+# DATABASE_SSL=true
+#
+# JWT_SECRET=<secure_secret_key>
+# REFRESH_TOKEN_SECRET=<secure_refresh_secret>
+#
+# PORT=5000
+# LOG_LEVEL=info
+#
+# REDIS_PASSWORD=<redis_password>
+#
+# SMTP_HOST=<smtp_server>
+# SMTP_PORT=587
+# SMTP_USER=<email>
+# SMTP_PASSWORD=<email_password>
+#
+# STRIPE_SECRET_KEY=<stripe_secret>
+# STRIPE_PUBLIC_KEY=<stripe_public>
+#
+# DOCKER_REGISTRY=docker.io
+# DOCKER_IMAGE=youruser/sag2026
+# DOCKER_TAG=latest
+#
+# SENTRY_DSN=<sentry_dsn>  # Optional
+# NEW_RELIC_LICENSE_KEY=<key>  # Optional
+#
+# ============================================================================

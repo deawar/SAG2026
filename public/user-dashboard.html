@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="User dashboard for bid history and account management">
+    <title>User Dashboard - Silent Auction Gallery</title>
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+</head>
+<body>
+    <!-- Skip link -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <!-- Navigation Header -->
+    <header class="navbar" role="banner">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="logo" aria-label="Silent Auction Gallery Home">
+                    <span class="logo-text">SAG</span>
+                </a>
+            </div>
+            <nav class="navbar-nav" role="navigation" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="/auctions.html" class="nav-link">Auctions</a></li>
+                    <li><a href="/" class="nav-link">Home</a></li>
+                    <li><a href="#help" class="nav-link">Help</a></li>
+                </ul>
+            </nav>
+            <div class="navbar-auth">
+                <button class="btn btn-profile" id="user-menu-btn">
+                    <span id="user-name"></span> ▼
+                </button>
+                <div class="user-dropdown" id="user-dropdown" style="display:none;">
+                    <a href="/user-dashboard.html" class="dropdown-item active">Dashboard</a>
+                    <a href="#settings" class="dropdown-item">Account Settings</a>
+                    <button class="dropdown-item" id="logout-btn">Logout</button>
+                </div>
+            </div>
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content">
+        <div class="container">
+            <!-- Page Header -->
+            <div class="page-header-small">
+                <h1>Your Dashboard</h1>
+                <p>Manage your bids and account settings</p>
+            </div>
+
+            <!-- Dashboard Tabs -->
+            <div class="dashboard-tabs">
+                <nav role="tablist" aria-label="Dashboard sections" class="tabs-list">
+                    <button role="tab" aria-selected="true" aria-controls="active-bids" class="tab-button active" id="tab-active">
+                        Active Bids
+                    </button>
+                    <button role="tab" aria-selected="false" aria-controls="bid-history" class="tab-button" id="tab-history">
+                        Bid History
+                    </button>
+                    <button role="tab" aria-selected="false" aria-controls="wins" class="tab-button" id="tab-wins">
+                        My Wins
+                    </button>
+                    <button role="tab" aria-selected="false" aria-controls="account" class="tab-button" id="tab-account">
+                        Account Settings
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="dashboard-content">
+                <!-- Active Bids Tab -->
+                <section role="tabpanel" id="active-bids" aria-labelledby="tab-active" class="tab-content active">
+                    <h2>Active Bids</h2>
+                    <p class="section-help">Auctions where you have placed a bid and bidding is still active</p>
+                    
+                    <div id="active-bids-list" class="bids-list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Bid History Tab -->
+                <section role="tabpanel" id="bid-history" aria-labelledby="tab-history" class="tab-content" style="display:none;">
+                    <h2>Bid History</h2>
+                    <p class="section-help">All bids you have placed</p>
+
+                    <div class="filter-group">
+                        <label for="history-filter">Filter by status:</label>
+                        <select id="history-filter" class="form-control">
+                            <option value="">All Bids</option>
+                            <option value="active">Active Auctions</option>
+                            <option value="closed">Closed Auctions</option>
+                            <option value="won">Won</option>
+                            <option value="lost">Not Won</option>
+                        </select>
+                    </div>
+
+                    <div id="bid-history-list" class="bids-list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Wins Tab -->
+                <section role="tabpanel" id="wins" aria-labelledby="tab-wins" class="tab-content" style="display:none;">
+                    <h2>My Wins</h2>
+                    <p class="section-help">Auctions you have won</p>
+
+                    <div id="wins-list" class="bids-list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </section>
+
+                <!-- Account Settings Tab -->
+                <section role="tabpanel" id="account" aria-labelledby="tab-account" class="tab-content" style="display:none;">
+                    <h2>Account Settings</h2>
+
+                    <!-- Profile Information -->
+                    <div class="settings-section">
+                        <h3>Profile Information</h3>
+                        <form id="profile-form" class="settings-form">
+                            <div class="form-group">
+                                <label for="full-name">Full Name</label>
+                                <input 
+                                    type="text" 
+                                    id="full-name" 
+                                    class="form-control" 
+                                    required
+                                    aria-required="true"
+                                >
+                            </div>
+
+                            <div class="form-group">
+                                <label for="email">Email Address</label>
+                                <input 
+                                    type="email" 
+                                    id="email" 
+                                    class="form-control" 
+                                    required
+                                    aria-required="true"
+                                >
+                            </div>
+
+                            <div class="form-group">
+                                <label for="phone">Phone Number</label>
+                                <input 
+                                    type="tel" 
+                                    id="phone" 
+                                    class="form-control" 
+                                    placeholder="+1 (555) 000-0000"
+                                >
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </form>
+                    </div>
+
+                    <!-- Payment Methods -->
+                    <div class="settings-section">
+                        <h2>Payment Methods</h2>
+                        <p class="section-help">Manage payment methods for bidding</p>
+                        
+                        <div id="payment-methods-list" class="payment-methods-list">
+                            <!-- Populated by JavaScript -->
+                        </div>
+
+                        <button class="btn btn-secondary" id="add-payment-btn">Add Payment Method</button>
+                    </div>
+
+                    <!-- Security Settings -->
+                    <div class="settings-section">
+                        <h2>Security Settings</h2>
+                        
+                        <div class="setting-item">
+                            <h4>Two-Factor Authentication (2FA)</h4>
+                            <p>Add extra security to your account</p>
+                            <button class="btn btn-secondary" id="enable-2fa-btn">Enable 2FA</button>
+                        </div>
+
+                        <div class="setting-item">
+                            <h4>Change Password</h4>
+                            <button class="btn btn-secondary" id="change-password-btn">Change Password</button>
+                        </div>
+                    </div>
+
+                    <!-- Danger Zone -->
+                    <div class="settings-section danger-zone">
+                        <h2>Danger Zone</h2>
+                        <p>Irreversible actions</p>
+                        <button class="btn btn-danger" id="delete-account-btn">Delete Account</button>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal: Bid Details -->
+    <div id="bid-detail-modal" class="modal" role="dialog" aria-modal="true" style="display:none;">
+        <div class="modal-content modal-medium">
+            <button class="modal-close" aria-label="Close bid details">&times;</button>
+            
+            <h2>Bid Details</h2>
+            <div id="bid-detail-content">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Change Password -->
+    <div id="password-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="password-title" style="display:none;">
+        <div class="modal-content modal-medium">
+            <button class="modal-close" aria-label="Close password change">&times;</button>
+            
+            <h2 id="password-title">Change Password</h2>
+            <form id="password-form" class="auth-form">
+                <div class="form-group">
+                    <label for="current-password">Current Password</label>
+                    <input 
+                        type="password" 
+                        id="current-password" 
+                        class="form-control" 
+                        required
+                        aria-required="true"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="new-password">New Password</label>
+                    <input 
+                        type="password" 
+                        id="new-password" 
+                        class="form-control" 
+                        required
+                        aria-required="true"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm-password">Confirm Password</label>
+                    <input 
+                        type="password" 
+                        id="confirm-password" 
+                        class="form-control" 
+                        required
+                        aria-required="true"
+                    >
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Change Password</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite"></div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/accessibility.js"></script>
+    <script src="/js/api-client.js"></script>
+    <script src="/js/websocket-client.js"></script>
+    <script src="/js/auth-manager.js"></script>
+    <script src="/js/ui-components.js"></script>
+    <script src="/js/user-dashboard.js"></script>
+</body>
+</html>

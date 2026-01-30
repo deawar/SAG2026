@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Browse and bid on artwork in our Silent Auction Gallery">
+    <title>Auctions - Silent Auction Gallery</title>
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+</head>
+<body>
+    <!-- Skip link -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <!-- Navigation Header -->
+    <header class="navbar" role="banner">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="logo" aria-label="Silent Auction Gallery Home">
+                    <span class="logo-text">SAG</span>
+                </a>
+            </div>
+            <nav class="navbar-nav" role="navigation" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="/auctions.html" class="nav-link active">Auctions</a></li>
+                    <li><a href="/" class="nav-link">Home</a></li>
+                    <li><a href="#help" class="nav-link">Help</a></li>
+                </ul>
+            </nav>
+            <div class="navbar-auth">
+                <button class="btn btn-secondary" id="login-btn">Login</button>
+                <button class="btn btn-profile" id="user-menu-btn" style="display:none;">
+                    <span id="user-name"></span>
+                </button>
+            </div>
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content">
+        <!-- Page Title -->
+        <section class="page-header">
+            <div class="container">
+                <h1>Active Auctions</h1>
+                <p>Discover and bid on amazing artwork supporting education</p>
+            </div>
+        </section>
+
+        <div class="container">
+            <div class="auctions-container">
+                <!-- Filters Sidebar -->
+                <aside class="filters-sidebar" role="complementary" aria-label="Auction Filters">
+                    <h2>Filters</h2>
+                    
+                    <!-- Status Filter -->
+                    <div class="filter-group">
+                        <label for="filter-status">Status</label>
+                        <select id="filter-status" class="filter-control">
+                            <option value="">All Auctions</option>
+                            <option value="active">Active</option>
+                            <option value="ending_soon">Ending Soon</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                    </div>
+
+                    <!-- Price Range Filter -->
+                    <div class="filter-group">
+                        <label for="filter-price-min">Price Range</label>
+                        <input type="number" id="filter-price-min" class="filter-control" placeholder="Min" min="0">
+                        <input type="number" id="filter-price-max" class="filter-control" placeholder="Max" min="0">
+                    </div>
+
+                    <!-- School Filter -->
+                    <div class="filter-group">
+                        <label for="filter-school">School</label>
+                        <select id="filter-school" class="filter-control">
+                            <option value="">All Schools</option>
+                            <!-- Populated by JavaScript -->
+                        </select>
+                    </div>
+
+                    <!-- Sort Options -->
+                    <div class="filter-group">
+                        <label for="sort-by">Sort By</label>
+                        <select id="sort-by" class="filter-control">
+                            <option value="newest">Newest</option>
+                            <option value="ending-soon">Ending Soon</option>
+                            <option value="price-low">Price: Low to High</option>
+                            <option value="price-high">Price: High to Low</option>
+                            <option value="most-bids">Most Bids</option>
+                        </select>
+                    </div>
+
+                    <!-- Apply Filters Button -->
+                    <button class="btn btn-primary" id="apply-filters">Apply Filters</button>
+                </aside>
+
+                <!-- Auctions Grid -->
+                <section class="auctions-main" role="region" aria-label="Auction Listings">
+                    <!-- Results Info -->
+                    <div class="results-info">
+                        <p id="results-count">Loading auctions...</p>
+                    </div>
+
+                    <!-- Auctions Grid -->
+                    <div class="auctions-grid" id="auctions-grid" role="list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+
+                    <!-- Pagination -->
+                    <nav class="pagination" role="navigation" aria-label="Auction results pagination">
+                        <button class="btn btn-secondary" id="prev-page" aria-label="Previous page">← Previous</button>
+                        <span id="page-info" class="page-info">Page 1</span>
+                        <button class="btn btn-secondary" id="next-page" aria-label="Next page">Next →</button>
+                    </nav>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal: Auction Detail -->
+    <div id="auction-detail-modal" class="modal" role="dialog" aria-modal="true" style="display:none;">
+        <div class="modal-content modal-large">
+            <button class="modal-close" aria-label="Close auction detail">&times;</button>
+            
+            <div class="auction-detail" id="auction-detail">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite"></div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/accessibility.js"></script>
+    <script src="/js/api-client.js"></script>
+    <script src="/js/websocket-client.js"></script>
+    <script src="/js/auth-manager.js"></script>
+    <script src="/js/ui-components.js"></script>
+    <script src="/js/auction-manager.js"></script>
+    <script src="/js/auctions.js"></script>
+</body>
+</html>

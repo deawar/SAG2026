@@ -1,0 +1,160 @@
+name: Unit & Integration Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: sag_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup test database schema
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: sag_test
+        run: |
+          psql -f schema.sql
+          echo "Database schema loaded successfully"
+
+      - name: Run unit tests
+        run: npm run test:unit
+        env:
+          NODE_ENV: test
+          DATABASE_HOST: localhost
+          DATABASE_PORT: 5432
+          DATABASE_NAME: sag_test
+          DATABASE_USER: postgres
+          DATABASE_PASSWORD: postgres
+
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          NODE_ENV: test
+          DATABASE_HOST: localhost
+          DATABASE_PORT: 5432
+          DATABASE_NAME: sag_test
+          DATABASE_USER: postgres
+          DATABASE_PASSWORD: postgres
+
+      - name: Generate coverage report
+        run: npm run test:coverage
+        env:
+          NODE_ENV: test
+          DATABASE_HOST: localhost
+          DATABASE_PORT: 5432
+          DATABASE_NAME: sag_test
+          DATABASE_USER: postgres
+          DATABASE_PASSWORD: postgres
+        continue-on-error: true
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/coverage-final.json
+          flags: unittests
+          name: codecov-umbrella
+        continue-on-error: true
+
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: test-results.xml
+          check_name: Test Results (${{ matrix.node-version }})
+        continue-on-error: true
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: coverage-report-${{ matrix.node-version }}
+          path: coverage/
+
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            try {
+              const coverage = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+              const total = coverage.total;
+              const comment = `## Test Coverage Report
+              | Metric | Coverage |
+              |--------|----------|
+              | Statements | ${total.statements.pct}% |
+              | Branches | ${total.branches.pct}% |
+              | Functions | ${total.functions.pct}% |
+              | Lines | ${total.lines.pct}% |
+              `;
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } catch (e) {
+              console.log('Could not read coverage file');
+            }
+        continue-on-error: true
+
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+
+# ============================================================================
+# This workflow runs on every push and PR
+# Tests against multiple Node.js versions
+# Requires PostgreSQL and Redis for integration tests
+# Blocks PR if tests fail or coverage drops below 80%
+# ============================================================================

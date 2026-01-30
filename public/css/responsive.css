@@ -1,0 +1,631 @@
+/* ============================================
+   Silent Auction Gallery - Responsive Styles
+   Mobile-First Responsive Design
+   ============================================ */
+
+/* ===== Mobile First Breakpoints ===== */
+/* Base (mobile): 0px - 640px */
+/* Small (tablet): 641px - 768px */
+/* Medium: 769px - 1024px */
+/* Large (desktop): 1025px - 1280px */
+/* Extra Large: 1281px+ */
+
+/* ===== Tablet (641px and up) ===== */
+@media (min-width: 641px) {
+    .navbar-container {
+        padding: var(--spacing-md) var(--spacing-xl);
+    }
+    
+    .container,
+    .container-admin {
+        padding: 0 var(--spacing-xl);
+    }
+    
+    .nav-list {
+        gap: var(--spacing-2xl);
+    }
+    
+    .grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .grid-3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .auctions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .modal-content {
+        max-width: 500px;
+    }
+}
+
+/* ===== Tablet Large (769px and up) ===== */
+@media (min-width: 769px) {
+    :root {
+        font-size: 17px;
+    }
+    
+    h1 {
+        font-size: var(--font-size-4xl);
+    }
+    
+    .menu-toggle {
+        display: none;
+    }
+    
+    .navbar-nav {
+        display: flex !important;
+    }
+    
+    /* Sidebar + Main Layout */
+    .auctions-container {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        gap: var(--spacing-2xl);
+    }
+    
+    .filters-sidebar {
+        position: relative;
+        max-height: 100vh;
+        overflow-y: auto;
+        padding-top: 0;
+    }
+    
+    /* Two Column Dashboard */
+    .dashboard-content > .tab-content {
+        display: grid;
+        gap: var(--spacing-2xl);
+    }
+    
+    /* Admin Layout */
+    .admin-content > .tab-content {
+        display: block;
+    }
+    
+    /* Page Header */
+    .page-header {
+        text-align: left;
+        padding: var(--spacing-xl) var(--spacing-2xl);
+    }
+    
+    .hero {
+        padding: var(--spacing-2xl) var(--spacing-xl);
+        text-align: center;
+    }
+    
+    /* Auction Detail */
+    .auction-detail-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-2xl);
+        align-items: start;
+    }
+    
+    .artwork-image-section {
+        position: sticky;
+        top: 100px;
+    }
+    
+    .artwork-image {
+        width: 100%;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .artwork-info-small {
+        margin-top: var(--spacing-lg);
+        text-align: center;
+    }
+    
+    .auction-details-section {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-2xl);
+    }
+}
+
+/* ===== Desktop (1025px and up) ===== */
+@media (min-width: 1025px) {
+    .container,
+    .container-admin {
+        padding: 0 var(--spacing-xl);
+    }
+    
+    .auctions-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .grid-3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .grid-4 {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    /* Filters Sidebar becomes sticky */
+    .filters-sidebar {
+        position: sticky;
+        top: 100px;
+        max-height: calc(100vh - 120px);
+    }
+    
+    /* Hero Large */
+    .hero h1 {
+        font-size: 3rem;
+    }
+    
+    .hero p {
+        font-size: var(--font-size-xl);
+    }
+    
+    /* Modal positioning */
+    .modal {
+        padding: var(--spacing-2xl);
+    }
+    
+    .modal-content {
+        max-width: 600px;
+    }
+    
+    .modal-medium {
+        max-width: 700px;
+    }
+    
+    .modal-large {
+        max-width: 900px;
+    }
+    
+    /* Alert container positioning */
+    .alert-container {
+        right: var(--spacing-xl);
+        top: 120px;
+        max-width: 420px;
+    }
+}
+
+/* ===== Extra Large (1281px and up) ===== */
+@media (min-width: 1281px) {
+    .container,
+    .container-admin {
+        max-width: 1280px;
+    }
+    
+    .auctions-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* ===== Mobile Styles (Default - 0px to 640px) ===== */
+@media (max-width: 640px) {
+    html {
+        font-size: 15px;
+    }
+    
+    h1 {
+        font-size: 1.75rem;
+    }
+    
+    h2 {
+        font-size: 1.5rem;
+    }
+    
+    h3 {
+        font-size: 1.25rem;
+    }
+    
+    /* Show mobile menu toggle */
+    .menu-toggle {
+        display: flex;
+    }
+    
+    /* Mobile Navigation */
+    .navbar-container {
+        flex-wrap: wrap;
+        padding: var(--spacing-md);
+    }
+    
+    .navbar-nav {
+        width: 100%;
+        order: 3;
+        margin-top: var(--spacing-md);
+        display: none;
+    }
+    
+    .navbar-nav.active {
+        display: flex;
+    }
+    
+    .nav-list {
+        flex-direction: column;
+        gap: 0;
+        width: 100%;
+    }
+    
+    .nav-link {
+        padding: var(--spacing-md);
+        border-radius: 0;
+        width: 100%;
+        text-align: left;
+    }
+    
+    .nav-link.active::after {
+        display: none;
+    }
+    
+    .nav-link.active {
+        background-color: var(--color-lightest-gray);
+        border-left: 3px solid var(--color-primary);
+        padding-left: calc(var(--spacing-md) - 3px);
+    }
+    
+    /* Mobile Forms */
+    .form-control {
+        padding: var(--spacing-md);
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    /* Mobile Grid */
+    .auctions-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .grid-2,
+    .grid-3,
+    .grid-4 {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Mobile Buttons */
+    .btn {
+        width: 100%;
+    }
+    
+    .navbar-auth {
+        flex-direction: column;
+        width: 100%;
+        gap: var(--spacing-sm);
+    }
+    
+    .navbar-auth .btn {
+        width: 100%;
+    }
+    
+    /* Mobile Auction Detail */
+    .auction-detail-container {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-lg);
+    }
+    
+    .artwork-image-section {
+        position: relative;
+        top: 0;
+    }
+    
+    /* Mobile Modal */
+    .modal {
+        padding: var(--spacing-md);
+    }
+    
+    .modal-content {
+        max-width: 100%;
+        max-height: 85vh;
+        padding: var(--spacing-lg);
+        border-radius: var(--radius-lg);
+    }
+    
+    .modal-close {
+        top: var(--spacing-md);
+        right: var(--spacing-md);
+    }
+    
+    /* Mobile Tables */
+    table {
+        font-size: var(--font-size-sm);
+    }
+    
+    th, td {
+        padding: var(--spacing-sm);
+    }
+    
+    /* Mobile Sidebar */
+    .auctions-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .filters-sidebar {
+        margin-bottom: var(--spacing-2xl);
+        position: relative;
+        max-height: none;
+    }
+    
+    .filter-group {
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    /* Mobile Alert Container */
+    .alert-container {
+        position: fixed;
+        top: 80px;
+        right: var(--spacing-md);
+        left: var(--spacing-md);
+        max-width: none;
+    }
+    
+    /* Mobile Hero */
+    .hero {
+        padding: var(--spacing-xl) var(--spacing-lg);
+    }
+    
+    .hero h1 {
+        font-size: 1.75rem;
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .hero p {
+        font-size: var(--font-size-base);
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    /* Mobile Tabs */
+    .tabs-list {
+        flex-wrap: wrap;
+        gap: 0;
+        border-bottom: 1px solid var(--color-lighter-gray);
+    }
+    
+    .tab-button {
+        flex: 1;
+        padding: var(--spacing-md);
+        font-size: var(--font-size-sm);
+        border: none;
+        border-bottom: 3px solid transparent;
+        margin: 0;
+        text-align: center;
+    }
+    
+    .tab-button.active {
+        border-bottom-color: var(--color-primary);
+    }
+    
+    /* Mobile Breadcrumb */
+    .breadcrumb {
+        font-size: var(--font-size-xs);
+        gap: var(--spacing-sm);
+    }
+    
+    /* Mobile Pagination */
+    .pagination {
+        flex-wrap: wrap;
+        gap: var(--spacing-md);
+    }
+    
+    .pagination .btn {
+        flex: 1;
+        min-width: 120px;
+    }
+    
+    .page-info {
+        width: 100%;
+    }
+    
+    /* Mobile Details */
+    .detail-item {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-md) 0;
+    }
+    
+    .detail-label {
+        font-weight: 600;
+    }
+    
+    /* Admin Mobile */
+    .container-admin {
+        padding: 0 var(--spacing-md);
+    }
+    
+    .admin-header {
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    .admin-header h1 {
+        font-size: 1.5rem;
+    }
+}
+
+/* ===== Landscape Mobile (641px width, low height) ===== */
+@media (max-width: 900px) and (max-height: 600px) {
+    .navbar {
+        position: relative;
+    }
+    
+    .hero {
+        padding: var(--spacing-lg);
+    }
+    
+    .hero h1 {
+        font-size: 1.5rem;
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    .hero p {
+        font-size: var(--font-size-sm);
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .stat-value {
+        font-size: var(--font-size-2xl);
+    }
+}
+
+/* ===== Touch Device Adjustments ===== */
+@media (hover: none) and (pointer: coarse) {
+    .btn,
+    .nav-link,
+    .card,
+    .auction-card {
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+    
+    /* Larger touch targets */
+    .btn {
+        min-height: 44px;
+    }
+    
+    .form-control {
+        min-height: 44px;
+    }
+    
+    /* Remove hover effects on touch devices */
+    .btn:hover {
+        background-color: var(--color-primary);
+    }
+    
+    .nav-link:hover {
+        color: var(--color-gray);
+    }
+}
+
+/* ===== High Pixel Density Displays ===== */
+@media (-webkit-min-device-pixel-ratio: 2),
+       (min-resolution: 192dpi) {
+    /* Slightly thicker borders for better visibility */
+    .modal-content {
+        border: 1px solid var(--color-lighter-gray);
+    }
+    
+    .btn {
+        border-width: 2px;
+    }
+}
+
+/* ===== Dark Mode Support (Prefers Dark Color Scheme) ===== */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-dark: #f5f5f5;
+        --color-dark-gray: #e0e0e0;
+        --color-gray: #a0a0a0;
+        --color-light-gray: #505050;
+        --color-lighter-gray: #424242;
+        --color-lightest-gray: #303030;
+        --color-white: #1e1e1e;
+    }
+    
+    body {
+        background-color: var(--color-white);
+        color: var(--color-dark);
+    }
+    
+    .navbar {
+        background-color: #2a2a2a;
+        border-bottom-color: var(--color-lighter-gray);
+    }
+    
+    .card,
+    .auction-card,
+    .stat-card,
+    .modal-content,
+    table {
+        background-color: #2a2a2a;
+        border-color: var(--color-lighter-gray);
+    }
+    
+    .page-header {
+        background-color: var(--color-lightest-gray);
+    }
+    
+    thead {
+        background-color: var(--color-lighter-gray);
+    }
+    
+    .hero {
+        background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+    }
+}
+
+/* ===== Reduced Motion ===== */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ===== Print Media ===== */
+@media print {
+    body {
+        background-color: white;
+        color: black;
+        line-height: 1.5;
+    }
+    
+    .navbar,
+    .footer,
+    .pagination,
+    .alert-container,
+    .filters-sidebar {
+        display: none;
+    }
+    
+    .main-content {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+    
+    .auction-detail-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .card,
+    .auction-card {
+        page-break-inside: avoid;
+        border: 1px solid #999;
+    }
+    
+    a {
+        text-decoration: underline;
+    }
+}
+
+/* ===== Wide Displays (Ultra-wide 1440px+) ===== */
+@media (min-width: 1440px) {
+    .container,
+    .container-admin {
+        max-width: 1400px;
+    }
+    
+    .auctions-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+    
+    .auction-detail-container {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .artwork-image-section {
+        position: sticky;
+        top: 120px;
+    }
+}

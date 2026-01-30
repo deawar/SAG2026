@@ -1,0 +1,222 @@
+# Silent Auction Gallery - Docker Compose Development Environment
+# Use this for local development with automatic service startup
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database Service
+  postgres:
+    image: postgres:15-alpine
+    container_name: sag-postgres-dev
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-sag_db}
+      POSTGRES_USER: ${DATABASE_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    ports:
+      - "${DATABASE_PORT:-5432}:5432"
+    volumes:
+      # Mount schema file for automatic initialization
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      # Named volume for data persistence
+      - postgres-data-dev:/var/lib/postgresql/data
+    networks:
+      - sag-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Node.js Application Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sag-app-dev
+    environment:
+      # Server
+      NODE_ENV: development
+      PORT: ${PORT:-5000}
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      
+      # Database
+      DATABASE_HOST: postgres
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_NAME: ${DATABASE_NAME:-sag_db}
+      DATABASE_USER: ${DATABASE_USER:-postgres}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      
+      # JWT Configuration
+      JWT_SECRET: ${JWT_SECRET:-dev_secret_key_change_in_production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-refresh_secret_key_change_in_production}
+      
+      # TOTP Configuration
+      TOTP_ISSUER: ${TOTP_ISSUER:-SAG2026}
+      TOTP_WINDOW: ${TOTP_WINDOW:-1}
+      
+      # SMTP Configuration (optional)
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      
+      # Stripe Configuration (optional)
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_}
+      STRIPE_PUBLIC_KEY: ${STRIPE_PUBLIC_KEY:-pk_test_}
+      
+      # Weather API (optional)
+      WEATHER_API_KEY: ${WEATHER_API_KEY:-}
+      
+      # Google OAuth (optional)
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+    
+    ports:
+      - "${PORT:-5000}:${PORT:-5000}"
+    
+    volumes:
+      # Mount source code for live reload (development)
+      - ./src:/app/src
+      - ./public:/app/public
+      - /app/node_modules  # Don't mount node_modules from host
+    
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    
+    networks:
+      - sag-network
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-5000}/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    
+    restart: unless-stopped
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    stdin_open: true
+    tty: true
+
+  # Redis Caching Service (Optional)
+  redis:
+    image: redis:7-alpine
+    container_name: sag-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data-dev:/data
+    networks:
+      - sag-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # pgAdmin - PostgreSQL Management UI (Optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: sag-pgadmin-dev
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data-dev:/var/lib/pgadmin
+    networks:
+      - sag-network
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Named volumes for data persistence
+volumes:
+  postgres-data-dev:
+    driver: local
+  redis-data-dev:
+    driver: local
+  pgadmin-data-dev:
+    driver: local
+
+# Network for service communication
+networks:
+  sag-network:
+    driver: bridge
+
+# ============================================================================
+# Docker Compose Commands
+# ============================================================================
+# Start all services:
+#   docker-compose up
+#
+# Start in background:
+#   docker-compose up -d
+#
+# View logs:
+#   docker-compose logs
+#   docker-compose logs -f app           # Follow app logs
+#   docker-compose logs -f postgres      # Follow postgres logs
+#
+# Stop all services:
+#   docker-compose down
+#
+# Stop and remove volumes:
+#   docker-compose down -v
+#
+# Rebuild images:
+#   docker-compose up --build
+#
+# Run commands in service:
+#   docker-compose exec app npm test
+#   docker-compose exec app npm run lint
+#   docker-compose exec postgres psql -U postgres -d sag_db
+#
+# View service status:
+#   docker-compose ps
+#
+# View resource usage:
+#   docker stats
+#
+# Scale services:
+#   docker-compose up --scale app=2
+#
+# Access services:
+#   Application:   http://localhost:5000
+#   pgAdmin:       http://localhost:5050
+#   PostgreSQL:    localhost:5432
+#   Redis:         localhost:6379
+#
+# ============================================================================
