@@ -1,0 +1,93 @@
+# Docker ignore file - excludes unnecessary files from Docker build context
+# Reduces image size and build time
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Node modules and package managers
+node_modules/
+npm-debug.log
+npm-debug.log.*
+yarn-error.log
+.pnp
+.pnp.js
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+.DS_Store
+.env.local
+.env.*.local
+
+# Build artifacts
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Environment files (use .env.example instead)
+.env
+.env.development
+.env.staging
+.env.test
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.circleci/
+Jenkinsfile
+
+# Docker
+Dockerfile
+docker-compose.yml
+docker-compose.prod.yml
+.dockerignore
+
+# Documentation
+README.md
+ARCHITECTURE.md
+DEPLOYMENT_GUIDE.md
+*.md
+
+# Test files and reports
+tests/
+jest.config.js
+testoutput.txt
+**/*.spec.js
+**/*.test.js
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Lock files (use one strategy)
+# Option 1: Include for reproducible builds
+# Option 2: Exclude and let npm ci handle it
+package-lock.json
+
+# Miscellaneous
+.env.example
+setup-db.js
+test-db-connection.js
+load-schema.js

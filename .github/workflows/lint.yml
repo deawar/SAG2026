@@ -1,0 +1,86 @@
+name: Lint & Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    name: Lint & Code Quality Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+        continue-on-error: false
+
+      - name: Check code formatting with Prettier
+        run: npm run format:check
+        continue-on-error: false
+
+      - name: Count lines of code
+        run: |
+          npx sloc src/ --format json > sloc-report.json
+          npx sloc src/
+        continue-on-error: true
+
+      - name: Upload SLOC report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: sloc-report
+          path: sloc-report.json
+
+      - name: Comment SLOC on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('sloc-report.json', 'utf8'));
+            const summary = report.summary || {};
+            const comment = `## Code Metrics
+            - **Total Lines**: ${summary.total || 'N/A'}
+            - **Code Lines**: ${summary.source || 'N/A'}
+            - **Comment Lines**: ${summary.comment || 'N/A'}
+            `;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+        continue-on-error: true
+
+      - name: Validate package.json
+        run: npm ls
+        continue-on-error: true
+
+      - name: Check dependencies for security issues
+        run: npm audit --production
+        continue-on-error: true
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+# ============================================================================
+# This workflow runs on every push and pull request
+# It checks code quality using ESLint and Prettier
+# Reports violations and blocks PR if issues found
+# ============================================================================

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Silent Auction Gallery - School-based charity auction platform">
+    <title>Silent Auction Gallery - Home</title>
+    
+    <!-- Accessibility & SEO -->
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+</head>
+<body>
+    <!-- Skip to main content link (accessibility) -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <!-- Navigation Header -->
+    <header class="navbar" role="banner">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="logo" aria-label="Silent Auction Gallery Home">
+                    <img src="/images/logo.svg" alt="Silent Auction Gallery Logo" class="logo-img">
+                    <span class="logo-text">SAG</span>
+                </a>
+            </div>
+
+            <!-- Navigation Menu -->
+            <nav class="navbar-nav" role="navigation" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="/auctions.html" class="nav-link">Auctions</a></li>
+                    <li><a href="#about" class="nav-link">About</a></li>
+                    <li><a href="#help" class="nav-link">Help</a></li>
+                </ul>
+            </nav>
+
+            <!-- Authentication Links -->
+            <div class="navbar-auth">
+                <button class="btn btn-secondary" id="login-btn" aria-label="Login to your account">Login</button>
+                <button class="btn btn-primary" id="register-btn" aria-label="Create a new account">Sign Up</button>
+                <button class="btn btn-profile" id="user-menu-btn" aria-label="User account menu" style="display:none;">
+                    <span id="user-name"></span>
+                    <span class="menu-icon">▼</span>
+                </button>
+            </div>
+
+            <!-- Mobile Menu Toggle -->
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content">
+        <!-- Hero Section -->
+        <section class="hero" role="region" aria-label="Hero Section">
+            <div class="hero-content">
+                <h1>Silent Auction Gallery</h1>
+                <p class="hero-subtitle">Supporting Education Through Art</p>
+                <button class="btn btn-large" id="browse-auctions-btn">Browse Auctions</button>
+            </div>
+            <div class="hero-image">
+                <img src="/images/hero-art.svg" alt="Beautiful artwork showcase" class="hero-img">
+            </div>
+        </section>
+
+        <!-- Featured Auctions Section -->
+        <section class="featured-auctions" role="region" aria-label="Featured Auctions">
+            <div class="container">
+                <h2>Featured Auctions</h2>
+                <div class="auctions-grid" id="featured-auctions-grid">
+                    <!-- Populated by JavaScript -->
+                </div>
+                <a href="/auctions.html" class="btn btn-secondary center-btn">View All Auctions</a>
+            </div>
+        </section>
+
+        <!-- How It Works Section -->
+        <section class="how-it-works" role="region" aria-label="How It Works">
+            <div class="container">
+                <h2>How It Works</h2>
+                <div class="steps-grid">
+                    <div class="step">
+                        <div class="step-number" aria-hidden="true">1</div>
+                        <h3>Browse</h3>
+                        <p>Explore beautiful artwork from talented artists.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-number" aria-hidden="true">2</div>
+                        <h3>Bid</h3>
+                        <p>Place bids in real-time during the auction.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-number" aria-hidden="true">3</div>
+                        <h3>Win</h3>
+                        <p>Highest bidder wins! Support education with your purchase.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-number" aria-hidden="true">4</div>
+                        <h3>Collect</h3>
+                        <p>Complete checkout and arrange artwork delivery.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Call to Action -->
+        <section class="cta-section" role="region" aria-label="Call to Action">
+            <div class="container">
+                <h2>Ready to Support Education?</h2>
+                <p>Join our community of art lovers and education supporters.</p>
+                <button class="btn btn-large" id="get-started-btn">Get Started</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal: Login -->
+    <div id="login-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="login-title" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" aria-label="Close login modal">&times;</button>
+            <h2 id="login-title">Login</h2>
+            <form id="login-form" class="form">
+                <div class="form-group">
+                    <label for="login-email">Email Address</label>
+                    <input type="email" id="login-email" name="email" required aria-required="true">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" name="password" required aria-required="true">
+                </div>
+                <div class="form-group">
+                    <label for="login-remember">
+                        <input type="checkbox" id="login-remember" name="remember">
+                        Remember me
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+            <p class="text-center">Don't have an account? <button class="link-btn" id="switch-to-register">Sign up</button></p>
+        </div>
+    </div>
+
+    <!-- Modal: Register -->
+    <div id="register-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="register-title" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" aria-label="Close registration modal">&times;</button>
+            <h2 id="register-title">Create Account</h2>
+            <form id="register-form" class="form">
+                <div class="form-group">
+                    <label for="register-name">Full Name</label>
+                    <input type="text" id="register-name" name="name" required aria-required="true">
+                </div>
+                <div class="form-group">
+                    <label for="register-email">Email Address</label>
+                    <input type="email" id="register-email" name="email" required aria-required="true">
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Password</label>
+                    <input type="password" id="register-password" name="password" required aria-required="true">
+                </div>
+                <div class="form-group">
+                    <label for="register-password-confirm">Confirm Password</label>
+                    <input type="password" id="register-password-confirm" name="password_confirm" required aria-required="true">
+                </div>
+                <div class="form-group">
+                    <label for="register-agree">
+                        <input type="checkbox" id="register-agree" name="agree" required aria-required="true">
+                        I agree to the Terms of Service
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary">Create Account</button>
+            </form>
+            <p class="text-center">Already have an account? <button class="link-btn" id="switch-to-login">Login</button></p>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>About SAG</h4>
+                    <p>Silent Auction Gallery supports education through art.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="/auctions.html">Auctions</a></li>
+                        <li><a href="#about">About Us</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="#privacy">Privacy Policy</a></li>
+                        <li><a href="#terms">Terms of Service</a></li>
+                        <li><a href="#accessibility">Accessibility</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Follow Us</h4>
+                    <div class="social-links">
+                        <a href="#facebook" aria-label="Facebook">f</a>
+                        <a href="#twitter" aria-label="Twitter">𝕏</a>
+                        <a href="#instagram" aria-label="Instagram">📷</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/accessibility.js"></script>
+    <script src="/js/api-client.js"></script>
+    <script src="/js/websocket-client.js"></script>
+    <script src="/js/auth-manager.js"></script>
+    <script src="/js/ui-components.js"></script>
+    <script src="/js/index.js"></script>
+</body>
+</html>
