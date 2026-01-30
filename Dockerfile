@@ -16,22 +16,19 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies (including dev dependencies)
-RUN npm ci --prefer-offline --no-audit
+RUN npm install --prefer-offline --no-audit
 
 # Copy source code
 COPY . .
 
-# Run linting
-RUN npm run lint 2>&1 | tee /tmp/lint.log || true
+# Run linting (continue on error)
+RUN npm run lint 2>&1 || true
 
-# Run unit tests
-RUN npm run test:unit 2>&1 | tee /tmp/test.log || true
+# Run unit tests (continue on error)
+RUN npm run test:unit 2>&1 || true
 
-# Run integration tests
-RUN npm run test:integration 2>&1 | tee /tmp/integration.log || true
-
-# Generate coverage reports
-RUN npm run test:coverage 2>&1 | tee /tmp/coverage.log || true
+# Run integration tests (continue on error)
+RUN npm run test:integration 2>&1 || true
 
 # ============================================================================
 # STAGE 2: RUNTIME - Slim production image
@@ -46,34 +43,25 @@ LABEL description="Silent Auction Gallery - Admin Dashboard API"
 # Install runtime dependencies only (curl for healthcheck)
 RUN apk add --no-cache curl dumb-init
 
-# Create non-root user for security
-RUN addgroup -g 1000 node && \
-    adduser -u 1000 -G node -s /bin/sh -D node
-
 # Set working directory
 WORKDIR /app
+
+# Create logs directory (before changing user)
+RUN mkdir -p logs
 
 # Copy package files
 COPY package*.json ./
 
 # Install production dependencies only
-RUN npm ci --prefer-offline --no-audit --production && \
-    npm cache clean --force
+RUN npm ci --production --no-audit 2>/dev/null || npm install --production --no-audit
 
 # Copy built application from builder stage
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/schema.sql ./
-COPY --from=builder /app/jest.config.js ./
-COPY --from=builder /app/.env.example ./
 
-# Copy test reports for documentation
-COPY --from=builder /tmp/lint.log ./logs/ || true
-COPY --from=builder /tmp/test.log ./logs/ || true
-COPY --from=builder /tmp/coverage.log ./logs/ || true
-
-# Create logs directory
-RUN mkdir -p logs && chown -R node:node /app
+# Set permissions for node user
+RUN chown -R node:node /app
 
 # Change to non-root user
 USER node
