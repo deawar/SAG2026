@@ -116,7 +116,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Deploy to staging environment
         uses: appleboy/ssh-action@master
@@ -139,7 +139,7 @@ jobs:
         continue-on-error: true
 
       - name: Slack notification - Staging deployed
-        uses: slackapi/slack-github-action@v1
+        uses: slackapi/slack-github-action@v1.26
         if: success()
         with:
           payload: |
@@ -168,7 +168,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Backup production database
         uses: appleboy/ssh-action@master
@@ -211,7 +211,7 @@ jobs:
         continue-on-error: true
 
       - name: Create GitHub release
-        uses: actions/create-release@v1
+        uses: ncipollo/release-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -226,7 +226,7 @@ jobs:
         continue-on-error: true
 
       - name: Slack notification - Production deployed
-        uses: slackapi/slack-github-action@v1
+        uses: slackapi/slack-github-action@v1.26
         if: success()
         with:
           payload: |
@@ -247,7 +247,7 @@ jobs:
         continue-on-error: true
 
       - name: Slack notification - Deployment failed
-        uses: slackapi/slack-github-action@v1
+        uses: slackapi/slack-github-action@v1.26
         if: failure()
         with:
           payload: |
