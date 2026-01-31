@@ -21,15 +21,6 @@ RUN npm install --prefer-offline --no-audit
 # Copy source code
 COPY . .
 
-# Run linting (continue on error)
-RUN npm run lint 2>&1 || true
-
-# Run unit tests (continue on error)
-RUN npm run test:unit 2>&1 || true
-
-# Run integration tests (continue on error)
-RUN npm run test:integration 2>&1 || true
-
 # ============================================================================
 # STAGE 2: RUNTIME - Slim production image
 # ============================================================================
