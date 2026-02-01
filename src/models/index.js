@@ -490,7 +490,18 @@ class UserModel {
 
     // COPPA: Age verification for students
     if ((role === 'STUDENT' || role === 'BIDDER') && dateOfBirth) {
-      const age = this._calculateAge(dateOfBirth);
+      // Convert string to Date if needed
+      let dateObj = dateOfBirth;
+      if (typeof dateOfBirth === 'string') {
+        dateObj = new Date(dateOfBirth);
+      }
+      
+      // Validate date is valid
+      if (!(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
+        throw new Error('INVALID_DATE_OF_BIRTH');
+      }
+      
+      const age = this._calculateAge(dateObj);
       if (age < 13) {
         throw new Error('COPPA_PARENTAL_CONSENT_REQUIRED');
       }

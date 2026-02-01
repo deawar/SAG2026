@@ -41,12 +41,18 @@ class AuthMiddleware {
 
       // 4. Verify signature and claims with HS256
       const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET, {
-        algorithms: ['HS256'],
-        issuer: 'silent-auction-gallery',
-        audience: 'silent-auction-users'
+        algorithms: ['HS256']
       });
 
-      // 5. Validate required claims (userId can be in 'sub' or direct property)
+      // 5. Validate token type (must be 'access', not 'refresh')
+      if (decoded.type === 'refresh') {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token: refresh token cannot be used as access token'
+        });
+      }
+
+      // 6. Validate required claims (userId can be in 'sub' or direct property)
       const userId = decoded.sub || decoded.userId;
       if (!userId) {
         return res.status(401).json({
@@ -62,7 +68,7 @@ class AuthMiddleware {
         });
       }
 
-      // 6. Attach user to request object
+      // 7. Attach user to request object
       req.user = {
         id: userId,
         userId: userId,

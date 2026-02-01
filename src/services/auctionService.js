@@ -447,9 +447,9 @@ class AuctionService {
     const result = await pool.query(
       `SELECT a.*, 
               (SELECT COUNT(*) FROM artwork WHERE auction_id = a.id) as artwork_count,
-              (SELECT COUNT(DISTINCT bidder_id) FROM bids b 
+              (SELECT COUNT(DISTINCT placed_by_user_id) FROM bids b 
                JOIN artwork aw ON b.artwork_id = aw.id 
-               WHERE aw.auction_id = a.id AND b.status = 'active') as unique_bidders
+               WHERE aw.auction_id = a.id AND b.bid_status = 'ACTIVE') as unique_bidders
        FROM auctions a
        WHERE a.status = $1 AND a.end_time > NOW()
        ORDER BY a.end_time ASC`,

@@ -35,7 +35,7 @@ describe('Authentication & Authorization Security', () => {
       );
 
       const response = await request(app)
-        .get('/api/auctions')
+        .get('/api/auctions/active/list')
         .set('Authorization', `Bearer ${malformedToken}`);
 
       expect(response.status).toBe(401);
@@ -45,12 +45,12 @@ describe('Authentication & Authorization Security', () => {
     test('should reject token with missing required claims', async () => {
       const tokenWithoutUserId = jwt.sign(
         { role: 'STUDENT' },
-        process.env.JWT_SECRET || 'test-secret',
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
         { algorithm: 'HS256' }
       );
 
       const response = await request(app)
-        .get('/api/auctions')
+        .get('/api/auctions/active/list')
         .set('Authorization', `Bearer ${tokenWithoutUserId}`);
 
       // Should reject token without userId claim
@@ -61,12 +61,12 @@ describe('Authentication & Authorization Security', () => {
       // Create a token with JTI
       const token = jwt.sign(
         { userId: '123', role: 'STUDENT', jti: 'unique-id' },
-        process.env.JWT_SECRET || 'test-secret',
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
         { algorithm: 'HS256' }
       );
 
       const response = await request(app)
-        .get('/api/auctions')
+        .get('/api/auctions/active/list')
         .set('Authorization', `Bearer ${token}`);
 
       // Response may be 401 due to invalid user, but should validate JTI
@@ -76,12 +76,12 @@ describe('Authentication & Authorization Security', () => {
     test('should reject token with future issue date', async () => {
       const futureToken = jwt.sign(
         { userId: '123', role: 'STUDENT' },
-        process.env.JWT_SECRET || 'test-secret',
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
         { algorithm: 'HS256', iat: Math.floor(Date.now() / 1000) + 3600 }
       );
 
       const response = await request(app)
-        .get('/api/auctions')
+        .get('/api/auctions/active/list')
         .set('Authorization', `Bearer ${futureToken}`);
 
       expect(response.status).toBe(401);
@@ -90,12 +90,12 @@ describe('Authentication & Authorization Security', () => {
     test('should require Bearer prefix in Authorization header', async () => {
       const token = jwt.sign(
         { userId: '123', role: 'STUDENT' },
-        process.env.JWT_SECRET || 'test-secret',
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
         { algorithm: 'HS256' }
       );
 
       const response = await request(app)
-        .get('/api/auctions')
+        .get('/api/auctions/active/list')
         .set('Authorization', token); // Missing 'Bearer ' prefix
 
       expect(response.status).toBe(401);
@@ -104,7 +104,7 @@ describe('Authentication & Authorization Security', () => {
     test('should reject token with null algorithm', async () => {
       // Attempt to create a token with no algorithm (None algorithm attack)
       const response = await request(app)
-        .get('/api/auctions')
+        .get('/api/auctions/active/list')
         .set('Authorization', 'Bearer eyJhbGciOiJub25lIiwi.eyJzdWIiOiJ1c2VyMTIzIn0.');
 
       expect(response.status).toBe(401);
@@ -120,7 +120,7 @@ describe('Authentication & Authorization Security', () => {
     test('should deny student role from creating auctions', async () => {
       const studentToken = jwt.sign(
         { userId: 'student123', role: 'STUDENT', schoolId: 'school1' },
-        process.env.JWT_SECRET || 'test-secret',
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
         { algorithm: 'HS256' }
       );
 
@@ -140,7 +140,7 @@ describe('Authentication & Authorization Security', () => {
     test('should deny bidder role from accessing admin dashboard', async () => {
       const bidderToken = jwt.sign(
         { userId: 'bidder123', role: 'BIDDER', schoolId: 'school1' },
-        process.env.JWT_SECRET || 'test-secret',
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
         { algorithm: 'HS256' }
       );
 
@@ -154,7 +154,7 @@ describe('Authentication & Authorization Security', () => {
     test('should enforce role hierarchy (teacher < school_admin < site_admin)', async () => {
       const teacherToken = jwt.sign(
         { userId: 'teacher123', role: 'TEACHER', schoolId: 'school1' },
-        process.env.JWT_SECRET || 'test-secret',
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
         { algorithm: 'HS256' }
       );
 
@@ -170,7 +170,7 @@ describe('Authentication & Authorization Security', () => {
     test('should not allow role modification via request body', async () => {
       const studentToken = jwt.sign(
         { userId: 'student123', role: 'STUDENT', schoolId: 'school1' },
-        process.env.JWT_SECRET || 'test-secret',
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
         { algorithm: 'HS256' }
       );
 
@@ -189,7 +189,7 @@ describe('Authentication & Authorization Security', () => {
     test('should validate schoolId context for school-scoped operations', async () => {
       const teacherToken = jwt.sign(
         { userId: 'teacher123', role: 'TEACHER', schoolId: 'school1' },
-        process.env.JWT_SECRET || 'test-secret',
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
         { algorithm: 'HS256' }
       );
 
@@ -212,7 +212,7 @@ describe('Authentication & Authorization Security', () => {
     test('should revoke tokens on logout', async () => {
       const token = jwt.sign(
         { userId: 'user123', role: 'STUDENT', jti: 'session-id-123' },
-        process.env.JWT_SECRET || 'test-secret',
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
         { algorithm: 'HS256' }
       );
 
@@ -225,7 +225,7 @@ describe('Authentication & Authorization Security', () => {
 
       // Token should no longer be valid
       const reuseResponse = await request(app)
-        .get('/api/auctions')
+        .get('/api/auctions/active/list')
         .set('Authorization', `Bearer ${token}`);
 
       expect(reuseResponse.status).toBe(401);
@@ -238,7 +238,7 @@ describe('Authentication & Authorization Security', () => {
         sessionTokens.push(
           jwt.sign(
             { userId: 'user123', role: 'STUDENT', sessionId: `session-${i}` },
-            process.env.JWT_SECRET || 'test-secret',
+            process.env.JWT_ACCESS_SECRET || 'test-secret',
             { algorithm: 'HS256' }
           )
         );
@@ -246,8 +246,10 @@ describe('Authentication & Authorization Security', () => {
 
       // Test that oldest sessions are invalidated
       const oldSessionResponse = await request(app)
-        .get('/api/auctions')
+        .get('/api/auctions/active/list')
         .set('Authorization', `Bearer ${sessionTokens[0]}`);
+
+      // Oldest session should be rejected after new ones created
 
       // First token should be rejected after new sessions created
       expect([401, 403]).toContain(oldSessionResponse.status);
@@ -271,7 +273,7 @@ describe('Authentication & Authorization Security', () => {
       // Create a token with short expiry
       const expiredToken = jwt.sign(
         { userId: 'user123', role: 'STUDENT' },
-        process.env.JWT_SECRET || 'test-secret',
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
         { expiresIn: '1s', algorithm: 'HS256' }
       );
 
@@ -279,7 +281,7 @@ describe('Authentication & Authorization Security', () => {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       const response = await request(app)
-        .get('/api/auctions')
+        .get('/api/auctions/active/list')
         .set('Authorization', `Bearer ${expiredToken}`);
 
       expect(response.status).toBe(401);
@@ -354,12 +356,12 @@ describe('Authentication & Authorization Security', () => {
       // Refresh tokens should be different from access tokens
       const refreshToken = jwt.sign(
         { userId: 'user123', type: 'refresh' },
-        process.env.JWT_SECRET || 'test-secret',
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
         { algorithm: 'HS256', expiresIn: '7d' }
       );
 
       const response = await request(app)
-        .get('/api/auctions')
+        .get('/api/auctions/active/list')
         .set('Authorization', `Bearer ${refreshToken}`);
 
       // Using refresh token as access token should fail
@@ -378,14 +380,14 @@ describe('Authentication & Authorization Security', () => {
       // After refresh, old access token should be invalid
       const oldAccessToken = jwt.sign(
         { userId: 'user123', role: 'STUDENT' },
-        process.env.JWT_SECRET || 'test-secret',
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
         { algorithm: 'HS256' }
       );
 
       // Simulate token refresh occurred
       // Now using old token should fail
       const response = await request(app)
-        .get('/api/auctions')
+        .get('/api/auctions/active/list')
         .set('Authorization', `Bearer ${oldAccessToken}`);
 
       expect(response.status).toBe(401);
