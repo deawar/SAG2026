@@ -25,11 +25,11 @@ describe('Data Integrity', () => {
 
   beforeAll(async () => {
     db = new Pool({
-      host: process.env.PG_HOST || 'localhost',
-      port: process.env.PG_PORT || 5432,
-      database: process.env.PG_DATABASE || 'sag_test',
-      user: process.env.PG_USER || 'postgres',
-      password: process.env.PG_PASSWORD || 'postgres'
+      host: process.env.DB_HOST || process.env.PG_HOST || 'localhost',
+      port: process.env.DB_PORT || process.env.PG_PORT || 5432,
+      database: process.env.DB_NAME || process.env.PG_DATABASE || 'silent_auction_gallery',
+      user: process.env.DB_USER || process.env.PG_USER || 'SAG_DB',
+      password: process.env.DB_PASSWORD || process.env.PG_PASSWORD || ''
     });
   });
 
