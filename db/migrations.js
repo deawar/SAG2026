@@ -228,12 +228,13 @@ if (require.main === module) {
   const command = process.argv[2];
   const { Pool } = require('pg');
   
+  const password = process.env.DB_PASSWORD || process.env.PG_PASSWORD;
   const pool = new Pool({
     host: process.env.DB_HOST || process.env.PG_HOST,
     port: process.env.DB_PORT || process.env.PG_PORT,
     database: process.env.DB_NAME || process.env.PG_DATABASE,
     user: process.env.DB_USER || process.env.PG_USER,
-    password: process.env.DB_PASSWORD || process.env.PG_PASSWORD
+    ...(password && { password })
   });
 
   const manager = new MigrationManager(pool);
