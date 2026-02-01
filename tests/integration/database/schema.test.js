@@ -539,7 +539,7 @@ describe('Database Schema Validation', () => {
       `;
       const result = await db.query(query);
       const columns = result.rows.map(row => row.column_name);
-      expect(columns).toContain('action');
+      expect(columns).toContain('action_type');
     });
   });
 
