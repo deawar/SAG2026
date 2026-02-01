@@ -292,6 +292,18 @@ class UserModel {
   }
 
   /**
+   * Update last login timestamp
+   * @param {string} userId - User UUID
+   * @returns {Promise<void>}
+   */
+  async updateLastLogin(userId) {
+    await this.db.query(
+      `UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1`,
+      [userId]
+    );
+  }
+
+  /**
    * Enable 2FA for user
    * @param {string} userId - User UUID
    * @returns {Promise<Object>} - Secret and backup codes

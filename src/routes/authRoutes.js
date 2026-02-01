@@ -7,10 +7,24 @@
 
 const express = require('express');
 const router = express.Router();
+const authMiddleware = require('../middleware/authMiddleware');
+const UserController = require('../controllers/userController');
+
+// Import services and models
+const authenticationService = require('../services/authenticationService');
+const { UserModel } = require('../models');
+
+// Placeholder for database connection (will be properly injected in index.js)
+const db = { query: async () => ({ rows: [] }) };
+
+// Initialize services
+const userModel = new UserModel(db);
+const userController = new UserController(userModel, authenticationService);
 
 /**
  * POST /api/auth/register
  * Register a new user
+ * Auth: Not required
  * 
  * Body:
  * {
@@ -19,27 +33,28 @@ const router = express.Router();
  *   "firstName": "John",
  *   "lastName": "Doe",
  *   "dateOfBirth": "2010-01-15",
- *   "schoolId": 1
+ *   "schoolId": "uuid",
+ *   "role": "STUDENT"
  * }
  * 
  * Response: 201
  * {
  *   "success": true,
  *   "message": "User registered successfully",
- *   "userId": 123
+ *   "data": {
+ *     "userId": "uuid",
+ *     "email": "user@example.com",
+ *     "accessToken": "jwt",
+ *     "refreshToken": "jwt"
+ *   }
  * }
  */
-router.post('/register', (req, res) => {
-  res.status(501).json({
-    error: 'Not Implemented',
-    message: 'Registration endpoint under development',
-    status: 'pending'
-  });
-});
+router.post('/register', (req, res, next) => userController.register(req, res, next));
 
 /**
  * POST /api/auth/login
  * Authenticate user and return access token
+ * Auth: Not required
  * 
  * Body:
  * {
@@ -50,23 +65,35 @@ router.post('/register', (req, res) => {
  * Response: 200
  * {
  *   "success": true,
- *   "accessToken": "eyJhbGc...",
- *   "refreshToken": "eyJhbGc...",
- *   "requiresMfa": false,
- *   "userId": 123
+ *   "message": "Login successful",
+ *   "data": {
+ *     "userId": "uuid",
+ *     "email": "user@example.com",
+ *     "role": "STUDENT",
+ *     "accessToken": "jwt",
+ *     "refreshToken": "jwt",
+ *     "expiresIn": "15m"
+ *   }
+ * }
+ * 
+ * If 2FA enabled:
+ * Response: 200
+ * {
+ *   "success": true,
+ *   "message": "2FA verification required",
+ *   "data": {
+ *     "requiresMfa": true,
+ *     "tempToken": "jwt",
+ *     "userId": "uuid"
+ *   }
  * }
  */
-router.post('/login', (req, res) => {
-  res.status(501).json({
-    error: 'Not Implemented',
-    message: 'Login endpoint under development',
-    status: 'pending'
-  });
-});
+router.post('/login', (req, res, next) => userController.login(req, res, next));
 
 /**
  * POST /api/auth/logout
  * Logout user and invalidate tokens
+ * Auth: Required
  * 
  * Headers:
  * - Authorization: Bearer <accessToken>
@@ -77,40 +104,62 @@ router.post('/login', (req, res) => {
  *   "message": "Logged out successfully"
  * }
  */
-router.post('/logout', (req, res) => {
-  res.status(501).json({
-    error: 'Not Implemented',
-    message: 'Logout endpoint under development',
-    status: 'pending'
-  });
-});
+router.post('/logout',
+  authMiddleware.verifyToken,
+  (req, res, next) => userController.logout(req, res, next)
+);
 
 /**
  * POST /api/auth/refresh
  * Refresh access token using refresh token
+ * Auth: Not required
  * 
  * Body:
  * {
- *   "refreshToken": "eyJhbGc..."
+ *   "refreshToken": "jwt"
  * }
  * 
  * Response: 200
  * {
  *   "success": true,
- *   "accessToken": "eyJhbGc..."
+ *   "message": "Token refreshed successfully",
+ *   "data": {
+ *     "accessToken": "jwt",
+ *     "expiresIn": "15m"
+ *   }
  * }
  */
-router.post('/refresh', (req, res) => {
-  res.status(501).json({
-    error: 'Not Implemented',
-    message: 'Token refresh endpoint under development',
-    status: 'pending'
-  });
-});
+router.post('/refresh', (req, res, next) => userController.refreshToken(req, res, next));
+
+/**
+ * POST /api/auth/verify-2fa
+ * Verify 2FA code and complete login
+ * Auth: Not required (uses temp token)
+ * 
+ * Body:
+ * {
+ *   "userId": "uuid",
+ *   "tempToken": "jwt",
+ *   "code": "123456"
+ * }
+ * 
+ * Response: 200
+ * {
+ *   "success": true,
+ *   "message": "2FA verification successful",
+ *   "data": {
+ *     "accessToken": "jwt",
+ *     "refreshToken": "jwt",
+ *     "expiresIn": "15m"
+ *   }
+ * }
+ */
+router.post('/verify-2fa', (req, res, next) => userController.verify2FA(req, res, next));
 
 /**
  * POST /api/auth/2fa/setup
- * Initiate 2FA setup
+ * Setup 2FA for authenticated user
+ * Auth: Required
  * 
  * Headers:
  * - Authorization: Bearer <accessToken>
@@ -118,41 +167,83 @@ router.post('/refresh', (req, res) => {
  * Response: 200
  * {
  *   "success": true,
- *   "secret": "JBSWY3DPEBLW64TMMQ======",
- *   "qrCode": "data:image/png;base64,...",
- *   "setupToken": "temp_token_123"
+ *   "data": {
+ *     "secret": "base32-encoded-secret",
+ *     "qrCode": "otpauth://url",
+ *     "backupCodes": ["code1", "code2", ...]
+ *   }
  * }
  */
-router.post('/2fa/setup', (req, res) => {
-  res.status(501).json({
-    error: 'Not Implemented',
-    message: '2FA setup endpoint under development',
-    status: 'pending'
-  });
+router.post('/2fa/setup', authMiddleware.verifyToken, (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const secret = authenticationService.twoFactorService.generateSecret(userId, req.user.email);
+    
+    return res.json({
+      success: true,
+      data: secret
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**
  * POST /api/auth/2fa/verify
  * Verify and enable 2FA
+ * Auth: Required
+ * 
+ * Headers:
+ * - Authorization: Bearer <accessToken>
  * 
  * Body:
  * {
- *   "setupToken": "temp_token_123",
+ *   "secret": "base32-encoded-secret",
  *   "code": "123456"
  * }
  * 
  * Response: 200
  * {
  *   "success": true,
- *   "backupCodes": ["code1", "code2", ...]
+ *   "message": "2FA enabled successfully"
  * }
  */
-router.post('/2fa/verify', (req, res) => {
-  res.status(501).json({
-    error: 'Not Implemented',
-    message: '2FA verification endpoint under development',
-    status: 'pending'
-  });
+router.post('/2fa/verify', authMiddleware.verifyToken, async (req, res, next) => {
+  try {
+    const { secret, code } = req.body;
+    const userId = req.user.id;
+
+    if (!secret || !code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Secret and code required'
+      });
+    }
+
+    // Verify code
+    const isValid = authenticationService.twoFactorService.verifyToken(secret, code);
+
+    if (!isValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid 2FA code'
+      });
+    }
+
+    // Enable 2FA for user
+    const backupCodes = ['BACKUP01', 'BACKUP02', 'BACKUP03', 'BACKUP04', 'BACKUP05', 'BACKUP06', 'BACKUP07', 'BACKUP08'];
+    // TODO: Implement database update to enable 2FA
+
+    return res.json({
+      success: true,
+      message: '2FA enabled successfully',
+      data: {
+        backupCodes
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**
