@@ -16,6 +16,7 @@
  * Total: 28+ tests
  */
 
+require('dotenv').config();
 const { Pool } = require('pg');
 const { v4: uuidv4 } = require('uuid');
 
@@ -24,12 +25,13 @@ describe('Data Integrity', () => {
   let testSchoolId, testUserId, testAuctionId, testBidId;
 
   beforeAll(async () => {
+    const password = process.env.DB_PASSWORD || process.env.PG_PASSWORD;
     db = new Pool({
       host: process.env.DB_HOST || process.env.PG_HOST || 'localhost',
       port: process.env.DB_PORT || process.env.PG_PORT || 5432,
       database: process.env.DB_NAME || process.env.PG_DATABASE || 'silent_auction_gallery',
       user: process.env.DB_USER || process.env.PG_USER || 'SAG_DB',
-      password: process.env.DB_PASSWORD || process.env.PG_PASSWORD || ''
+      ...(password && { password })
     });
   });
 
