@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="1200" height="400">
+  <!-- Gradient Background -->
+  <defs>
+    <linearGradient id="heroGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1976d2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d47a1;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="400" fill="url(#heroGradient)"/>
+  
+  <!-- Decorative elements -->
+  <circle cx="100" cy="100" r="80" fill="#ffffff" opacity="0.1"/>
+  <circle cx="1100" cy="300" r="120" fill="#ffffff" opacity="0.1"/>
+  
+  <!-- Main title -->
+  <text x="600" y="120" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">
+    Silent Auction Gallery
+  </text>
+  
+  <!-- Subtitle -->
+  <text x="600" y="170" font-family="Arial, sans-serif" font-size="24" fill="#e3f2fd" text-anchor="middle">
+    Discover, Bid, and Win Exclusive Items
+  </text>
+  
+  <!-- CTA Button representation -->
+  <rect x="450" y="220" width="300" height="50" fill="white" rx="6"/>
+  <text x="600" y="255" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#1976d2" text-anchor="middle">
+    Browse Auctions
+  </text>
+  
+  <!-- Decorative auction items -->
+  <g transform="translate(150, 300)">
+    <rect width="60" height="60" fill="white" opacity="0.2" rx="4"/>
+    <text x="30" y="40" font-family="Arial, sans-serif" font-size="12" fill="white" text-anchor="middle">🎨</text>
+  </g>
+  
+  <g transform="translate(500, 300)">
+    <rect width="60" height="60" fill="white" opacity="0.2" rx="4"/>
+    <text x="30" y="40" font-family="Arial, sans-serif" font-size="12" fill="white" text-anchor="middle">🏆</text>
+  </g>
+  
+  <g transform="translate(850, 300)">
+    <rect width="60" height="60" fill="white" opacity="0.2" rx="4"/>
+    <text x="30" y="40" font-family="Arial, sans-serif" font-size="12" fill="white" text-anchor="middle">💎</text>
+  </g>
+</svg>

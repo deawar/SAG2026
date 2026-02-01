@@ -488,6 +488,391 @@ class UIComponents {
             okBtn.focus();
         });
     }
+
+    /**
+     * Create toast notification (non-blocking alert)
+     * @param {object} options - Toast options
+     * @returns {HTMLElement}
+     */
+    static createToast(options = {}) {
+        const {
+            message = '',
+            type = 'info',
+            duration = 5000,
+            position = 'bottom-right',
+        } = options;
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type} toast-${position}`;
+        toast.setAttribute('role', 'status');
+        toast.setAttribute('aria-live', 'polite');
+        
+        const icon = {
+            success: '✓',
+            error: '✕',
+            warning: '⚠',
+            info: 'ℹ',
+        }[type] || '✓';
+
+        toast.innerHTML = `
+            <span class="toast-icon">${icon}</span>
+            <span class="toast-message">${this.escapeHtml(message)}</span>
+            <button class="toast-close" aria-label="Close">×</button>
+        `;
+
+        // Add to document
+        if (!document.querySelector('.toast-container')) {
+            const container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        const container = document.querySelector('.toast-container');
+        container.appendChild(toast);
+
+        // Close button handler
+        const closeBtn = toast.querySelector('.toast-close');
+        const removeToast = () => {
+            toast.classList.add('fade-out');
+            setTimeout(() => toast.remove(), 300);
+        };
+        closeBtn.addEventListener('click', removeToast);
+
+        // Auto-dismiss
+        if (duration > 0) {
+            setTimeout(removeToast, duration);
+        }
+
+        return toast;
+    }
+
+    /**
+     * Create dropdown component
+     * @param {object} options - Dropdown options
+     * @returns {HTMLElement}
+     */
+    static createDropdown(options = {}) {
+        const {
+            id = 'dropdown-' + Date.now(),
+            label = 'Select option',
+            items = [],
+            onSelect = null,
+            className = '',
+        } = options;
+
+        const wrapper = document.createElement('div');
+        wrapper.className = `dropdown ${className}`;
+
+        const button = document.createElement('button');
+        button.id = id + '-btn';
+        button.className = 'dropdown-btn';
+        button.setAttribute('aria-haspopup', 'true');
+        button.setAttribute('aria-expanded', 'false');
+        button.innerHTML = `
+            ${this.escapeHtml(label)}
+            <span class="dropdown-arrow">▼</span>
+        `;
+
+        const menu = document.createElement('div');
+        menu.className = 'dropdown-menu';
+        menu.id = id + '-menu';
+        menu.setAttribute('role', 'menu');
+        menu.style.display = 'none';
+
+        items.forEach((item, index) => {
+            const menuItem = document.createElement('button');
+            menuItem.className = 'dropdown-item';
+            menuItem.type = 'button';
+            menuItem.textContent = this.escapeHtml(item.label || '');
+            menuItem.setAttribute('role', 'menuitem');
+            
+            menuItem.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (onSelect) {
+                    onSelect(item.value, item.label);
+                }
+                button.textContent = this.escapeHtml(item.label);
+                menu.style.display = 'none';
+                button.setAttribute('aria-expanded', 'false');
+            });
+
+            menu.appendChild(menuItem);
+        });
+
+        // Toggle menu
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            const isOpen = menu.style.display !== 'none';
+            menu.style.display = isOpen ? 'none' : 'block';
+            button.setAttribute('aria-expanded', !isOpen);
+        });
+
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+            if (!wrapper.contains(e.target)) {
+                menu.style.display = 'none';
+                button.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        wrapper.appendChild(button);
+        wrapper.appendChild(menu);
+
+        return wrapper;
+    }
+
+    /**
+     * Create tab component
+     * @param {object} options - Tab options
+     * @returns {HTMLElement}
+     */
+    static createTabs(options = {}) {
+        const {
+            id = 'tabs-' + Date.now(),
+            tabs = [],
+            activeIndex = 0,
+            onTabChange = null,
+        } = options;
+
+        const container = document.createElement('div');
+        container.className = 'tabs-container';
+        container.id = id;
+
+        // Tab buttons
+        const tabList = document.createElement('div');
+        tabList.className = 'tabs-list';
+        tabList.setAttribute('role', 'tablist');
+
+        tabs.forEach((tab, index) => {
+            const button = document.createElement('button');
+            button.className = `tab-button${index === activeIndex ? ' active' : ''}`;
+            button.setAttribute('role', 'tab');
+            button.setAttribute('aria-selected', index === activeIndex);
+            button.setAttribute('aria-controls', `${id}-panel-${index}`);
+            button.textContent = this.escapeHtml(tab.label || '');
+
+            button.addEventListener('click', () => {
+                // Remove active from all tabs/panels
+                tabList.querySelectorAll('.tab-button').forEach(t => {
+                    t.classList.remove('active');
+                    t.setAttribute('aria-selected', 'false');
+                });
+                container.querySelectorAll('.tab-panel').forEach(p => {
+                    p.classList.remove('active');
+                    p.setAttribute('aria-hidden', 'true');
+                });
+
+                // Add active to clicked tab/panel
+                button.classList.add('active');
+                button.setAttribute('aria-selected', 'true');
+                const panel = document.getElementById(`${id}-panel-${index}`);
+                if (panel) {
+                    panel.classList.add('active');
+                    panel.setAttribute('aria-hidden', 'false');
+                }
+
+                if (onTabChange) {
+                    onTabChange(index, tab);
+                }
+            });
+
+            tabList.appendChild(button);
+        });
+
+        container.appendChild(tabList);
+
+        // Tab panels
+        tabs.forEach((tab, index) => {
+            const panel = document.createElement('div');
+            panel.className = `tab-panel${index === activeIndex ? ' active' : ''}`;
+            panel.id = `${id}-panel-${index}`;
+            panel.setAttribute('role', 'tabpanel');
+            panel.setAttribute('aria-labelledby', `${id}-btn-${index}`);
+            panel.setAttribute('aria-hidden', index !== activeIndex);
+
+            if (typeof tab.content === 'string') {
+                panel.innerHTML = tab.content;
+            } else if (tab.content instanceof HTMLElement) {
+                panel.appendChild(tab.content);
+            }
+
+            container.appendChild(panel);
+        });
+
+        return container;
+    }
+
+    /**
+     * Validate form and return errors
+     * @param {HTMLFormElement} form - Form element
+     * @returns {object} { isValid: boolean, errors: {} }
+     */
+    static validateForm(form) {
+        const errors = {};
+        const inputs = form.querySelectorAll('input, textarea, select');
+
+        inputs.forEach((input) => {
+            const fieldName = input.name || input.id;
+            const value = input.value.trim();
+
+            // Check required
+            if (input.hasAttribute('required') && !value) {
+                errors[fieldName] = 'This field is required';
+                return;
+            }
+
+            // Check email
+            if (input.type === 'email' && value && !this.validateEmail(value)) {
+                errors[fieldName] = 'Please enter a valid email';
+                return;
+            }
+
+            // Check minimum length
+            if (input.hasAttribute('minlength')) {
+                const minLength = parseInt(input.getAttribute('minlength'));
+                if (value && value.length < minLength) {
+                    errors[fieldName] = `Must be at least ${minLength} characters`;
+                    return;
+                }
+            }
+
+            // Check pattern
+            if (input.hasAttribute('pattern')) {
+                const pattern = new RegExp(input.getAttribute('pattern'));
+                if (value && !pattern.test(value)) {
+                    errors[fieldName] = 'Invalid format';
+                    return;
+                }
+            }
+
+            // Check password strength
+            if (input.type === 'password' && input.hasAttribute('data-require-strength')) {
+                const strength = this.validatePassword(value);
+                if (strength.score < 3) {
+                    errors[fieldName] = 'Password is too weak';
+                    return;
+                }
+            }
+        });
+
+        return {
+            isValid: Object.keys(errors).length === 0,
+            errors: errors,
+        };
+    }
+
+    /**
+     * Display form errors
+     * @param {HTMLFormElement} form - Form element
+     * @param {object} errors - Error object
+     */
+    static displayFormErrors(form, errors) {
+        // Clear previous errors
+        form.querySelectorAll('.error-message').forEach(el => el.remove());
+
+        // Display new errors
+        Object.entries(errors).forEach(([fieldName, message]) => {
+            const input = form.querySelector(`[name="${fieldName}"], #${fieldName}`);
+            if (input) {
+                input.classList.add('error');
+                input.setAttribute('aria-invalid', 'true');
+
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.setAttribute('role', 'alert');
+                errorDiv.textContent = message;
+
+                input.parentNode.insertBefore(errorDiv, input.nextSibling);
+            }
+        });
+    }
+
+    /**
+     * Clear form errors
+     * @param {HTMLFormElement} form - Form element
+     */
+    static clearFormErrors(form) {
+        form.querySelectorAll('.error').forEach(el => {
+            el.classList.remove('error');
+            el.setAttribute('aria-invalid', 'false');
+        });
+        form.querySelectorAll('.error-message').forEach(el => el.remove());
+    }
+
+    /**
+     * Create password strength indicator
+     * @param {string} password - Password string
+     * @returns {HTMLElement}
+     */
+    static createPasswordStrengthMeter(password = '') {
+        const meter = document.createElement('div');
+        meter.className = 'password-strength-meter';
+
+        const strength = this.validatePassword(password);
+        const colors = ['#d32f2f', '#f57c00', '#fbc02d', '#388e3c'];
+        const labels = ['Weak', 'Fair', 'Good', 'Strong'];
+
+        meter.innerHTML = `
+            <div class="strength-bar">
+                <div class="strength-fill" style="width: ${(strength.score / 4) * 100}%; background-color: ${colors[strength.score] || '#ccc'};"></div>
+            </div>
+            <span class="strength-label" style="color: ${colors[strength.score] || '#999'};">${labels[strength.score] || 'Invalid'}</span>
+        `;
+
+        return meter;
+    }
+
+    /**
+     * Debounce function
+     * @param {Function} func - Function to debounce
+     * @param {number} delay - Delay in milliseconds
+     * @returns {Function}
+     */
+    static debounce(func, delay = 300) {
+        let timeoutId;
+        return function (...args) {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => func.apply(this, args), delay);
+        };
+    }
+
+    /**
+     * Throttle function
+     * @param {Function} func - Function to throttle
+     * @param {number} limit - Limit in milliseconds
+     * @returns {Function}
+     */
+    static throttle(func, limit = 300) {
+        let inThrottle;
+        return function (...args) {
+            if (!inThrottle) {
+                func.apply(this, args);
+                inThrottle = true;
+                setTimeout(() => (inThrottle = false), limit);
+            }
+        };
+    }
+
+    /**
+     * Count down timer for auctions
+     * @param {number} endTime - End time in milliseconds
+     * @param {Function} callback - Callback on tick
+     * @returns {Function} Stop function
+     */
+    static startCountdown(endTime, callback) {
+        const updateCountdown = () => {
+            const now = Date.now();
+            const remaining = Math.max(0, endTime - now);
+
+            callback(remaining);
+
+            if (remaining > 0) {
+                return setTimeout(updateCountdown, 1000);
+            }
+        };
+
+        return updateCountdown();
+    }
 }
 
 // Create global instance

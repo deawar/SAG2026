@@ -609,6 +609,156 @@
     }
 }
 
+/* ===== Authentication Pages - Mobile First ===== */
+/* Base: 0px - 640px */
+.auth-page {
+    padding: var(--spacing-lg) var(--spacing-sm);
+}
+
+.auth-container {
+    grid-template-columns: 1fr;
+}
+
+.auth-card {
+    padding: var(--spacing-lg);
+}
+
+.auth-info {
+    display: none;
+}
+
+.auth-header h1 {
+    font-size: var(--font-size-2xl);
+}
+
+.form-row {
+    grid-template-columns: 1fr;
+}
+
+.form-actions {
+    flex-direction: column;
+}
+
+.form-actions .btn {
+    width: 100%;
+}
+
+/* ===== Progress Indicator - Mobile ===== */
+.progress-step {
+    width: 32px;
+    height: 32px;
+    font-size: var(--font-size-sm);
+}
+
+.progress-line {
+    max-width: 20px;
+}
+
+/* ===== QR Code - Mobile ===== */
+.qr-code {
+    max-width: 180px;
+}
+
+/* ===== Tablet (641px and up) ===== */
+@media (min-width: 641px) {
+    .auth-page {
+        padding: var(--spacing-2xl) var(--spacing-lg);
+    }
+    
+    .auth-card {
+        padding: var(--spacing-2xl);
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .auth-header h1 {
+        font-size: var(--font-size-3xl);
+    }
+}
+
+/* ===== Tablet Large (769px and up) ===== */
+@media (min-width: 769px) {
+    .auth-container {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-xl);
+    }
+    
+    .auth-card {
+        order: 1;
+    }
+    
+    .auth-info {
+        display: block;
+        order: 2;
+    }
+    
+    .auth-card.compact {
+        grid-column: 1;
+    }
+    
+    .qr-code {
+        max-width: 250px;
+    }
+    
+    /* Dashboard Tabs */
+    .dashboard-tabs,
+    .admin-tabs {
+        display: flex;
+        border-bottom: 2px solid var(--color-lighter-gray);
+    }
+    
+    .tabs-list {
+        flex-wrap: nowrap;
+    }
+    
+    .tab-button {
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+    
+    /* Form Row on Tablet */
+    .form-row {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* ===== Desktop (1025px and up) ===== */
+@media (min-width: 1025px) {
+    .auth-page {
+        padding: var(--spacing-2xl);
+    }
+    
+    .auth-container {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-2xl);
+        max-width: 1200px;
+    }
+    
+    .auth-card {
+        padding: var(--spacing-2xl);
+    }
+    
+    .auth-info {
+        padding: var(--spacing-2xl);
+    }
+    
+    .backup-codes-section {
+        max-height: 300px;
+    }
+    
+    /* Dashboard on Desktop */
+    .dashboard-content .tab-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-2xl);
+    }
+    
+    .admin-content .tab-content {
+        display: block;
+    }
+}
+
 /* ===== Wide Displays (Ultra-wide 1440px+) ===== */
 @media (min-width: 1440px) {
     .container,
@@ -627,5 +777,9 @@
     .artwork-image-section {
         position: sticky;
         top: 120px;
+    }
+    
+    .auth-container {
+        max-width: 1400px;
     }
 }
