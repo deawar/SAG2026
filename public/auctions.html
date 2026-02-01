@@ -9,6 +9,10 @@
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/responsive.css">
     <link rel="stylesheet" href="/css/accessibility.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
 </head>
 <body>
     <!-- Skip link -->
@@ -24,27 +28,30 @@
             </div>
             <nav class="navbar-nav" role="navigation" aria-label="Main Navigation">
                 <ul class="nav-list">
-                    <li><a href="/auctions.html" class="nav-link active">Auctions</a></li>
+                    <li><a href="/auctions.html" class="nav-link active" aria-current="page">Auctions</a></li>
                     <li><a href="/" class="nav-link">Home</a></li>
                     <li><a href="#help" class="nav-link">Help</a></li>
                 </ul>
             </nav>
             <div class="navbar-auth">
-                <button class="btn btn-secondary" id="login-btn">Login</button>
-                <button class="btn btn-profile" id="user-menu-btn" style="display:none;">
+                <button class="btn btn-secondary" id="login-btn" aria-label="Login to your account">Login</button>
+                <button class="btn btn-profile" id="user-menu-btn" aria-label="User account menu" style="display:none;">
                     <span id="user-name"></span>
+                    <span class="menu-icon" aria-hidden="true">▼</span>
                 </button>
             </div>
-            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu">
-                <span></span><span></span><span></span>
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
             </button>
         </div>
     </header>
 
     <!-- Main Content -->
     <main id="main-content" class="main-content">
-        <!-- Page Title -->
-        <section class="page-header">
+        <!-- Page Header -->
+        <section class="page-header" role="region" aria-label="Page Header">
             <div class="container">
                 <h1>Active Auctions</h1>
                 <p>Discover and bid on amazing artwork supporting education</p>
@@ -56,91 +63,141 @@
                 <!-- Filters Sidebar -->
                 <aside class="filters-sidebar" role="complementary" aria-label="Auction Filters">
                     <h2>Filters</h2>
-                    
-                    <!-- Status Filter -->
-                    <div class="filter-group">
-                        <label for="filter-status">Status</label>
-                        <select id="filter-status" class="filter-control">
-                            <option value="">All Auctions</option>
-                            <option value="active">Active</option>
-                            <option value="ending_soon">Ending Soon</option>
-                            <option value="closed">Closed</option>
-                        </select>
-                    </div>
+                    <form id="filters-form" aria-label="Filter auctions">
+                        <!-- Status Filter -->
+                        <fieldset class="filter-group">
+                            <legend><label for="filter-status">Status</label></legend>
+                            <select id="filter-status" class="filter-control" aria-describedby="filter-status-help">
+                                <option value="">All Auctions</option>
+                                <option value="active">Active</option>
+                                <option value="ending_soon">Ending Soon</option>
+                                <option value="closed">Closed</option>
+                            </select>
+                            <small id="filter-status-help" class="help-text">Filter by auction status</small>
+                        </fieldset>
 
-                    <!-- Price Range Filter -->
-                    <div class="filter-group">
-                        <label for="filter-price-min">Price Range</label>
-                        <input type="number" id="filter-price-min" class="filter-control" placeholder="Min" min="0">
-                        <input type="number" id="filter-price-max" class="filter-control" placeholder="Max" min="0">
-                    </div>
+                        <!-- Price Range Filter -->
+                        <fieldset class="filter-group">
+                            <legend>Price Range</legend>
+                            <div class="price-inputs">
+                                <div class="form-group">
+                                    <label for="filter-price-min">Minimum</label>
+                                    <input 
+                                        type="number" 
+                                        id="filter-price-min" 
+                                        class="filter-control" 
+                                        placeholder="Min" 
+                                        min="0"
+                                        aria-label="Minimum price"
+                                    >
+                                </div>
+                                <div class="form-group">
+                                    <label for="filter-price-max">Maximum</label>
+                                    <input 
+                                        type="number" 
+                                        id="filter-price-max" 
+                                        class="filter-control" 
+                                        placeholder="Max" 
+                                        min="0"
+                                        aria-label="Maximum price"
+                                    >
+                                </div>
+                            </div>
+                        </fieldset>
 
-                    <!-- School Filter -->
-                    <div class="filter-group">
-                        <label for="filter-school">School</label>
-                        <select id="filter-school" class="filter-control">
-                            <option value="">All Schools</option>
-                            <!-- Populated by JavaScript -->
-                        </select>
-                    </div>
+                        <!-- School Filter -->
+                        <fieldset class="filter-group">
+                            <legend><label for="filter-school">School</label></legend>
+                            <select id="filter-school" class="filter-control" aria-describedby="filter-school-help">
+                                <option value="">All Schools</option>
+                                <!-- Populated by JavaScript -->
+                            </select>
+                            <small id="filter-school-help" class="help-text">Filter by school</small>
+                        </fieldset>
 
-                    <!-- Sort Options -->
-                    <div class="filter-group">
-                        <label for="sort-by">Sort By</label>
-                        <select id="sort-by" class="filter-control">
-                            <option value="newest">Newest</option>
-                            <option value="ending-soon">Ending Soon</option>
-                            <option value="price-low">Price: Low to High</option>
-                            <option value="price-high">Price: High to Low</option>
-                            <option value="most-bids">Most Bids</option>
-                        </select>
-                    </div>
+                        <!-- Sort Options -->
+                        <fieldset class="filter-group">
+                            <legend><label for="sort-by">Sort By</label></legend>
+                            <select id="sort-by" class="filter-control">
+                                <option value="newest">Newest</option>
+                                <option value="ending-soon">Ending Soon</option>
+                                <option value="price-low">Price: Low to High</option>
+                                <option value="price-high">Price: High to Low</option>
+                                <option value="most-bids">Most Bids</option>
+                            </select>
+                        </fieldset>
 
-                    <!-- Apply Filters Button -->
-                    <button class="btn btn-primary" id="apply-filters">Apply Filters</button>
+                        <!-- Apply Filters Button -->
+                        <button type="button" class="btn btn-primary btn-block" id="apply-filters">Apply Filters</button>
+                        <button type="button" class="btn btn-secondary btn-block" id="clear-filters" aria-label="Clear all filters">Clear Filters</button>
+                    </form>
                 </aside>
 
-                <!-- Auctions Grid -->
+                <!-- Auctions Main Section -->
                 <section class="auctions-main" role="region" aria-label="Auction Listings">
                     <!-- Results Info -->
-                    <div class="results-info">
+                    <div class="results-info" role="status" aria-live="polite" aria-atomic="true">
                         <p id="results-count">Loading auctions...</p>
                     </div>
 
                     <!-- Auctions Grid -->
-                    <div class="auctions-grid" id="auctions-grid" role="list">
+                    <div class="auctions-grid" id="auctions-grid" role="list" aria-label="Available auctions">
                         <!-- Populated by JavaScript -->
+                    </div>
+
+                    <!-- No Results Message -->
+                    <div id="no-results" class="no-results" role="status" style="display:none;">
+                        <p>No auctions match your filters. Try adjusting your search criteria.</p>
+                        <button class="btn btn-secondary" id="reset-filters">Reset Filters</button>
+                    </div>
+
+                    <!-- Loading Indicator -->
+                    <div id="loading-spinner" class="loading-spinner" role="status" aria-label="Loading auctions" style="display:none;">
+                        <span class="spinner" aria-hidden="true"></span>
                     </div>
 
                     <!-- Pagination -->
                     <nav class="pagination" role="navigation" aria-label="Auction results pagination">
-                        <button class="btn btn-secondary" id="prev-page" aria-label="Previous page">← Previous</button>
-                        <span id="page-info" class="page-info">Page 1</span>
-                        <button class="btn btn-secondary" id="next-page" aria-label="Next page">Next →</button>
+                        <button class="btn btn-secondary" id="prev-page" aria-label="Previous page of results">← Previous</button>
+                        <span id="page-info" class="page-info" aria-live="polite">Page 1</span>
+                        <button class="btn btn-secondary" id="next-page" aria-label="Next page of results">Next →</button>
                     </nav>
                 </section>
             </div>
         </div>
     </main>
 
-    <!-- Modal: Auction Detail -->
-    <div id="auction-detail-modal" class="modal" role="dialog" aria-modal="true" style="display:none;">
-        <div class="modal-content modal-large">
-            <button class="modal-close" aria-label="Close auction detail">&times;</button>
-            
-            <div class="auction-detail" id="auction-detail">
-                <!-- Populated by JavaScript -->
-            </div>
-        </div>
-    </div>
-
     <!-- Alert Container -->
-    <div id="alert-container" class="alert-container" role="region" aria-live="polite"></div>
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
 
     <!-- Footer -->
     <footer class="footer" role="contentinfo">
         <div class="container">
-            <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About SAG</h3>
+                    <p>Silent Auction Gallery supports education through art.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="/auctions.html">Auctions</a></li>
+                        <li><a href="/">Home</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Legal</h3>
+                    <ul>
+                        <li><a href="#privacy">Privacy Policy</a></li>
+                        <li><a href="#terms">Terms of Service</a></li>
+                        <li><a href="#accessibility">Accessibility</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+            </div>
         </div>
     </footer>
 
@@ -151,6 +208,6 @@
     <script src="/js/auth-manager.js"></script>
     <script src="/js/ui-components.js"></script>
     <script src="/js/auction-manager.js"></script>
-    <script src="/js/auctions.js"></script>
+    <script src="/js/auctions-page.js"></script>
 </body>
 </html>

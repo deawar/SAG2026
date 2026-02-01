@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/responsive.css">
     <link rel="stylesheet" href="/css/accessibility.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
 </head>
 <body>
     <!-- Skip link -->
@@ -30,13 +33,16 @@
                 </ul>
             </nav>
             <div class="navbar-auth">
-                <button class="btn btn-secondary" id="login-btn">Login</button>
-                <button class="btn btn-profile" id="user-menu-btn" style="display:none;">
+                <button class="btn btn-secondary" id="login-btn" aria-label="Login to your account">Login</button>
+                <button class="btn btn-profile" id="user-menu-btn" aria-label="User account menu" style="display:none;">
                     <span id="user-name"></span>
+                    <span class="menu-icon" aria-hidden="true">▼</span>
                 </button>
             </div>
-            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu">
-                <span></span><span></span><span></span>
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
             </button>
         </div>
     </header>
@@ -46,11 +52,11 @@
         <div class="container">
             <!-- Breadcrumb Navigation -->
             <nav class="breadcrumb" role="navigation" aria-label="Breadcrumb navigation">
-                <a href="/">Home</a>
-                <span aria-hidden="true">/</span>
-                <a href="/auctions.html">Auctions</a>
-                <span aria-hidden="true">/</span>
-                <span id="breadcrumb-title">Auction Details</span>
+                <ol>
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/auctions.html">Auctions</a></li>
+                    <li><span id="breadcrumb-title" aria-current="page">Auction Details</span></li>
+                </ol>
             </nav>
 
             <!-- Auction Detail Section -->
@@ -58,10 +64,28 @@
                 <div class="auction-detail-container">
                     <!-- Artwork Image -->
                     <div class="artwork-image-section">
-                        <img id="artwork-image" src="" alt="Artwork" class="artwork-image">
+                        <div class="artwork-image-wrapper">
+                            <img id="artwork-image" src="" alt="" class="artwork-image">
+                            <button class="btn-icon" id="fullscreen-btn" aria-label="View artwork in fullscreen" title="Fullscreen">
+                                <span aria-hidden="true">⛶</span>
+                            </button>
+                        </div>
                         <div class="artwork-info-small">
                             <p id="artwork-title-small"></p>
                             <p id="artwork-artist-small" class="artist-name"></p>
+                        </div>
+                        
+                        <!-- Share & QR Code Buttons -->
+                        <div class="artwork-actions">
+                            <button class="btn btn-secondary" id="share-btn" aria-label="Share this auction">
+                                <span aria-hidden="true">↗</span> Share
+                            </button>
+                            <button class="btn btn-secondary" id="qr-btn" aria-label="Show QR code for this auction">
+                                <span aria-hidden="true">⌑</span> QR Code
+                            </button>
+                            <button class="btn btn-secondary" id="watchlist-btn" aria-label="Add to watchlist">
+                                <span aria-hidden="true">♡</span> Watch
+                            </button>
                         </div>
                     </div>
 
@@ -75,13 +99,13 @@
 
                             <dl class="artwork-specs">
                                 <dt>Medium:</dt>
-                                <dd id="artwork-medium"></dd>
+                                <dd id="artwork-medium">-</dd>
                                 <dt>Year:</dt>
-                                <dd id="artwork-year"></dd>
+                                <dd id="artwork-year">-</dd>
                                 <dt>Dimensions:</dt>
-                                <dd id="artwork-dimensions"></dd>
+                                <dd id="artwork-dimensions">-</dd>
                                 <dt>School:</dt>
-                                <dd id="school-name"></dd>
+                                <dd id="school-name">-</dd>
                             </dl>
                         </div>
 
@@ -89,73 +113,97 @@
                         <div class="auction-status" role="region" aria-label="Auction Status">
                             <h2>Auction Information</h2>
 
+                            <!-- Auction Status Badge -->
+                            <div class="auction-status-badge" id="auction-status-badge" aria-live="polite">
+                                <!-- Populated by JavaScript -->
+                            </div>
+
                             <!-- Timer -->
                             <div class="auction-timer">
-                                <div class="timer-display" id="timer-display" aria-live="polite">
+                                <div class="timer-display" id="timer-display" role="status" aria-live="polite" aria-atomic="true">
                                     <div class="timer-label">Time Remaining</div>
-                                    <div class="timer-value" id="timer-value">--:--:--</div>
+                                    <div class="timer-value" id="timer-value" aria-label="Hours, minutes, and seconds remaining">--:--:--</div>
                                 </div>
                             </div>
 
                             <!-- Price Information -->
                             <div class="price-info">
                                 <div class="price-item">
-                                    <label>Opening Bid</label>
-                                    <span id="opening-bid" class="price-value">-</span>
+                                    <label for="display-opening-bid">Opening Bid</label>
+                                    <span id="display-opening-bid" class="price-value">-</span>
                                 </div>
                                 <div class="price-item">
-                                    <label>Current Bid</label>
-                                    <span id="current-bid" class="price-value">-</span>
+                                    <label for="display-current-bid">Current Bid</label>
+                                    <span id="display-current-bid" class="price-value" aria-live="polite">-</span>
                                 </div>
                                 <div class="price-item">
-                                    <label>Minimum Increment</label>
-                                    <span id="minimum-increment" class="price-value">-</span>
+                                    <label for="display-minimum-increment">Minimum Increment</label>
+                                    <span id="display-minimum-increment" class="price-value">-</span>
                                 </div>
                                 <div class="price-item">
-                                    <label>Number of Bids</label>
-                                    <span id="bid-count">0</span>
+                                    <label for="display-bid-count">Number of Bids</label>
+                                    <span id="display-bid-count" aria-live="polite">0</span>
                                 </div>
                             </div>
 
-                            <!-- Bidding Form -->
-                            <form id="bidding-form" class="bidding-form">
-                                <div class="form-group">
-                                    <label for="bid-amount">Place Your Bid</label>
-                                    <input 
-                                        type="number" 
-                                        id="bid-amount" 
-                                        class="form-control" 
-                                        placeholder="Enter bid amount"
-                                        step="0.01"
-                                        min="0"
-                                        aria-required="true"
-                                    >
-                                    <small id="bid-error" class="error-message" role="alert"></small>
-                                </div>
+                            <!-- Bidding Form (Visible to logged-in users) -->
+                            <div id="bidding-form-container" style="display:none;">
+                                <form id="bidding-form" class="bidding-form" aria-label="Place bid form">
+                                    <fieldset>
+                                        <legend>Place Your Bid</legend>
+                                        
+                                        <div class="form-group">
+                                            <label for="bid-amount">Bid Amount <span aria-label="required">*</span></label>
+                                            <div class="input-wrapper">
+                                                <span class="currency-symbol">$</span>
+                                                <input 
+                                                    type="number" 
+                                                    id="bid-amount" 
+                                                    class="form-control" 
+                                                    placeholder="Enter bid amount"
+                                                    step="0.01"
+                                                    min="0"
+                                                    required
+                                                    aria-required="true"
+                                                    aria-describedby="bid-amount-help bid-amount-error"
+                                                >
+                                            </div>
+                                            <small id="bid-amount-help" class="help-text">Minimum bid: $<span id="min-bid-amount">0.00</span></small>
+                                            <small id="bid-amount-error" class="error-message" role="alert"></small>
+                                        </div>
 
-                                <div class="form-group">
-                                    <label for="payment-method">Payment Method</label>
-                                    <select id="payment-method" class="form-control" aria-required="true">
-                                        <option value="">Select payment method</option>
-                                        <option value="credit_card">Credit Card</option>
-                                        <option value="debit_card">Debit Card</option>
-                                        <option value="bank_transfer">Bank Transfer</option>
-                                    </select>
-                                </div>
+                                        <div class="form-group">
+                                            <label for="payment-method">Payment Method <span aria-label="required">*</span></label>
+                                            <select id="payment-method" class="form-control" required aria-required="true" aria-describedby="payment-help">
+                                                <option value="">Select payment method</option>
+                                                <option value="credit_card">Credit Card</option>
+                                                <option value="debit_card">Debit Card</option>
+                                                <option value="bank_transfer">Bank Transfer</option>
+                                            </select>
+                                            <small id="payment-help" class="help-text">Required to finalize purchase if you win</small>
+                                        </div>
 
-                                <button type="submit" class="btn btn-primary btn-large" id="place-bid-btn">
-                                    Place Bid
-                                </button>
-                                <p class="bid-note">
-                                    By placing a bid, you commit to purchase this item if you win the auction.
-                                </p>
-                            </form>
+                                        <button type="submit" class="btn btn-primary btn-large btn-block" id="place-bid-btn">
+                                            Place Bid
+                                        </button>
+                                    </fieldset>
+                                    
+                                    <p class="bid-note" role="note">
+                                        By placing a bid, you commit to purchase this item if you win the auction.
+                                    </p>
+                                </form>
+                            </div>
 
                             <!-- Authentication Required Message -->
-                            <div id="auth-required" class="alert alert-info" style="display:none;">
+                            <div id="auth-required" class="alert alert-info" role="alertdialog" style="display:none;">
                                 <p>You must be logged in to place a bid. 
                                     <button type="button" class="btn-link" id="login-from-auction">Log in here</button>
                                 </p>
+                            </div>
+
+                            <!-- Auction Closed Message -->
+                            <div id="auction-closed" class="alert alert-warning" role="alertdialog" style="display:none;">
+                                <p id="closed-message">This auction has ended. Thank you for participating!</p>
                             </div>
                         </div>
                     </div>
@@ -164,7 +212,15 @@
                 <!-- Bid History -->
                 <section class="bid-history" role="region" aria-label="Bid History">
                     <h2>Bid History</h2>
-                    <div id="bid-history-container" class="bid-history-list">
+                    <div id="bid-history-container" class="bid-history-list" role="list" aria-live="polite" aria-atomic="false">
+                        <p class="loading-message">Loading bid history...</p>
+                    </div>
+                </section>
+
+                <!-- Related Auctions -->
+                <section class="related-auctions" role="region" aria-label="Related Auctions">
+                    <h2>More Auctions from this School</h2>
+                    <div class="auctions-grid-small" id="related-auctions-grid" role="list">
                         <!-- Populated by JavaScript -->
                     </div>
                 </section>
@@ -172,15 +228,17 @@
         </div>
     </main>
 
-    <!-- Modal: Login (Displayed when placing bid while logged out) -->
+    <!-- Modal: Login -->
     <div id="login-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="login-title" style="display:none;">
         <div class="modal-content">
             <button class="modal-close" aria-label="Close login modal">&times;</button>
             
             <h2 id="login-title">Login to Your Account</h2>
-            <form id="login-form" class="auth-form">
+            <p class="modal-subtitle">Sign in to place your bid</p>
+            
+            <form id="login-form" class="auth-form" aria-label="Login form">
                 <div class="form-group">
-                    <label for="login-email">Email Address</label>
+                    <label for="login-email">Email Address <span aria-label="required">*</span></label>
                     <input 
                         type="email" 
                         id="login-email" 
@@ -188,11 +246,13 @@
                         placeholder="your@email.com"
                         required
                         aria-required="true"
+                        aria-describedby="login-email-error"
                     >
+                    <small id="login-email-error" class="error-message" role="alert"></small>
                 </div>
 
                 <div class="form-group">
-                    <label for="login-password">Password</label>
+                    <label for="login-password">Password <span aria-label="required">*</span></label>
                     <input 
                         type="password" 
                         id="login-password" 
@@ -200,7 +260,9 @@
                         placeholder="••••••••"
                         required
                         aria-required="true"
+                        aria-describedby="login-password-error"
                     >
+                    <small id="login-password-error" class="error-message" role="alert"></small>
                 </div>
 
                 <div class="form-group checkbox">
@@ -210,16 +272,43 @@
 
                 <button type="submit" class="btn btn-primary btn-block">Login</button>
             </form>
+
+            <p class="auth-link">Don't have an account? <button class="btn-link" id="switch-to-register">Create one</button></p>
+            <p class="auth-link"><button class="btn-link" id="forgot-password">Forgot your password?</button></p>
         </div>
     </div>
 
     <!-- Alert Container -->
-    <div id="alert-container" class="alert-container" role="region" aria-live="polite"></div>
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
 
     <!-- Footer -->
     <footer class="footer" role="contentinfo">
         <div class="container">
-            <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About SAG</h3>
+                    <p>Silent Auction Gallery supports education through art.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="/auctions.html">Auctions</a></li>
+                        <li><a href="/">Home</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Legal</h3>
+                    <ul>
+                        <li><a href="#privacy">Privacy Policy</a></li>
+                        <li><a href="#terms">Terms of Service</a></li>
+                        <li><a href="#accessibility">Accessibility</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+            </div>
         </div>
     </footer>
 

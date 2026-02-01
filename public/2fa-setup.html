@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Set up two-factor authentication for your account">
+    <title>Two-Factor Authentication Setup - Silent Auction Gallery</title>
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+</head>
+<body>
+    <!-- Skip link -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <!-- Navigation Header -->
+    <header class="navbar" role="banner">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="logo" aria-label="Silent Auction Gallery Home">
+                    <span class="logo-text">SAG</span>
+                </a>
+            </div>
+            <nav class="navbar-nav" role="navigation" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="/auctions.html" class="nav-link">Auctions</a></li>
+                    <li><a href="/" class="nav-link">Home</a></li>
+                    <li><a href="#help" class="nav-link">Help</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content auth-page">
+        <div class="auth-container">
+            <div class="auth-card">
+                <!-- Card Header -->
+                <div class="auth-header">
+                    <h1>Two-Factor Authentication</h1>
+                    <p>Add an extra layer of security to your account</p>
+                </div>
+
+                <!-- Progress Indicator -->
+                <div class="progress-indicator" role="progressbar" aria-valuenow="1" aria-valuemin="1" aria-valuemax="2" aria-label="2FA setup step 1 of 2">
+                    <span class="progress-step active" aria-current="step">1</span>
+                    <span class="progress-line"></span>
+                    <span class="progress-step">2</span>
+                </div>
+
+                <form id="2fa-form" class="auth-form" aria-label="Two-factor authentication setup">
+                    <!-- Step 1: Scan QR Code -->
+                    <fieldset id="step-1-fieldset">
+                        <legend class="sr-only">Scan QR Code</legend>
+
+                        <div class="step-header">
+                            <h2>Step 1: Scan QR Code</h2>
+                            <p class="step-subtitle">Use an authenticator app to scan this code</p>
+                        </div>
+
+                        <div class="qr-code-section">
+                            <div class="qr-code-container">
+                                <img id="qr-code" src="" alt="QR code for 2FA setup" class="qr-code">
+                            </div>
+
+                            <p class="qr-help">
+                                Using <strong>Google Authenticator</strong>, <strong>Microsoft Authenticator</strong>, 
+                                or <strong>Authy</strong>? Open the app and scan this code.
+                            </p>
+
+                            <!-- Manual Entry Option -->
+                            <div class="manual-entry">
+                                <details>
+                                    <summary>Can't scan? Enter this code manually:</summary>
+                                    <div class="secret-code" role="region" aria-label="Manual entry code">
+                                        <code id="secret-code">••••••••••••••••••••••••</code>
+                                        <button type="button" class="btn-icon" id="copy-secret-btn" aria-label="Copy code to clipboard" title="Copy">
+                                            <span aria-hidden="true">📋</span>
+                                        </button>
+                                    </div>
+                                </details>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn btn-primary btn-large btn-block" id="next-2fa-btn">
+                            I've Scanned the Code
+                        </button>
+                    </fieldset>
+
+                    <!-- Step 2: Verify Code -->
+                    <fieldset id="step-2-fieldset" style="display:none;">
+                        <legend class="sr-only">Verify Code</legend>
+
+                        <div class="step-header">
+                            <h2>Step 2: Verify Your Code</h2>
+                            <p class="step-subtitle">Enter the 6-digit code from your authenticator app</p>
+                        </div>
+
+                        <!-- Verification Code Input -->
+                        <div class="form-group">
+                            <label for="verification-code">Verification Code <span aria-label="required">*</span></label>
+                            <input 
+                                type="text" 
+                                id="verification-code" 
+                                name="verification_code"
+                                class="form-control verification-input" 
+                                placeholder="000000"
+                                maxlength="6"
+                                inputmode="numeric"
+                                pattern="[0-9]{6}"
+                                required
+                                aria-required="true"
+                                aria-describedby="code-error code-help"
+                                autocomplete="one-time-code"
+                            >
+                            <small id="code-help" class="help-text">6 digits from your authenticator app</small>
+                            <small id="code-error" class="error-message" role="alert"></small>
+                        </div>
+
+                        <!-- Backup Codes -->
+                        <div class="backup-codes-section">
+                            <h3>Backup Codes</h3>
+                            <p class="backup-help">Save these codes in a safe place. You can use them if you lose access to your authenticator app.</p>
+                            
+                            <div class="backup-codes-list" id="backup-codes-list" role="region" aria-label="Backup codes">
+                                <!-- Populated by JavaScript -->
+                            </div>
+
+                            <div class="backup-actions">
+                                <button type="button" class="btn-icon" id="copy-codes-btn" aria-label="Copy all backup codes" title="Copy all codes">
+                                    <span aria-hidden="true">📋</span> Copy Codes
+                                </button>
+                                <a href="#" id="download-codes-btn" class="btn-icon" aria-label="Download backup codes as file">
+                                    <span aria-hidden="true">⬇️</span> Download
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Confirmation -->
+                        <div class="form-group checkbox">
+                            <input 
+                                type="checkbox" 
+                                id="codes-saved" 
+                                name="codes_saved"
+                                class="checkbox-control"
+                                required
+                                aria-required="true"
+                                aria-describedby="codes-error"
+                            >
+                            <label for="codes-saved">I have saved my backup codes in a safe place <span aria-label="required">*</span></label>
+                            <small id="codes-error" class="error-message" role="alert"></small>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" id="back-2fa-btn">Back</button>
+                            <button type="submit" class="btn btn-primary btn-large btn-block" id="enable-2fa-btn">
+                                Enable 2FA
+                            </button>
+                        </div>
+                    </fieldset>
+                </form>
+
+                <!-- Success Message (shown after setup) -->
+                <div id="success-section" style="display:none;">
+                    <div class="success-message">
+                        <div class="success-icon" aria-hidden="true">✓</div>
+                        <h2>Two-Factor Authentication Enabled</h2>
+                        <p>Your account is now more secure. You'll need to enter a code from your authenticator app when you log in.</p>
+                        
+                        <div class="success-actions">
+                            <a href="/user-dashboard.html" class="btn btn-primary btn-large btn-block">Go to Dashboard</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Alert Container -->
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/accessibility.js"></script>
+    <script src="/js/api-client.js"></script>
+    <script src="/js/auth-manager.js"></script>
+    <script src="/js/ui-components.js"></script>
+    <script src="/js/auth-pages.js"></script>
+</body>
+</html>

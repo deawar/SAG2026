@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/responsive.css">
     <link rel="stylesheet" href="/css/accessibility.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
 </head>
 <body>
     <!-- Skip link -->
@@ -30,17 +33,20 @@
                 </ul>
             </nav>
             <div class="navbar-auth">
-                <button class="btn btn-profile" id="user-menu-btn">
-                    <span id="user-name"></span> ▼
+                <button class="btn btn-profile" id="user-menu-btn" aria-label="User account menu" aria-expanded="false">
+                    <span id="user-name"></span>
+                    <span class="menu-icon" aria-hidden="true">▼</span>
                 </button>
-                <div class="user-dropdown" id="user-dropdown" style="display:none;">
-                    <a href="/user-dashboard.html" class="dropdown-item active">Dashboard</a>
-                    <a href="#settings" class="dropdown-item">Account Settings</a>
-                    <button class="dropdown-item" id="logout-btn">Logout</button>
+                <div class="user-dropdown" id="user-dropdown" style="display:none;" role="menu">
+                    <a href="/user-dashboard.html" class="dropdown-item" role="menuitem" aria-current="page">Dashboard</a>
+                    <a href="#settings" class="dropdown-item" role="menuitem">Account Settings</a>
+                    <button class="dropdown-item" id="logout-btn" role="menuitem">Logout</button>
                 </div>
             </div>
-            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu">
-                <span></span><span></span><span></span>
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
             </button>
         </div>
     </header>
@@ -48,6 +54,414 @@
     <!-- Main Content -->
     <main id="main-content" class="main-content">
         <div class="container">
+            <!-- Breadcrumb Navigation -->
+            <nav class="breadcrumb" role="navigation" aria-label="Breadcrumb navigation">
+                <ol>
+                    <li><a href="/">Home</a></li>
+                    <li><span aria-current="page">Dashboard</span></li>
+                </ol>
+            </nav>
+
+            <!-- Page Header -->
+            <div class="page-header-small" role="region" aria-label="Page Header">
+                <h1>Your Dashboard</h1>
+                <p>Manage your bids and account settings</p>
+            </div>
+
+            <!-- Dashboard Tabs -->
+            <div class="dashboard-tabs">
+                <nav role="tablist" aria-label="Dashboard sections" class="tabs-list">
+                    <button 
+                        role="tab" 
+                        aria-selected="true" 
+                        aria-controls="active-bids" 
+                        class="tab-button active" 
+                        id="tab-active"
+                        tabindex="0"
+                    >
+                        <span class="tab-icon" aria-hidden="true">🎯</span>
+                        Active Bids
+                        <span class="tab-badge" id="active-count" aria-label="number of active bids">0</span>
+                    </button>
+                    <button 
+                        role="tab" 
+                        aria-selected="false" 
+                        aria-controls="bid-history" 
+                        class="tab-button" 
+                        id="tab-history"
+                        tabindex="-1"
+                    >
+                        <span class="tab-icon" aria-hidden="true">📋</span>
+                        Bid History
+                    </button>
+                    <button 
+                        role="tab" 
+                        aria-selected="false" 
+                        aria-controls="wins" 
+                        class="tab-button" 
+                        id="tab-wins"
+                        tabindex="-1"
+                    >
+                        <span class="tab-icon" aria-hidden="true">🏆</span>
+                        My Wins
+                        <span class="tab-badge" id="wins-count" aria-label="number of wins">0</span>
+                    </button>
+                    <button 
+                        role="tab" 
+                        aria-selected="false" 
+                        aria-controls="account" 
+                        class="tab-button" 
+                        id="tab-account"
+                        tabindex="-1"
+                    >
+                        <span class="tab-icon" aria-hidden="true">⚙️</span>
+                        Account Settings
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="dashboard-content">
+                <!-- Active Bids Tab -->
+                <section role="tabpanel" id="active-bids" aria-labelledby="tab-active" class="tab-content active">
+                    <h2>Active Bids</h2>
+                    <p class="section-help">Auctions where you have placed a bid and bidding is still active</p>
+                    
+                    <div id="active-bids-list" class="bids-list" role="list" aria-label="Your active bids">
+                        <p class="loading-message">Loading your active bids...</p>
+                    </div>
+                </section>
+
+                <!-- Bid History Tab -->
+                <section role="tabpanel" id="bid-history" aria-labelledby="tab-history" class="tab-content" style="display:none;">
+                    <h2>Bid History</h2>
+                    <p class="section-help">All bids you have placed</p>
+
+                    <div class="filter-row">
+                        <fieldset class="filter-group">
+                            <legend><label for="history-filter">Filter by status:</label></legend>
+                            <select id="history-filter" class="form-control" aria-describedby="filter-help">
+                                <option value="">All Bids</option>
+                                <option value="active">Active Auctions</option>
+                                <option value="closed">Closed Auctions</option>
+                                <option value="won">Won</option>
+                                <option value="lost">Not Won</option>
+                            </select>
+                            <small id="filter-help" class="help-text">Filter bids by auction status</small>
+                        </fieldset>
+                    </div>
+
+                    <div id="bid-history-list" class="bids-list" role="list" aria-label="Your bid history">
+                        <p class="loading-message">Loading bid history...</p>
+                    </div>
+                </section>
+
+                <!-- Wins Tab -->
+                <section role="tabpanel" id="wins" aria-labelledby="tab-wins" class="tab-content" style="display:none;">
+                    <h2>My Wins</h2>
+                    <p class="section-help">Auctions you have won. Complete checkout to finalize your purchases.</p>
+
+                    <div id="wins-list" class="bids-list" role="list" aria-label="Your auction wins">
+                        <p class="loading-message">Loading your wins...</p>
+                    </div>
+
+                    <div id="no-wins" class="empty-state" style="display:none;">
+                        <p>You haven't won any auctions yet. <a href="/auctions.html">Browse auctions</a> to start bidding!</p>
+                    </div>
+                </section>
+
+                <!-- Account Settings Tab -->
+                <section role="tabpanel" id="account" aria-labelledby="tab-account" class="tab-content" style="display:none;">
+                    <h2>Account Settings</h2>
+
+                    <!-- Profile Information -->
+                    <div class="settings-section">
+                        <h3>Profile Information</h3>
+                        <form id="profile-form" class="settings-form" aria-label="Update profile information">
+                            <fieldset>
+                                <legend class="sr-only">Personal Information</legend>
+                                
+                                <div class="form-group">
+                                    <label for="full-name">Full Name <span aria-label="required">*</span></label>
+                                    <input 
+                                        type="text" 
+                                        id="full-name" 
+                                        class="form-control" 
+                                        required
+                                        aria-required="true"
+                                        aria-describedby="fullname-error"
+                                    >
+                                    <small id="fullname-error" class="error-message" role="alert"></small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="email">Email Address <span aria-label="required">*</span></label>
+                                    <input 
+                                        type="email" 
+                                        id="email" 
+                                        class="form-control" 
+                                        required
+                                        aria-required="true"
+                                        aria-describedby="email-error"
+                                    >
+                                    <small id="email-error" class="error-message" role="alert"></small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="phone">Phone Number</label>
+                                    <input 
+                                        type="tel" 
+                                        id="phone" 
+                                        class="form-control" 
+                                        placeholder="+1 (555) 000-0000"
+                                        aria-describedby="phone-help"
+                                    >
+                                    <small id="phone-help" class="help-text">Optional: for order updates</small>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </fieldset>
+                        </form>
+                    </div>
+
+                    <!-- Address Information -->
+                    <div class="settings-section">
+                        <h3>Shipping Address</h3>
+                        <form id="address-form" class="settings-form" aria-label="Update shipping address">
+                            <fieldset>
+                                <legend class="sr-only">Shipping Address</legend>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="street-address">Street Address</label>
+                                        <input type="text" id="street-address" class="form-control">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="apt-number">Apt/Suite (Optional)</label>
+                                        <input type="text" id="apt-number" class="form-control">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="city">City</label>
+                                        <input type="text" id="city" class="form-control">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="state">State/Province</label>
+                                        <input type="text" id="state" class="form-control">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="postal-code">ZIP/Postal Code</label>
+                                        <input type="text" id="postal-code" class="form-control">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="country">Country</label>
+                                        <input type="text" id="country" class="form-control" value="United States">
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary">Save Address</button>
+                            </fieldset>
+                        </form>
+                    </div>
+
+                    <!-- Payment Methods -->
+                    <div class="settings-section">
+                        <h3>Payment Methods</h3>
+                        <p class="section-help">Manage payment methods for bidding</p>
+                        
+                        <div id="payment-methods-list" class="payment-methods-list" role="list" aria-label="Your payment methods">
+                            <p class="loading-message">Loading payment methods...</p>
+                        </div>
+
+                        <button class="btn btn-secondary" id="add-payment-btn" type="button">Add Payment Method</button>
+                    </div>
+
+                    <!-- Notification Preferences -->
+                    <div class="settings-section">
+                        <h3>Notification Preferences</h3>
+                        <form id="notifications-form" class="settings-form" aria-label="Notification preferences">
+                            <fieldset>
+                                <legend class="sr-only">Email Notifications</legend>
+                                
+                                <div class="form-group checkbox-group">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="notify-outbid" class="checkbox-control" checked>
+                                        <label for="notify-outbid">Notify me when I'm outbid</label>
+                                    </div>
+                                    
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="notify-ending" class="checkbox-control" checked>
+                                        <label for="notify-ending">Notify me when auction is ending soon</label>
+                                    </div>
+                                    
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="notify-won" class="checkbox-control" checked>
+                                        <label for="notify-won">Notify me when I win an auction</label>
+                                    </div>
+                                    
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="notify-new-auctions" class="checkbox-control">
+                                        <label for="notify-new-auctions">Notify me about new auctions</label>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary">Save Preferences</button>
+                            </fieldset>
+                        </form>
+                    </div>
+
+                    <!-- Security Settings -->
+                    <div class="settings-section">
+                        <h3>Security Settings</h3>
+                        
+                        <div class="setting-item">
+                            <h4>Two-Factor Authentication (2FA)</h4>
+                            <p>Add extra security to your account</p>
+                            <button class="btn btn-secondary" id="enable-2fa-btn" type="button">Enable 2FA</button>
+                        </div>
+
+                        <div class="setting-item">
+                            <h4>Change Password</h4>
+                            <button class="btn btn-secondary" id="change-password-btn" type="button">Change Password</button>
+                        </div>
+
+                        <!-- Active Sessions -->
+                        <div class="setting-item">
+                            <h4>Active Sessions</h4>
+                            <p>Manage your active login sessions</p>
+                            <div id="sessions-list" class="sessions-list">
+                                <p class="loading-message">Loading sessions...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Danger Zone -->
+                    <div class="settings-section danger-zone">
+                        <h2>Danger Zone</h2>
+                        <p>Irreversible actions. Be careful!</p>
+                        <button class="btn btn-danger" id="delete-account-btn" type="button">Delete Account</button>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal: Bid Details -->
+    <div id="bid-detail-modal" class="modal" role="dialog" aria-modal="true" style="display:none;">
+        <div class="modal-content modal-medium">
+            <button class="modal-close" aria-label="Close bid details">&times;</button>
+            
+            <h2>Bid Details</h2>
+            <div id="bid-detail-content">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Change Password -->
+    <div id="password-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="password-title" style="display:none;">
+        <div class="modal-content modal-medium">
+            <button class="modal-close" aria-label="Close password change">&times;</button>
+            
+            <h2 id="password-title">Change Password</h2>
+            <form id="password-form" class="auth-form" aria-label="Change password form">
+                <fieldset>
+                    <legend class="sr-only">Password Information</legend>
+                    
+                    <div class="form-group">
+                        <label for="current-password">Current Password <span aria-label="required">*</span></label>
+                        <input 
+                            type="password" 
+                            id="current-password" 
+                            class="form-control" 
+                            required
+                            aria-required="true"
+                            aria-describedby="current-password-error"
+                        >
+                        <small id="current-password-error" class="error-message" role="alert"></small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="new-password">New Password <span aria-label="required">*</span></label>
+                        <input 
+                            type="password" 
+                            id="new-password" 
+                            class="form-control" 
+                            required
+                            aria-required="true"
+                            aria-describedby="new-password-error new-password-help"
+                        >
+                        <small id="new-password-help" class="help-text">Must be at least 8 characters</small>
+                        <small id="new-password-error" class="error-message" role="alert"></small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirm-password">Confirm Password <span aria-label="required">*</span></label>
+                        <input 
+                            type="password" 
+                            id="confirm-password" 
+                            class="form-control" 
+                            required
+                            aria-required="true"
+                            aria-describedby="confirm-password-error"
+                        >
+                        <small id="confirm-password-error" class="error-message" role="alert"></small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">Change Password</button>
+                </fieldset>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About SAG</h3>
+                    <p>Silent Auction Gallery supports education through art.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="/auctions.html">Auctions</a></li>
+                        <li><a href="/">Home</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Legal</h3>
+                    <ul>
+                        <li><a href="#privacy">Privacy Policy</a></li>
+                        <li><a href="#terms">Terms of Service</a></li>
+                        <li><a href="#accessibility">Accessibility</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/accessibility.js"></script>
+    <script src="/js/api-client.js"></script>
+    <script src="/js/websocket-client.js"></script>
+    <script src="/js/auth-manager.js"></script>
+    <script src="/js/ui-components.js"></script>
+    <script src="/js/user-dashboard.js"></script>
+</body>
+</html>
             <!-- Page Header -->
             <div class="page-header-small">
                 <h1>Your Dashboard</h1>

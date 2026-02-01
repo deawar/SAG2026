@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Login to your Silent Auction Gallery account">
+    <title>Login - Silent Auction Gallery</title>
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+</head>
+<body>
+    <!-- Skip link -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <!-- Navigation Header -->
+    <header class="navbar" role="banner">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="logo" aria-label="Silent Auction Gallery Home">
+                    <span class="logo-text">SAG</span>
+                </a>
+            </div>
+            <nav class="navbar-nav" role="navigation" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="/auctions.html" class="nav-link">Auctions</a></li>
+                    <li><a href="/" class="nav-link">Home</a></li>
+                    <li><a href="#help" class="nav-link">Help</a></li>
+                </ul>
+            </nav>
+            <div class="navbar-auth">
+                <a href="/register.html" class="btn btn-primary">Sign Up</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content auth-page">
+        <div class="auth-container">
+            <div class="auth-card">
+                <!-- Card Header -->
+                <div class="auth-header">
+                    <h1>Welcome Back</h1>
+                    <p>Sign in to your Silent Auction Gallery account</p>
+                </div>
+
+                <!-- Login Form -->
+                <form id="login-form" class="auth-form" aria-label="Login form">
+                    <fieldset>
+                        <legend class="sr-only">Login Credentials</legend>
+
+                        <!-- Email Field -->
+                        <div class="form-group">
+                            <label for="email">Email Address <span aria-label="required">*</span></label>
+                            <input 
+                                type="email" 
+                                id="email" 
+                                name="email"
+                                class="form-control" 
+                                placeholder="your@email.com"
+                                required
+                                aria-required="true"
+                                aria-describedby="email-error email-help"
+                                autocomplete="email"
+                            >
+                            <small id="email-help" class="help-text">We'll never share your email</small>
+                            <small id="email-error" class="error-message" role="alert"></small>
+                        </div>
+
+                        <!-- Password Field -->
+                        <div class="form-group">
+                            <label for="password">Password <span aria-label="required">*</span></label>
+                            <input 
+                                type="password" 
+                                id="password" 
+                                name="password"
+                                class="form-control" 
+                                placeholder="••••••••"
+                                required
+                                aria-required="true"
+                                aria-describedby="password-error"
+                                autocomplete="current-password"
+                            >
+                            <small id="password-error" class="error-message" role="alert"></small>
+                        </div>
+
+                        <!-- Remember Me Checkbox -->
+                        <div class="form-group checkbox">
+                            <input 
+                                type="checkbox" 
+                                id="remember" 
+                                name="remember"
+                                class="checkbox-control"
+                            >
+                            <label for="remember">Remember me on this device</label>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button 
+                            type="submit" 
+                            class="btn btn-primary btn-large btn-block"
+                            id="login-btn"
+                            aria-label="Sign in to your account"
+                        >
+                            Sign In
+                        </button>
+                    </fieldset>
+                </form>
+
+                <!-- Forgot Password Link -->
+                <div class="auth-links">
+                    <a href="/password-reset.html" class="btn-link">Forgot your password?</a>
+                </div>
+
+                <!-- Divider -->
+                <div class="auth-divider">
+                    <span>or</span>
+                </div>
+
+                <!-- Sign Up Link -->
+                <p class="auth-footer">
+                    Don't have an account? <a href="/register.html" class="btn-link">Create one</a>
+                </p>
+            </div>
+
+            <!-- Info Box -->
+            <div class="auth-info">
+                <h2>New to Silent Auction Gallery?</h2>
+                <p>Create an account to bid on amazing artwork and support education.</p>
+                <ul class="info-list">
+                    <li>Browse hundreds of artworks</li>
+                    <li>Place bids in real-time auctions</li>
+                    <li>Support schools and charities</li>
+                    <li>Secure payment processing</li>
+                </ul>
+                <a href="/register.html" class="btn btn-secondary btn-large">Create Account</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Alert Container -->
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About SAG</h3>
+                    <p>Silent Auction Gallery supports education through art.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="/auctions.html">Auctions</a></li>
+                        <li><a href="/">Home</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Legal</h3>
+                    <ul>
+                        <li><a href="#privacy">Privacy Policy</a></li>
+                        <li><a href="#terms">Terms of Service</a></li>
+                        <li><a href="#accessibility">Accessibility</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/accessibility.js"></script>
+    <script src="/js/api-client.js"></script>
+    <script src="/js/auth-manager.js"></script>
+    <script src="/js/ui-components.js"></script>
+    <script src="/js/auth-pages.js"></script>
+</body>
+</html>

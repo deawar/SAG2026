@@ -16,8 +16,25 @@ const uuidv4 = () => crypto.randomUUID();
 // 2.1 Database Connection Pool
 // ============================================================================
 
+// Create a shared pool instance for use in services
+const pool = new Pool({
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  database: process.env.DB_NAME,
+  max: process.env.DB_POOL_MAX || 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+});
+
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+});
+
 class Database {
   constructor(config) {
+    // Use the shared pool or create a new one if config is provided
     this.pool = new Pool({
       user: config.user,
       password: config.password,
@@ -1199,6 +1216,7 @@ class BidModel {
 // ============================================================================
 
 module.exports = {
+  pool,
   Database,
   UserModel,
   SchoolModel,
