@@ -54,9 +54,6 @@ COPY --from=builder /app/schema.sql ./
 # Set permissions for node user
 RUN chown -R node:node /app
 
-# Change to non-root user
-USER node
-
 # Expose port
 EXPOSE 5000
 
@@ -69,10 +66,13 @@ ENV PORT=5000
 # Checks if the application is healthy
 # Interval: 30 seconds, Timeout: 3 seconds, Retries: 3
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:5000/health || exit 1
+  CMD curl -f http://localhost:5000/ || exit 1
 
 # Use dumb-init to handle signals properly
-ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+# ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+
+# Change to non-root user for application execution
+USER node
 
 # Start application
 CMD ["node", "src/index.js"]
