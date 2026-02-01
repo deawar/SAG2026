@@ -1,7 +1,7 @@
 # Silent Auction Gallery - Docker Compose Development Environment
 # Use this for local development with automatic service startup
 
-version: '3.8'
+# version: '3.8'
 
 services:
   # PostgreSQL Database Service
@@ -97,7 +97,7 @@ services:
       - sag-network
     
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-5000}/"] || exit 1
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-5000}/"]
       interval: 30s
       timeout: 5s
       retries: 3
