@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Create a new Silent Auction Gallery account">
+    <title>Register - Silent Auction Gallery</title>
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+</head>
+<body>
+    <!-- Skip link -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <!-- Navigation Header -->
+    <header class="navbar" role="banner">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="logo" aria-label="Silent Auction Gallery Home">
+                    <span class="logo-text">SAG</span>
+                </a>
+            </div>
+            <nav class="navbar-nav" role="navigation" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="/auctions.html" class="nav-link">Auctions</a></li>
+                    <li><a href="/" class="nav-link">Home</a></li>
+                    <li><a href="#help" class="nav-link">Help</a></li>
+                </ul>
+            </nav>
+            <div class="navbar-auth">
+                <a href="/login.html" class="btn btn-secondary">Sign In</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content auth-page">
+        <div class="auth-container">
+            <div class="auth-card">
+                <!-- Card Header -->
+                <div class="auth-header">
+                    <h1>Create Account</h1>
+                    <p>Join Silent Auction Gallery to bid on amazing artwork</p>
+                </div>
+
+                <!-- Progress Indicator -->
+                <div class="progress-indicator" role="progressbar" aria-valuenow="1" aria-valuemin="1" aria-valuemax="3" aria-label="Account creation step 1 of 3">
+                    <span class="progress-step active" aria-current="step">1</span>
+                    <span class="progress-line"></span>
+                    <span class="progress-step">2</span>
+                    <span class="progress-line"></span>
+                    <span class="progress-step">3</span>
+                </div>
+
+                <!-- Step 1: Basic Information -->
+                <form id="register-form" class="auth-form" aria-label="Registration form">
+                    <fieldset id="step-1-fieldset">
+                        <legend class="sr-only">Account Information</legend>
+
+                        <div class="step-header">
+                            <h2>Account Information</h2>
+                            <p class="step-subtitle">Basic details to create your account</p>
+                        </div>
+
+                        <!-- Full Name -->
+                        <div class="form-group">
+                            <label for="full-name">Full Name <span aria-label="required">*</span></label>
+                            <input 
+                                type="text" 
+                                id="full-name" 
+                                name="full_name"
+                                class="form-control" 
+                                placeholder="John Doe"
+                                required
+                                aria-required="true"
+                                aria-describedby="fullname-error"
+                                autocomplete="name"
+                            >
+                            <small id="fullname-error" class="error-message" role="alert"></small>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="form-group">
+                            <label for="register-email">Email Address <span aria-label="required">*</span></label>
+                            <input 
+                                type="email" 
+                                id="register-email" 
+                                name="email"
+                                class="form-control" 
+                                placeholder="your@email.com"
+                                required
+                                aria-required="true"
+                                aria-describedby="email-error email-help"
+                                autocomplete="email"
+                            >
+                            <small id="email-help" class="help-text">Must be a valid email address</small>
+                            <small id="email-error" class="error-message" role="alert"></small>
+                        </div>
+
+                        <!-- Date of Birth (COPPA Compliance) -->
+                        <div class="form-group">
+                            <label for="date-of-birth">Date of Birth <span aria-label="required">*</span></label>
+                            <input 
+                                type="date" 
+                                id="date-of-birth" 
+                                name="date_of_birth"
+                                class="form-control" 
+                                required
+                                aria-required="true"
+                                aria-describedby="dob-error dob-help"
+                                autocomplete="bday"
+                            >
+                            <small id="dob-help" class="help-text">Must be 13 years or older</small>
+                            <small id="dob-error" class="error-message" role="alert"></small>
+                        </div>
+
+                        <!-- School Selection -->
+                        <div class="form-group">
+                            <label for="school">School <span aria-label="required">*</span></label>
+                            <select 
+                                id="school" 
+                                name="school_id"
+                                class="form-control" 
+                                required
+                                aria-required="true"
+                                aria-describedby="school-error school-help"
+                            >
+                                <option value="">Select your school</option>
+                                <!-- Populated by JavaScript -->
+                            </select>
+                            <small id="school-help" class="help-text">Select the school you attend</small>
+                            <small id="school-error" class="error-message" role="alert"></small>
+                        </div>
+
+                        <!-- Password -->
+                        <div class="form-group">
+                            <label for="register-password">Password <span aria-label="required">*</span></label>
+                            <input 
+                                type="password" 
+                                id="register-password" 
+                                name="password"
+                                class="form-control" 
+                                placeholder="••••••••"
+                                required
+                                aria-required="true"
+                                aria-describedby="password-error password-help"
+                                autocomplete="new-password"
+                            >
+                            <small id="password-help" class="help-text">At least 8 characters, with uppercase, lowercase, numbers, and symbols</small>
+                            <small id="password-error" class="error-message" role="alert"></small>
+                        </div>
+
+                        <!-- Confirm Password -->
+                        <div class="form-group">
+                            <label for="confirm-password">Confirm Password <span aria-label="required">*</span></label>
+                            <input 
+                                type="password" 
+                                id="confirm-password" 
+                                name="confirm_password"
+                                class="form-control" 
+                                placeholder="••••••••"
+                                required
+                                aria-required="true"
+                                aria-describedby="confirm-error"
+                                autocomplete="new-password"
+                            >
+                            <small id="confirm-error" class="error-message" role="alert"></small>
+                        </div>
+
+                        <button type="button" class="btn btn-primary btn-large btn-block" id="next-step-btn">
+                            Continue
+                        </button>
+                    </fieldset>
+
+                    <!-- Step 2: Address Information -->
+                    <fieldset id="step-2-fieldset" style="display:none;">
+                        <legend class="sr-only">Shipping Address</legend>
+
+                        <div class="step-header">
+                            <h2>Shipping Address</h2>
+                            <p class="step-subtitle">Where we'll deliver your artwork</p>
+                        </div>
+
+                        <!-- Address Fields -->
+                        <div class="form-group">
+                            <label for="street-address">Street Address <span aria-label="required">*</span></label>
+                            <input 
+                                type="text" 
+                                id="street-address" 
+                                name="street_address"
+                                class="form-control"
+                                required
+                                aria-required="true"
+                                autocomplete="street-address"
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="apt-number">Apt/Suite (Optional)</label>
+                            <input 
+                                type="text" 
+                                id="apt-number" 
+                                name="apt_number"
+                                class="form-control"
+                                autocomplete="street-address"
+                            >
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="city">City <span aria-label="required">*</span></label>
+                                <input 
+                                    type="text" 
+                                    id="city" 
+                                    name="city"
+                                    class="form-control"
+                                    required
+                                    aria-required="true"
+                                    autocomplete="address-level2"
+                                >
+                            </div>
+                            <div class="form-group">
+                                <label for="state">State <span aria-label="required">*</span></label>
+                                <input 
+                                    type="text" 
+                                    id="state" 
+                                    name="state"
+                                    class="form-control"
+                                    required
+                                    aria-required="true"
+                                    autocomplete="address-level1"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="postal-code">ZIP Code <span aria-label="required">*</span></label>
+                                <input 
+                                    type="text" 
+                                    id="postal-code" 
+                                    name="postal_code"
+                                    class="form-control"
+                                    required
+                                    aria-required="true"
+                                    autocomplete="postal-code"
+                                >
+                            </div>
+                            <div class="form-group">
+                                <label for="country">Country <span aria-label="required">*</span></label>
+                                <input 
+                                    type="text" 
+                                    id="country" 
+                                    name="country"
+                                    class="form-control"
+                                    value="United States"
+                                    required
+                                    aria-required="true"
+                                    autocomplete="country-name"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" id="back-step-btn">Back</button>
+                            <button type="button" class="btn btn-primary" id="next-step-2-btn">Continue</button>
+                        </div>
+                    </fieldset>
+
+                    <!-- Step 3: Terms & Agreements -->
+                    <fieldset id="step-3-fieldset" style="display:none;">
+                        <legend class="sr-only">Terms and Agreements</legend>
+
+                        <div class="step-header">
+                            <h2>Terms & Agreements</h2>
+                            <p class="step-subtitle">Please review and accept our terms</p>
+                        </div>
+
+                        <!-- Terms Checkbox -->
+                        <div class="form-group checkbox-group">
+                            <div class="checkbox-item">
+                                <input 
+                                    type="checkbox" 
+                                    id="accept-terms" 
+                                    name="accept_terms"
+                                    class="checkbox-control"
+                                    required
+                                    aria-required="true"
+                                    aria-describedby="terms-error"
+                                >
+                                <label for="accept-terms">
+                                    I agree to the <a href="#terms" target="_blank">Terms of Service</a> <span aria-label="required">*</span>
+                                </label>
+                            </div>
+                            <small id="terms-error" class="error-message" role="alert"></small>
+                        </div>
+
+                        <!-- Privacy Checkbox -->
+                        <div class="form-group checkbox-group">
+                            <div class="checkbox-item">
+                                <input 
+                                    type="checkbox" 
+                                    id="accept-privacy" 
+                                    name="accept_privacy"
+                                    class="checkbox-control"
+                                    required
+                                    aria-required="true"
+                                    aria-describedby="privacy-error"
+                                >
+                                <label for="accept-privacy">
+                                    I agree to the <a href="#privacy" target="_blank">Privacy Policy</a> <span aria-label="required">*</span>
+                                </label>
+                            </div>
+                            <small id="privacy-error" class="error-message" role="alert"></small>
+                        </div>
+
+                        <!-- Marketing Checkbox -->
+                        <div class="form-group checkbox-group">
+                            <div class="checkbox-item">
+                                <input 
+                                    type="checkbox" 
+                                    id="marketing-consent" 
+                                    name="marketing_consent"
+                                    class="checkbox-control"
+                                >
+                                <label for="marketing-consent">
+                                    I want to receive emails about new auctions and updates
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- COPPA Parental Consent (if under 13) -->
+                        <div class="form-group checkbox-group" id="coppa-section" style="display:none;">
+                            <div class="alert alert-info">
+                                <p>If you are under 13 years old, a parent or guardian must verify your account. Check your email for verification instructions.</p>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" id="back-step-2-btn">Back</button>
+                            <button type="submit" class="btn btn-primary btn-large btn-block" id="create-account-btn">
+                                Create Account
+                            </button>
+                        </div>
+                    </fieldset>
+                </form>
+
+                <!-- Login Link -->
+                <p class="auth-footer">
+                    Already have an account? <a href="/login.html" class="btn-link">Sign in</a>
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Alert Container -->
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About SAG</h3>
+                    <p>Silent Auction Gallery supports education through art.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="/auctions.html">Auctions</a></li>
+                        <li><a href="/">Home</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Legal</h3>
+                    <ul>
+                        <li><a href="#privacy">Privacy Policy</a></li>
+                        <li><a href="#terms">Terms of Service</a></li>
+                        <li><a href="#accessibility">Accessibility</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/accessibility.js"></script>
+    <script src="/js/api-client.js"></script>
+    <script src="/js/auth-manager.js"></script>
+    <script src="/js/ui-components.js"></script>
+    <script src="/js/auth-pages.js"></script>
+</body>
+</html>

@@ -342,16 +342,25 @@ class AuctionService {
       limit = 20,
       offset = 0,
       sortBy = 'created_at',
-      sortOrder = 'DESC'
+      sortOrder = 'DESC',
+      sort = null  // Alternative sort parameter name
     } = options;
 
     let query = 'SELECT * FROM auctions WHERE 1=1';
     const params = [];
     let paramCount = 1;
 
+    // Map frontend status values to database values
     if (status) {
-      query += ` AND status = $${paramCount}`;
-      params.push(status);
+      let dbStatus = status.toUpperCase();
+      // Map common status values
+      if (dbStatus === 'ACTIVE') dbStatus = 'LIVE';
+      if (dbStatus === 'PENDING') dbStatus = 'PENDING_APPROVAL';
+      if (dbStatus === 'DRAFT') dbStatus = 'DRAFT';
+      if (dbStatus === 'FINISHED' || dbStatus === 'ENDED') dbStatus = 'ENDED';
+      
+      query += ` AND auction_status = $${paramCount}`;
+      params.push(dbStatus);
       paramCount++;
     }
 
@@ -361,14 +370,26 @@ class AuctionService {
       paramCount++;
     }
 
+    // Handle sort parameter (either sortBy or sort)
+    const finalSort = sort || sortBy;
     const validSortFields = [
       'created_at',
-      'start_time',
-      'end_time',
-      'title'
+      'starts_at',
+      'ends_at',
+      'title',
+      'ending_soon'  // Special case for sorting by time remaining
     ];
-    const sortField = validSortFields.includes(sortBy) ? sortBy : 'created_at';
-    const order = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    
+    let sortField = 'created_at';
+    if (validSortFields.includes(finalSort)) {
+      if (finalSort === 'ending_soon') {
+        sortField = 'ends_at';  // Sort by end time to show auctions ending soon first
+      } else {
+        sortField = finalSort;
+      }
+    }
+    
+    const order = sortOrder && sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
     query += ` ORDER BY ${sortField} ${order} LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
     params.push(limit, offset);
@@ -379,8 +400,15 @@ class AuctionService {
     let countQuery = 'SELECT COUNT(*) as count FROM auctions WHERE 1=1';
     const countParams = [];
     if (status) {
-      countQuery += ` AND status = $${countParams.length + 1}`;
-      countParams.push(status);
+      let dbStatus = status.toUpperCase();
+      // Map common status values
+      if (dbStatus === 'ACTIVE') dbStatus = 'LIVE';
+      if (dbStatus === 'PENDING') dbStatus = 'PENDING_APPROVAL';
+      if (dbStatus === 'DRAFT') dbStatus = 'DRAFT';
+      if (dbStatus === 'FINISHED' || dbStatus === 'ENDED') dbStatus = 'ENDED';
+      
+      countQuery += ` AND auction_status = $${countParams.length + 1}`;
+      countParams.push(dbStatus);
     }
     if (schoolId) {
       countQuery += ` AND school_id = $${countParams.length + 1}`;

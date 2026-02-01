@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" width="200" height="60">
+  <!-- Background -->
+  <rect width="200" height="60" fill="#f5f5f5" rx="4"/>
+  
+  <!-- Icon/Gavel -->
+  <g transform="translate(15, 12)">
+    <rect x="0" y="12" width="10" height="20" fill="#1976d2" rx="2"/>
+    <rect x="4" y="0" width="2" height="12" fill="#555"/>
+    <ellipse cx="5" cy="32" rx="8" ry="4" fill="#1976d2"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="35" y="25" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1976d2">
+    SAG
+  </text>
+  <text x="35" y="42" font-family="Arial, sans-serif" font-size="10" fill="#666" letter-spacing="1">
+    SILENT AUCTION
+  </text>
+</svg>

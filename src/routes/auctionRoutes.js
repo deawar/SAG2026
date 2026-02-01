@@ -16,7 +16,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 router.post(
   '/',
   authMiddleware.verifyToken,
-  authMiddleware.requireRole(['site_admin', 'school_admin']),
+  authMiddleware.verifyRole('site_admin', 'school_admin'),
   (req, res) => auctionController.createAuction(req, res)
 );
 
@@ -24,13 +24,11 @@ router.post(
  * GET /api/auctions
  * List auctions with filtering and pagination
  * Query params: status, schoolId, limit, offset, sortBy, sortOrder
- * Access: Public (authenticated users)
+ * Access: Public
  */
-router.get(
-  '/',
-  authMiddleware.verifyToken,
-  (req, res) => auctionController.listAuctions(req, res)
-);
+router.get('/', async (req, res) => {
+  await auctionController.listAuctions(req, res);
+});
 
 /**
  * GET /api/auctions/active/list
@@ -84,7 +82,7 @@ router.get(
 router.put(
   '/:auctionId',
   authMiddleware.verifyToken,
-  authMiddleware.requireRole(['site_admin', 'school_admin']),
+  authMiddleware.verifyRole('site_admin', 'school_admin'),
   (req, res) => auctionController.updateAuction(req, res)
 );
 
@@ -96,7 +94,7 @@ router.put(
 router.post(
   '/:auctionId/start',
   authMiddleware.verifyToken,
-  authMiddleware.requireRole(['site_admin', 'school_admin']),
+  authMiddleware.verifyRole('site_admin', 'school_admin'),
   (req, res) => auctionController.startAuction(req, res)
 );
 
@@ -108,7 +106,7 @@ router.post(
 router.post(
   '/:auctionId/end',
   authMiddleware.verifyToken,
-  authMiddleware.requireRole(['site_admin', 'school_admin']),
+  authMiddleware.verifyRole('site_admin', 'school_admin'),
   (req, res) => auctionController.endAuction(req, res)
 );
 
@@ -120,7 +118,7 @@ router.post(
 router.post(
   '/:auctionId/extend',
   authMiddleware.verifyToken,
-  authMiddleware.requireRole(['site_admin', 'school_admin']),
+  authMiddleware.verifyRole('site_admin', 'school_admin'),
   (req, res) => auctionController.extendAuction(req, res)
 );
 
@@ -132,7 +130,7 @@ router.post(
 router.delete(
   '/:auctionId',
   authMiddleware.verifyToken,
-  authMiddleware.requireRole(['site_admin', 'school_admin']),
+  authMiddleware.verifyRole('site_admin', 'school_admin'),
   (req, res) => auctionController.deleteAuction(req, res)
 );
 

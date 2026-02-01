@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Verify your two-factor authentication code">
+    <title>Verify 2FA Code - Silent Auction Gallery</title>
+    
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+</head>
+<body>
+    <!-- Skip link -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <!-- Navigation Header -->
+    <header class="navbar" role="banner">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="logo" aria-label="Silent Auction Gallery Home">
+                    <span class="logo-text">SAG</span>
+                </a>
+            </div>
+            <nav class="navbar-nav" role="navigation" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="/auctions.html" class="nav-link">Auctions</a></li>
+                    <li><a href="/" class="nav-link">Home</a></li>
+                    <li><a href="#help" class="nav-link">Help</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content auth-page">
+        <div class="auth-container">
+            <div class="auth-card compact">
+                <!-- Card Header -->
+                <div class="auth-header">
+                    <h1>Verify Your Identity</h1>
+                    <p>Enter the code from your authenticator app</p>
+                </div>
+
+                <!-- 2FA Verification Form -->
+                <form id="2fa-verify-form" class="auth-form" aria-label="Two-factor authentication verification">
+                    <fieldset>
+                        <legend class="sr-only">Verification Code</legend>
+
+                        <!-- Code Input -->
+                        <div class="form-group">
+                            <label for="2fa-code">Authentication Code <span aria-label="required">*</span></label>
+                            <input 
+                                type="text" 
+                                id="2fa-code" 
+                                name="code"
+                                class="form-control verification-input" 
+                                placeholder="000000"
+                                maxlength="6"
+                                inputmode="numeric"
+                                pattern="[0-9]{6}"
+                                required
+                                aria-required="true"
+                                aria-describedby="code-error code-help"
+                                autocomplete="one-time-code"
+                                autofocus
+                            >
+                            <small id="code-help" class="help-text">6 digits from your authenticator app</small>
+                            <small id="code-error" class="error-message" role="alert"></small>
+                        </div>
+
+                        <!-- Remember This Device -->
+                        <div class="form-group checkbox">
+                            <input 
+                                type="checkbox" 
+                                id="remember-device" 
+                                name="remember_device"
+                                class="checkbox-control"
+                            >
+                            <label for="remember-device">Trust this device for 30 days</label>
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            class="btn btn-primary btn-large btn-block"
+                            id="verify-btn"
+                            aria-label="Verify authentication code"
+                        >
+                            Verify & Continue
+                        </button>
+                    </fieldset>
+                </form>
+
+                <!-- Alternative Options -->
+                <div class="auth-divider">
+                    <span>or</span>
+                </div>
+
+                <!-- Use Backup Code -->
+                <div class="alternative-section">
+                    <button type="button" class="btn-link" id="use-backup-btn" aria-label="Use a backup code instead">
+                        Don't have your phone? Use a backup code
+                    </button>
+                </div>
+
+                <!-- Back to Login -->
+                <p class="auth-footer">
+                    <a href="/login.html" class="btn-link">Back to login</a>
+                </p>
+            </div>
+
+            <!-- Backup Code Entry (Hidden by default) -->
+            <div id="backup-section" class="auth-card compact" style="display:none;">
+                <div class="auth-header">
+                    <h1>Use Backup Code</h1>
+                    <p>Enter one of your backup codes to access your account</p>
+                </div>
+
+                <form id="backup-code-form" class="auth-form" aria-label="Backup code verification">
+                    <fieldset>
+                        <legend class="sr-only">Backup Code</legend>
+
+                        <div class="form-group">
+                            <label for="backup-code">Backup Code <span aria-label="required">*</span></label>
+                            <input 
+                                type="text" 
+                                id="backup-code" 
+                                name="backup_code"
+                                class="form-control" 
+                                placeholder="XXXX-XXXX-XXXX"
+                                required
+                                aria-required="true"
+                                aria-describedby="backup-error backup-help"
+                                autocomplete="off"
+                                autofocus
+                            >
+                            <small id="backup-help" class="help-text">From your backup codes list</small>
+                            <small id="backup-error" class="error-message" role="alert"></small>
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            class="btn btn-primary btn-large btn-block"
+                            id="verify-backup-btn"
+                        >
+                            Verify & Continue
+                        </button>
+                    </fieldset>
+                </form>
+
+                <p class="auth-footer">
+                    <button type="button" class="btn-link" id="back-to-2fa-btn">Back to authenticator code</button>
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Alert Container -->
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/accessibility.js"></script>
+    <script src="/js/api-client.js"></script>
+    <script src="/js/auth-manager.js"></script>
+    <script src="/js/ui-components.js"></script>
+    <script src="/js/auth-pages.js"></script>
+</body>
+</html>
