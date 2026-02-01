@@ -11,6 +11,11 @@ const helmet = require('helmet');
 require('dotenv').config();
 
 /**
+ * Import Middleware
+ */
+const { loginLimiter, apiLimiter, paymentLimiter, authLimiter, bidLimiter } = require('./middleware/rateLimitMiddleware');
+
+/**
  * Import Routes
  */
 const authRoutes = require('./routes/authRoutes');
@@ -110,7 +115,9 @@ app.get('/health', (req, res) => {
  * POST   /api/auth/refresh       - Refresh access token
  * POST   /api/auth/2fa/setup     - Setup 2FA
  * POST   /api/auth/2fa/verify    - Verify 2FA code
+ * Rate limit: 20 requests/min for general auth, 5/min for login
  */
+app.use('/api/auth', authLimiter);
 app.use('/api/auth', authRoutes);
 
 /**
@@ -121,7 +128,9 @@ app.use('/api/auth', authRoutes);
  * PUT    /api/auctions/:id       - Update auction (admin only)
  * DELETE /api/auctions/:id       - Delete auction (admin only)
  * POST   /api/auctions/:id/bids  - Place bid
+ * Rate limit: 100 requests/min
  */
+app.use('/api/auctions', apiLimiter);
 app.use('/api/auctions', auctionRoutes);
 
 /**
@@ -131,7 +140,9 @@ app.use('/api/auctions', auctionRoutes);
  * POST   /api/payments/:id/refund - Refund payment
  * POST   /api/webhooks/stripe    - Stripe webhook handler
  * POST   /api/webhooks/square    - Square webhook handler
+ * Rate limit: 10 requests/min (strict for payment security)
  */
+app.use('/api/payments', paymentLimiter);
 app.use('/api/payments', paymentRoutes);
 
 /**
@@ -145,7 +156,9 @@ app.use('/api/payments', paymentRoutes);
  * GET    /api/bidding/auction/:id/winner - Get auction winner
  * POST   /api/bidding/auction/:id/close - Close auction (admin)
  * GET    /api/bidding/stats      - Get real-time stats (admin)
+ * Rate limit: 30 requests/min (to prevent bid spam)
  */
+app.use('/api/bidding', bidLimiter);
 app.use('/api/bidding', biddingRoutes);
 
 /**
