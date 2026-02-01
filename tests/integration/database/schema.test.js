@@ -17,18 +17,20 @@
  * Total: 35+ tests
  */
 
+require('dotenv').config();
 const { Pool } = require('pg');
 
 describe('Database Schema Validation', () => {
   let db;
 
   beforeAll(async () => {
+    const password = process.env.DB_PASSWORD || process.env.PG_PASSWORD;
     db = new Pool({
       host: process.env.DB_HOST || process.env.PG_HOST || 'localhost',
       port: process.env.DB_PORT || process.env.PG_PORT || 5432,
       database: process.env.DB_NAME || process.env.PG_DATABASE || 'silent_auction_gallery',
       user: process.env.DB_USER || process.env.PG_USER || 'SAG_DB',
-      password: process.env.DB_PASSWORD || process.env.PG_PASSWORD || ''
+      ...(password && { password })
     });
   });
 
@@ -45,7 +47,7 @@ describe('Database Schema Validation', () => {
   describe('Table Existence', () => {
     const requiredTables = [
       'users', 'schools', 'auctions', 'artwork', 'bids',
-      'notifications', 'payment_transactions', 'audit_logs'
+      'notifications', 'transactions', 'audit_logs'
     ];
 
     test('should have all required tables', async () => {
@@ -193,7 +195,7 @@ describe('Database Schema Validation', () => {
       const query = `
         SELECT column_name 
         FROM information_schema.columns 
-        WHERE table_name = 'payment_transactions'
+        WHERE table_name = 'transactions'
       `;
       const result = await db.query(query);
       const columns = result.rows.map(row => row.column_name);
@@ -312,7 +314,7 @@ describe('Database Schema Validation', () => {
       const query = `
         SELECT is_nullable 
         FROM information_schema.columns 
-        WHERE table_name = 'payment_transactions' AND column_name = 'amount'
+        WHERE table_name = 'transactions' AND column_name = 'amount'
       `;
       const result = await db.query(query);
       expect(result.rows[0].is_nullable).toBe('NO');
@@ -396,7 +398,7 @@ describe('Database Schema Validation', () => {
       const query = `
         SELECT COUNT(*) 
         FROM information_schema.table_constraints 
-        WHERE table_name = 'payment_transactions' 
+        WHERE table_name = 'transactions' 
         AND constraint_type = 'FOREIGN KEY'
       `;
       const result = await db.query(query);
