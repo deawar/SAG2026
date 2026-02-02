@@ -7,6 +7,8 @@
 
 require('dotenv').config();
 const http = require('http');
+const https = require('https');
+const fs = require('fs');
 const app = require('./app');
 const { Database } = require('./models');
 const realtimeService = require('./services/realtimeService');
@@ -16,6 +18,12 @@ const realtimeService = require('./services/realtimeService');
  */
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
+const HTTPS_ENABLED = process.env.HTTPS_ENABLED === 'true';
+const SSL_KEY_PATH = process.env.SSL_KEY_PATH || './ssl/key.pem';
+const SSL_CERT_PATH = process.env.SSL_CERT_PATH || './ssl/cert.pem';
+
+// Store database instance for route initialization
+let db = null;
 
 /**
  * ============================================================================
@@ -54,7 +62,7 @@ async function startServer() {
         throw new Error('Missing database configuration in .env file');
       }
 
-      const db = new Database(dbConfig);
+      db = new Database(dbConfig);
       await db.query('SELECT NOW() as current_time');
       console.log('✅ Database connection successful');
     } catch (dbError) {
@@ -63,31 +71,148 @@ async function startServer() {
     }
 
     /**
-     * Create HTTP Server with WebSocket Support
+     * Mount Authentication Routes (requires database)
      */
-    const server = http.createServer(app);
+    if (db) {
+      console.log('\nMounting authentication routes...');
+      try {
+        const authRoutes = require('./routes/authRoutes')(db);
+        const { authLimiter } = require('./middleware/rateLimitMiddleware');
+        app.use('/api/auth', authLimiter);
+        app.use('/api/auth', authRoutes);
+        console.log('✅ Authentication routes mounted');
+      } catch (routeErr) {
+        console.error('❌ ERROR mounting auth routes:', routeErr);
+      }
+    } else {
+      console.warn('⚠️  Skipping auth routes (database unavailable)');
+    }
+
+    /**
+     * ============================================================================
+     * ERROR HANDLING & 404 HANDLERS (MUST BE LAST!)
+     * ============================================================================
+     */
+
+    /**
+     * 404 Not Found Handler
+     * Must come before error handler
+     */
+    app.use((req, res) => {
+      res.status(404).json({
+        error: 'Not Found',
+        message: `Route ${req.method} ${req.path} not found`,
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    /**
+     * Global Error Handler
+     * Catches all errors from routes and middleware
+     */
+    app.use((err, req, res, next) => {
+      console.error('Global Error Handler:', {
+        message: err.message,
+        stack: err.stack,
+        url: req.originalUrl,
+        method: req.method,
+        timestamp: new Date().toISOString()
+      });
+
+      const statusCode = err.statusCode || err.status || 500;
+      const message = process.env.NODE_ENV === 'production'
+        ? (statusCode === 500 ? 'Internal Server Error' : err.message)
+        : err.message;
+
+      res.status(statusCode).json({
+        error: err.name || 'Error',
+        message: message,
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    /**
+     * Create HTTP/HTTPS Server with WebSocket Support
+     */
+    let server;
+    if (HTTPS_ENABLED) {
+      try {
+        const sslOptions = {
+          key: fs.readFileSync(SSL_KEY_PATH),
+          cert: fs.readFileSync(SSL_CERT_PATH)
+        };
+        server = https.createServer(sslOptions, app);
+        console.log('✅ HTTPS enabled');
+      } catch (err) {
+        console.warn('⚠️  HTTPS configured but certificates not found, falling back to HTTP');
+        console.warn(`   Expected: ${SSL_KEY_PATH} and ${SSL_CERT_PATH}`);
+        server = http.createServer(app);
+      }
+    } else {
+      server = http.createServer(app);
+    }
 
     /**
      * Initialize WebSocket Server
      */
     console.log('\nInitializing WebSocket server...');
     realtimeService.initializeWebSocketServer(server);
-    console.log('✅ WebSocket server initialized at ws://localhost:' + PORT);
+    const wsInitProtocol = HTTPS_ENABLED ? 'wss' : 'ws';
+    console.log(`✅ WebSocket server initialized at ${wsInitProtocol}://localhost:${PORT}`);
 
     /**
-     * Start HTTP Server
+     * Start HTTP/HTTPS Server
      */
-    server.listen(PORT, () => {
+    // Determine binding address
+    let bindAddress = '0.0.0.0'; // Try all interfaces
+    const os = require('os');
+    const interfaces = os.networkInterfaces();
+    
+    // Try to find actual network IP for binding on Windows
+    for (const name of Object.keys(interfaces)) {
+      for (const iface of interfaces[name]) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          // Bind to actual IP on Windows for better network access
+          bindAddress = iface.address;
+          break;
+        }
+      }
+      if (bindAddress !== '0.0.0.0') break;
+    }
+
+    server.listen(PORT, bindAddress, () => {
+      const os = require('os');
+      const interfaces = os.networkInterfaces();
+      let localIp = 'localhost';
+      
+      // Find the local IP address
+      for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+          if (iface.family === 'IPv4' && !iface.internal) {
+            localIp = iface.address;
+            break;
+          }
+        }
+        if (localIp !== 'localhost') break;
+      }
+
+      const protocol = HTTPS_ENABLED ? 'https' : 'http';
+      const wsProtocol = HTTPS_ENABLED ? 'wss' : 'ws';
+
       console.log('\n============================================================');
-      console.log(`✅ Server running on http://localhost:${PORT}`);
+      console.log(`✅ Server running on ${protocol}://${localIp}:${PORT}`);
+      console.log(`   Local machine:   ${protocol}://localhost:${PORT}`);
+      console.log(`   Network access:  ${protocol}://${localIp}:${PORT}`);
+      console.log(`   Bound to:        ${bindAddress}`);
       console.log('============================================================\n');
       console.log('Endpoints available:');
-      console.log(`  Health Check:     GET http://localhost:${PORT}/health`);
-      console.log(`  Auth API:         http://localhost:${PORT}/api/auth`);
-      console.log(`  Auction API:      http://localhost:${PORT}/api/auctions`);
-      console.log(`  Payment API:      http://localhost:${PORT}/api/payments`);
-      console.log(`  Bidding API:      http://localhost:${PORT}/api/bidding`);
-      console.log(`  WebSocket:        ws://localhost:${PORT}/ws`);
+      console.log(`  Health Check:     GET ${protocol}://localhost:${PORT}/health`);
+      console.log(`  Auth API:         ${protocol}://localhost:${PORT}/api/auth`);
+      console.log(`  Auction API:      ${protocol}://localhost:${PORT}/api/auctions`);
+      console.log(`  Payment API:      ${protocol}://localhost:${PORT}/api/payments`);
+      console.log(`  Bidding API:      ${protocol}://localhost:${PORT}/api/bidding`);
+      console.log(`  WebSocket:        ${wsProtocol}://localhost:${PORT}/ws`);
       console.log('\n');
     });
 
