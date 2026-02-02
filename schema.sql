@@ -612,23 +612,6 @@ CREATE TABLE admin_actions (
 CREATE INDEX idx_admin_actions_name ON admin_actions(action_name);
 CREATE INDEX idx_admin_actions_role ON admin_actions(required_role);
 
--- Compliance Reports - Store generated compliance audit reports
-CREATE TABLE compliance_reports (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  report_type VARCHAR(50) NOT NULL CHECK (report_type IN ('GDPR', 'COPPA', 'FERPA', 'CCPA')),
-  generated_by UUID NOT NULL REFERENCES users(id) ON DELETE SET NULL,
-  school_id UUID REFERENCES schools(id) ON DELETE SET NULL,
-  start_date DATE NOT NULL,
-  end_date DATE NOT NULL,
-  summary JSONB, -- {users_deleted: N, data_exported: N, consents_tracked: N, users_affected: N}
-  details JSONB, -- Full report data
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_compliance_reports_type ON compliance_reports(report_type, created_at);
-CREATE INDEX idx_compliance_reports_school ON compliance_reports(school_id, created_at);
-CREATE INDEX idx_compliance_reports_generated_by ON compliance_reports(generated_by, created_at);
-
 -- Dashboard Metrics - Real-time system metrics
 CREATE TABLE dashboard_metrics (
   id BIGSERIAL PRIMARY KEY,

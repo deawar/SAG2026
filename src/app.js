@@ -8,6 +8,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const path = require('path');
 require('dotenv').config();
 
 /**
@@ -18,7 +19,7 @@ const { loginLimiter, apiLimiter, paymentLimiter, authLimiter, bidLimiter } = re
 /**
  * Import Routes
  */
-const authRoutes = require('./routes/authRoutes');
+// authRoutes will be mounted dynamically in index.js after db initialization
 const auctionRoutes = require('./routes/auctionRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const biddingRoutes = require('./routes/biddingRoutes');
@@ -41,8 +42,32 @@ app.wsServer = null;
  * Security Headers (Helmet.js)
  * - Sets X-Frame-Options, X-Content-Type-Options, etc.
  * - Provides protection against common vulnerabilities
+ * - Allow CSS, images, and fonts to load properly
+ * - Disable CSP in development for easier debugging
  */
-app.use(helmet());
+if (process.env.NODE_ENV === 'production') {
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        fontSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'", 'https:', 'wss:', 'ws:'],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: []
+      }
+    }
+  }));
+} else {
+  // Development: use minimal helmet config to avoid blocking assets
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+  }));
+}
 
 /**
  * CORS Configuration
@@ -68,8 +93,9 @@ app.use(cors(corsOptions));
 /**
  * Static Files Serving
  * - Serve public directory (HTML, CSS, JS)
+ * - Use absolute path to ensure it works from any directory
  */
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
@@ -102,6 +128,13 @@ app.get('/health', (req, res) => {
 });
 
 /**
+ * Root route - serve index.html
+ */
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+});
+
+/**
  * ============================================================================
  * API ROUTES
  * ============================================================================
@@ -116,9 +149,8 @@ app.get('/health', (req, res) => {
  * POST   /api/auth/2fa/setup     - Setup 2FA
  * POST   /api/auth/2fa/verify    - Verify 2FA code
  * Rate limit: 20 requests/min for general auth, 5/min for login
+ * NOTE: Mounted dynamically in index.js after database initialization
  */
-app.use('/api/auth', authLimiter);
-app.use('/api/auth', authRoutes);
 
 /**
  * Auction Routes
@@ -160,55 +192,6 @@ app.use('/api/payments', paymentRoutes);
  */
 app.use('/api/bidding', bidLimiter);
 app.use('/api/bidding', biddingRoutes);
-
-/**
- * ============================================================================
- * ERROR HANDLING & 404
- * ============================================================================
- */
-
-/**
- * 404 Not Found Handler
- */
-app.use((req, res) => {
-  res.status(404).json({
-    error: 'Not Found',
-    message: `Route ${req.method} ${req.path} not found`,
-    timestamp: new Date().toISOString()
-  });
-});
-
-/**
- * Global Error Handler
- * - Catches all errors from routes and middleware
- * - Formats error responses consistently
- * - Logs errors for debugging
- */
-app.use((err, req, res, next) => {
-  console.error('Global Error Handler:', {
-    message: err.message,
-    stack: err.stack,
-    url: req.originalUrl,
-    method: req.method,
-    timestamp: new Date().toISOString()
-  });
-
-  // Determine status code
-  const statusCode = err.statusCode || err.status || 500;
-
-  // Determine error message
-  const message = process.env.NODE_ENV === 'production'
-    ? (statusCode === 500 ? 'Internal Server Error' : err.message)
-    : err.message;
-
-  // Send error response
-  res.status(statusCode).json({
-    error: err.name || 'Error',
-    message: message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-    timestamp: new Date().toISOString()
-  });
-});
 
 /**
  * ============================================================================

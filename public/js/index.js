@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function initializePage() {
+    console.log('=== initializePage called ===');
+    
     // Initialize authentication UI
     updateAuthUI();
     
@@ -32,21 +34,23 @@ async function initializePage() {
  */
 function updateAuthUI() {
     const loginBtn = document.getElementById('login-btn');
+    const registerBtn = document.getElementById('register-btn');
+    const userMenuWrapper = document.querySelector('.user-menu-wrapper');
     const userMenuBtn = document.getElementById('user-menu-btn');
     const userName = document.getElementById('user-name');
 
     if (authManager.isAuthenticated() && authManager.getUser()) {
         const user = authManager.getUser();
         if (loginBtn) loginBtn.style.display = 'none';
-        if (userMenuBtn) {
-            userMenuBtn.style.display = 'flex';
-            if (userName) {
-                userName.textContent = user.first_name || user.email;
-            }
+        if (registerBtn) registerBtn.style.display = 'none';
+        if (userMenuWrapper) userMenuWrapper.style.display = 'flex';
+        if (userMenuBtn && userName) {
+            userName.textContent = user.first_name || user.firstName || user.email;
         }
     } else {
         if (loginBtn) loginBtn.style.display = 'block';
-        if (userMenuBtn) userMenuBtn.style.display = 'none';
+        if (registerBtn) registerBtn.style.display = 'block';
+        if (userMenuWrapper) userMenuWrapper.style.display = 'none';
     }
 
     // Listen for auth changes
@@ -59,11 +63,25 @@ function updateAuthUI() {
  * Setup event listeners
  */
 function setupEventListeners() {
+    console.log('=== setupEventListeners called ===');
+    
     // Login button
     const loginBtn = document.getElementById('login-btn');
+    console.log('Login button found:', !!loginBtn);
     if (loginBtn) {
         loginBtn.addEventListener('click', () => {
+            console.log('Login button clicked');
             UIComponents.showModal('login-modal');
+        });
+    }
+
+    // Register button
+    const registerBtn = document.getElementById('register-btn');
+    console.log('Register button found:', !!registerBtn);
+    if (registerBtn) {
+        registerBtn.addEventListener('click', () => {
+            console.log('Register button clicked');
+            UIComponents.showModal('register-modal');
         });
     }
 
@@ -71,7 +89,8 @@ function setupEventListeners() {
     const userMenuBtn = document.getElementById('user-menu-btn');
     const userDropdown = document.getElementById('user-dropdown');
     if (userMenuBtn && userDropdown) {
-        userMenuBtn.addEventListener('click', () => {
+        userMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
             userDropdown.style.display = userDropdown.style.display === 'none' ? 'block' : 'none';
         });
 
@@ -83,11 +102,11 @@ function setupEventListeners() {
     }
 
     // Logout button
-    const logoutBtn = document.querySelector('[id*="logout"]');
+    const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            await authManager.logout();
-            window.location.reload();
+        logoutBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await handleLogout();
         });
     }
 
@@ -110,14 +129,22 @@ function setupEventListeners() {
 
     // Login form
     const loginForm = document.getElementById('login-form');
+    console.log('Login form found:', !!loginForm);
     if (loginForm) {
+        console.log('Attaching submit listener to login form');
         loginForm.addEventListener('submit', handleLogin);
+    } else {
+        console.error('Login form NOT found in DOM');
     }
 
     // Register form
     const registerForm = document.getElementById('register-form');
+    console.log('Register form found:', !!registerForm);
     if (registerForm) {
+        console.log('Attaching submit listener to register form');
         registerForm.addEventListener('submit', handleRegister);
+    } else {
+        console.error('Register form NOT found in DOM');
     }
 
     // Modal close buttons
@@ -138,6 +165,8 @@ function setupEventListeners() {
             }
         });
     });
+    
+    console.log('=== setupEventListeners complete ===');
 }
 
 /**
@@ -147,16 +176,28 @@ function setupEventListeners() {
 async function handleLogin(event) {
     event.preventDefault();
 
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-    const remember = document.getElementById('login-remember').checked;
+    const email = document.getElementById('login-email')?.value;
+    const password = document.getElementById('login-password')?.value;
+    const remember = document.getElementById('login-remember')?.checked;
+
+    if (!email || !password) {
+        UIComponents.showAlert('Email and password required', 'error', 3000);
+        return;
+    }
 
     const loader = UIComponents.showLoading('Logging in...');
 
     try {
         const result = await authManager.login(email, password);
 
-        if (result.success) {
+        if (result.requires2FA) {
+            // 2FA is required, redirect to verification page
+            UIComponents.hideLoading(loader);
+            UIComponents.showAlert('Check your authenticator app for the verification code', 'info', 3000);
+            setTimeout(() => {
+                window.location.href = '/2fa-verify.html';
+            }, 500);
+        } else if (result.success) {
             UIComponents.hideLoading(loader);
             UIComponents.showAlert('Login successful!', 'success', 3000);
             
@@ -176,11 +217,6 @@ async function handleLogin(event) {
             } catch (error) {
                 console.warn('Failed to connect WebSocket:', error);
             }
-        } else if (result.requires2FA) {
-            UIComponents.hideLoading(loader);
-            UIComponents.showAlert('2FA code sent to your email', 'info');
-            // Show 2FA verification UI
-            show2FAForm();
         } else {
             UIComponents.hideLoading(loader);
             UIComponents.showAlert(result.error || 'Login failed', 'error', 5000);
@@ -197,39 +233,64 @@ async function handleLogin(event) {
  */
 async function handleRegister(event) {
     event.preventDefault();
+    console.log('Register form submitted');
 
     const firstName = document.getElementById('register-first-name')?.value;
     const lastName = document.getElementById('register-last-name')?.value;
     const email = document.getElementById('register-email').value;
+    const phone = document.getElementById('register-phone').value;
     const password = document.getElementById('register-password').value;
     const passwordConfirm = document.getElementById('register-confirm').value;
     const terms = document.getElementById('register-terms').checked;
 
+    console.log('Form data:', { firstName, lastName, email, phone, passwordConfirm: '***', terms });
+
     // Validate
-    if (!email || !password) {
+    if (!email || !password || !phone) {
+        console.warn('Missing required field (email, password, or phone)');
         UIComponents.showAlert('Please fill in all required fields', 'error');
         return;
     }
 
+    if (!firstName || !lastName) {
+        console.warn('Missing name fields');
+        UIComponents.showAlert('First name and last name are required', 'error');
+        return;
+    }
+
     if (password !== passwordConfirm) {
+        console.warn('Passwords do not match');
         UIComponents.showAlert('Passwords do not match', 'error');
         return;
     }
 
     if (!terms) {
+        console.warn('Terms not agreed');
         UIComponents.showAlert('You must agree to the terms', 'error');
         return;
     }
 
+    // Validate phone format (basic validation - digits, spaces, +, -, parentheses)
+    const phoneRegex = /^[0-9+\-\s\(\)]{10,}$/;
+    if (!phoneRegex.test(phone)) {
+        console.warn('Invalid phone format:', phone);
+        UIComponents.showAlert('Please enter a valid phone number', 'error');
+        return;
+    }
+
     const loader = UIComponents.showLoading('Creating account...');
+    console.log('Calling authManager.register...');
 
     try {
         const result = await authManager.register({
             firstName,
             lastName,
             email,
+            phone,
             password,
         });
+
+        console.log('Register result:', result);
 
         if (result.success) {
             UIComponents.hideLoading(loader);
@@ -253,11 +314,43 @@ async function handleRegister(event) {
             }
         } else {
             UIComponents.hideLoading(loader);
+            console.error('Registration failed:', result.error);
             UIComponents.showAlert(result.error || 'Registration failed', 'error', 5000);
         }
     } catch (error) {
         UIComponents.hideLoading(loader);
+        console.error('Registration error:', error);
         UIComponents.showAlert('Registration error: ' + error.message, 'error', 5000);
+    }
+}
+
+/**
+ * Handle logout
+ */
+async function handleLogout() {
+    try {
+        // Close dropdown menu
+        const userDropdown = document.getElementById('user-dropdown');
+        if (userDropdown) {
+            userDropdown.style.display = 'none';
+        }
+
+        // Call logout from auth manager
+        await authManager.logout();
+
+        // Show success message
+        UIComponents.showAlert('Logged out successfully', 'success', 3000);
+
+        // Update UI
+        updateAuthUI();
+
+        // Redirect to home after a brief delay
+        setTimeout(() => {
+            window.location.href = '/';
+        }, 500);
+    } catch (error) {
+        console.error('Logout error:', error);
+        UIComponents.showAlert('Logout failed: ' + error.message, 'error', 5000);
     }
 }
 

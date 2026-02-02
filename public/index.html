@@ -46,10 +46,18 @@
             <div class="navbar-auth">
                 <button class="btn btn-secondary" id="login-btn" aria-label="Login to your account">Login</button>
                 <button class="btn btn-primary" id="register-btn" aria-label="Create a new account">Sign Up</button>
-                <button class="btn btn-profile" id="user-menu-btn" aria-label="User account menu" style="display:none;">
-                    <span id="user-name"></span>
-                    <span class="menu-icon">▼</span>
-                </button>
+                <div class="user-menu-wrapper" style="display:none;">
+                    <button class="btn btn-profile" id="user-menu-btn" aria-label="User account menu">
+                        <span id="user-name"></span>
+                        <span class="menu-icon">▼</span>
+                    </button>
+                    <!-- User Dropdown Menu -->
+                    <div class="user-dropdown" id="user-dropdown" style="display:none;" role="menu">
+                        <a href="/user-dashboard.html" class="dropdown-item" role="menuitem">My Dashboard</a>
+                        <a href="/user-dashboard.html#my-bids" class="dropdown-item" role="menuitem">My Bids</a>
+                        <button class="dropdown-item" id="logout-btn" role="menuitem" aria-label="Logout from your account">Logout</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Mobile Menu Toggle -->
@@ -158,24 +166,33 @@
             <h2 id="register-title">Create Account</h2>
             <form id="register-form" class="form">
                 <div class="form-group">
-                    <label for="register-name">Full Name</label>
-                    <input type="text" id="register-name" name="name" required aria-required="true">
+                    <label for="register-first-name">First Name</label>
+                    <input type="text" id="register-first-name" name="firstName" required aria-required="true">
+                </div>
+                <div class="form-group">
+                    <label for="register-last-name">Last Name</label>
+                    <input type="text" id="register-last-name" name="lastName" required aria-required="true">
                 </div>
                 <div class="form-group">
                     <label for="register-email">Email Address</label>
                     <input type="email" id="register-email" name="email" required aria-required="true">
                 </div>
                 <div class="form-group">
+                    <label for="register-phone">Mobile Phone Number</label>
+                    <input type="tel" id="register-phone" name="phone" placeholder="+1 (555) 123-4567" pattern="[0-9+\-\s\(\)]{10,}" required aria-required="true">
+                    <small>Required for 2FA, communications, and payment verification</small>
+                </div>
+                <div class="form-group">
                     <label for="register-password">Password</label>
                     <input type="password" id="register-password" name="password" required aria-required="true">
                 </div>
                 <div class="form-group">
-                    <label for="register-password-confirm">Confirm Password</label>
-                    <input type="password" id="register-password-confirm" name="password_confirm" required aria-required="true">
+                    <label for="register-confirm">Confirm Password</label>
+                    <input type="password" id="register-confirm" name="password_confirm" required aria-required="true">
                 </div>
                 <div class="form-group">
-                    <label for="register-agree">
-                        <input type="checkbox" id="register-agree" name="agree" required aria-required="true">
+                    <label for="register-terms">
+                        <input type="checkbox" id="register-terms" name="terms" required aria-required="true">
                         I agree to the Terms of Service
                     </label>
                 </div>
