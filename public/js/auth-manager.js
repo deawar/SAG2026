@@ -22,21 +22,31 @@ class AuthManager {
     async register(userData) {
         try {
             const response = await apiClient.register({
-                first_name: userData.firstName,
-                last_name: userData.lastName,
+                firstName: userData.firstName,
+                lastName: userData.lastName,
                 email: userData.email,
                 password: userData.password,
                 school_id: userData.schoolId,
                 phone: userData.phone,
             });
 
-            if (response.token) {
-                this.setToken(response.token);
-                this.setUser(response.user);
-                return { success: true, user: response.user };
+            // Handle successful registration response from server
+            if (response.success && response.data) {
+                const { accessToken, refreshToken, ...userData } = response.data;
+                
+                // Store tokens
+                this.setToken(accessToken);
+                if (refreshToken) {
+                    localStorage.setItem('refreshToken', refreshToken);
+                }
+                
+                // Store user data
+                this.setUser(userData);
+                
+                return { success: true, user: userData };
             }
 
-            return { success: false, error: response.message };
+            return { success: false, error: response.message || 'Registration failed' };
         } catch (error) {
             return { success: false, error: error.message };
         }
@@ -52,13 +62,35 @@ class AuthManager {
         try {
             const response = await apiClient.login(email, password);
 
-            if (response.requires_2fa) {
+            // Check for 2FA requirement (new format)
+            if (response.data?.requiresMfa || response.requires_2fa) {
                 this.require2FA = true;
                 localStorage.setItem('2fa_required', 'true');
-                localStorage.setItem('2fa_token', response.temp_token);
+                localStorage.setItem('2fa_token', response.data?.tempToken || response.temp_token);
                 return { success: false, requires2FA: true };
             }
 
+            // Handle successful login with new response format
+            if (response.data?.accessToken) {
+                this.setToken(response.data.accessToken);
+                this.setRefreshToken(response.data.refreshToken);
+                
+                // Set user object from response data
+                if (response.data.userId || response.data.email) {
+                    this.setUser({
+                        id: response.data.userId,
+                        email: response.data.email,
+                        role: response.data.role
+                    });
+                }
+                
+                this.require2FA = false;
+                localStorage.removeItem('2fa_required');
+                localStorage.removeItem('2fa_token');
+                return { success: true, user: this.user };
+            }
+
+            // Handle old response format for backward compatibility
             if (response.token) {
                 this.setToken(response.token);
                 this.setUser(response.user);

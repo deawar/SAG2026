@@ -1235,6 +1235,241 @@ class BidModel {
 }
 
 // ============================================================================
+// 2.7 Payment Model
+// ============================================================================
+
+class PaymentModel {
+  constructor(db) {
+    this.db = db;
+  }
+
+  /**
+   * Create payment record
+   * NO raw card data is stored - only tokens and transaction IDs
+   */
+  async create(data) {
+    const {
+      auctionId,
+      buyerId,
+      amount,
+      platformFee,
+      gateway,
+      tokenId,
+      transactionId,
+      status = 'pending',
+      metadata = {}
+    } = data;
+
+    // Validate required fields
+    if (!auctionId || !buyerId || !amount || !gateway || !transactionId) {
+      throw new Error('Missing required payment fields');
+    }
+
+    if (amount <= 0) {
+      throw new Error('Amount must be positive');
+    }
+
+    const id = uuidv4();
+    const now = new Date().toISOString();
+
+    try {
+      const result = await this.db.query(
+        `INSERT INTO payments (
+          id, auction_id, buyer_id, amount, platform_fee, 
+          gateway, token_id, transaction_id, status, metadata, 
+          created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        RETURNING *`,
+        [
+          id,
+          auctionId,
+          buyerId,
+          amount,
+          platformFee || 0,
+          gateway,
+          tokenId,
+          transactionId,
+          status,
+          JSON.stringify(metadata),
+          now,
+          now
+        ]
+      );
+
+      return result.rows[0];
+    } catch (error) {
+      console.error('Payment creation error:', error);
+      throw new Error(`Payment creation failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Retrieve payment by ID
+   */
+  async getById(paymentId) {
+    const result = await this.db.query(
+      `SELECT * FROM payments WHERE id = $1 AND deleted_at IS NULL`,
+      [paymentId]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error('PAYMENT_NOT_FOUND');
+    }
+
+    return result.rows[0];
+  }
+
+  /**
+   * Retrieve payment by transaction ID (gateway transaction ID)
+   */
+  async getByTransactionId(transactionId) {
+    const result = await this.db.query(
+      `SELECT * FROM payments WHERE transaction_id = $1 AND deleted_at IS NULL`,
+      [transactionId]
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    return result.rows[0];
+  }
+
+  /**
+   * Get all payments for an auction
+   */
+  async getByAuctionId(auctionId) {
+    const result = await this.db.query(
+      `SELECT * FROM payments WHERE auction_id = $1 AND deleted_at IS NULL
+       ORDER BY created_at DESC`,
+      [auctionId]
+    );
+
+    return result.rows;
+  }
+
+  /**
+   * Get all payments for a user
+   */
+  async getByBuyerId(buyerId) {
+    const result = await this.db.query(
+      `SELECT * FROM payments WHERE buyer_id = $1 AND deleted_at IS NULL
+       ORDER BY created_at DESC`,
+      [buyerId]
+    );
+
+    return result.rows;
+  }
+
+  /**
+   * Update payment status
+   */
+  async updateStatus(paymentId, status) {
+    const validStatuses = ['pending', 'completed', 'failed', 'refunded'];
+    if (!validStatuses.includes(status)) {
+      throw new Error('Invalid payment status');
+    }
+
+    const result = await this.db.query(
+      `UPDATE payments SET status = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2 AND deleted_at IS NULL
+       RETURNING *`,
+      [status, paymentId]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error('PAYMENT_NOT_FOUND');
+    }
+
+    return result.rows[0];
+  }
+
+  /**
+   * Record refund (partial or full)
+   */
+  async recordRefund(paymentId, refundAmount, refundReason, refundTransactionId) {
+    const result = await this.db.query(
+      `UPDATE payments SET 
+        status = 'refunded',
+        refunded_amount = $1,
+        refund_reason = $2,
+        refund_transaction_id = $3,
+        updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4 AND deleted_at IS NULL
+       RETURNING *`,
+      [refundAmount, refundReason, refundTransactionId, paymentId]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error('PAYMENT_NOT_FOUND');
+    }
+
+    return result.rows[0];
+  }
+
+  /**
+   * Check for duplicate payment (prevent double-charge)
+   * Look for same card, amount, and merchant within last 5 minutes
+   */
+  async checkDuplicate(buyerId, amount, gateway) {
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+
+    const result = await this.db.query(
+      `SELECT * FROM payments 
+       WHERE buyer_id = $1 
+       AND amount = $2 
+       AND gateway = $3
+       AND status IN ('completed', 'pending')
+       AND created_at > $4
+       AND deleted_at IS NULL
+       LIMIT 1`,
+      [buyerId, amount, gateway, fiveMinutesAgo]
+    );
+
+    return result.rows.length > 0 ? result.rows[0] : null;
+  }
+
+  /**
+   * Soft delete payment record
+   */
+  async delete(paymentId) {
+    return this.db.query(
+      `UPDATE payments SET deleted_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING *`,
+      [paymentId]
+    );
+  }
+
+  /**
+   * Get payment statistics for reporting
+   */
+  async getStats(startDate, endDate, gateway = null) {
+    let query = `SELECT 
+      COUNT(*) as total_payments,
+      SUM(amount) as total_amount,
+      SUM(platform_fee) as total_fees,
+      COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_count,
+      COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_count,
+      COUNT(CASE WHEN status = 'refunded' THEN 1 END) as refunded_count,
+      AVG(amount) as avg_amount
+      FROM payments
+      WHERE created_at BETWEEN $1 AND $2
+      AND deleted_at IS NULL`;
+
+    const params = [startDate, endDate];
+
+    if (gateway) {
+      query += ` AND gateway = $${params.length + 1}`;
+      params.push(gateway);
+    }
+
+    const result = await this.db.query(query, params);
+    return result.rows[0];
+  }
+}
+
+// ============================================================================
 // Export Models
 // ============================================================================
 
@@ -1246,4 +1481,5 @@ module.exports = {
   AuctionModel,
   ArtworkModel,
   BidModel,
+  PaymentModel,
 };

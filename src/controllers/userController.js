@@ -23,7 +23,7 @@ class UserController {
    */
   async register(req, res, next) {
     try {
-      const { email, password, firstName, lastName, dateOfBirth, schoolId, role = 'STUDENT' } = req.body;
+      const { email, password, firstName, lastName, dateOfBirth, schoolId, phone, role = 'STUDENT' } = req.body;
 
       // 1. Validate required fields
       if (!email || !password || !firstName || !lastName) {
@@ -65,6 +65,7 @@ class UserController {
       const sanitizedEmail = ValidationUtils.sanitizeString(email, 254).toLowerCase();
       const sanitizedFirstName = ValidationUtils.sanitizeString(firstName, 100);
       const sanitizedLastName = ValidationUtils.sanitizeString(lastName, 100);
+      const sanitizedPhone = phone ? ValidationUtils.sanitizeString(phone, 20) : null;
 
       // 6. Create user in database
       const user = await this.userModel.create({
@@ -72,6 +73,7 @@ class UserController {
         password,
         firstName: sanitizedFirstName,
         lastName: sanitizedLastName,
+        phoneNumber: sanitizedPhone,
         dateOfBirth,
         schoolId,
         role
