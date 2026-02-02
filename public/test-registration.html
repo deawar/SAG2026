@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Registration Test</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        input { display: block; margin: 10px 0; padding: 8px; width: 300px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        #response { margin-top: 20px; padding: 10px; background: #f0f0f0; border: 1px solid #ccc; min-height: 100px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>Registration Test</h1>
+    <input type="text" id="firstName" placeholder="First Name" value="John">
+    <input type="text" id="lastName" placeholder="Last Name" value="Doe">
+    <input type="email" id="email" placeholder="Email" value="test@example.com">
+    <input type="tel" id="phone" placeholder="Phone" value="+1-555-123-4567">
+    <input type="password" id="password" placeholder="Password (12+ chars, UPPERCASE, lowercase, number, !@#$)" value="TestPass@1234">
+    <button onclick="testRegister()">Test Registration</button>
+    
+    <div id="response">Response will appear here...</div>
+    
+    <script>
+    async function testRegister() {
+        const response = document.getElementById('response');
+        
+        const payload = {
+            firstName: document.getElementById('firstName').value,
+            lastName: document.getElementById('lastName').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value,
+            password: document.getElementById('password').value,
+            role: 'STUDENT'
+        };
+        
+        console.log('Sending payload:', payload);
+        response.innerHTML = '<p>Sending request...</p>';
+        
+        try {
+            const result = await fetch('http://localhost:3000/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            console.log('Response status:', result.status);
+            const data = await result.json();
+            console.log('Response data:', data);
+            
+            const className = result.ok ? 'success' : 'error';
+            response.innerHTML = `<div class="${className}"><strong>Status: ${result.status}</strong><br><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+        } catch (error) {
+            console.error('Error:', error);
+            response.innerHTML = `<div class="error"><strong>Error:</strong><br>${error.message}</div>`;
+        }
+    }
+    </script>
+</body>
+</html>

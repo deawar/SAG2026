@@ -129,11 +129,11 @@ class AuctionService {
       `SELECT a.*, 
               (SELECT COUNT(*) FROM artwork WHERE auction_id = a.id) as artwork_count,
               (SELECT COUNT(*) FROM bids b JOIN artwork aw ON b.artwork_id = aw.id 
-               WHERE aw.auction_id = a.id AND b.status = 'active') as total_bids,
-              (SELECT SUM(current_bid) FROM auctions au JOIN artwork aw ON au.id = aw.auction_id
-               WHERE au.id = a.id) as total_current_value
+               WHERE aw.auction_id = a.id AND b.bid_status = 'ACTIVE') as total_bids,
+              (SELECT SUM(bid_amount) FROM bids b JOIN artwork aw ON b.artwork_id = aw.id
+               WHERE aw.auction_id = a.id AND b.bid_status = 'ACTIVE') as total_current_value
        FROM auctions a
-       WHERE a.id = $1`,
+       WHERE a.id = $1 AND a.deleted_at IS NULL`,
       [auctionId]
     );
 
@@ -143,7 +143,7 @@ class AuctionService {
 
     const auction = result.rows[0];
     const now = new Date();
-    const endTime = new Date(auction.end_time);
+    const endTime = new Date(auction.ends_at);
     const timeRemaining = Math.max(0, endTime - now);
 
     return {
@@ -151,20 +151,18 @@ class AuctionService {
       title: auction.title,
       description: auction.description,
       schoolId: auction.school_id,
-      charityId: auction.charity_id,
-      status: auction.status,
-      startTime: auction.start_time,
-      endTime: auction.end_time,
+      status: auction.auction_status,
+      startTime: auction.starts_at,
+      endTime: auction.ends_at,
       timeRemaining: timeRemaining,
-      isActive: auction.status === 'active' && endTime > now,
+      isActive: auction.auction_status === 'LIVE' && endTime > now,
       artworkCount: parseInt(auction.artwork_count),
       totalBids: parseInt(auction.total_bids) || 0,
       totalCurrentValue: auction.total_current_value || 0,
       platformFeePercentage: auction.platform_fee_percentage,
-      autoExtendEnabled: auction.auto_extend_enabled,
       autoExtendMinutes: auction.auto_extend_minutes,
       createdAt: auction.created_at,
-      closedAt: auction.closed_at
+      updatedAt: auction.updated_at
     };
   }
 
@@ -451,13 +449,13 @@ class AuctionService {
                JOIN artwork aw ON b.artwork_id = aw.id 
                WHERE aw.auction_id = a.id AND b.bid_status = 'ACTIVE') as unique_bidders
        FROM auctions a
-       WHERE a.status = $1 AND a.end_time > NOW()
-       ORDER BY a.end_time ASC`,
-      ['active']
+       WHERE a.auction_status = $1 AND a.ends_at > NOW() AND a.deleted_at IS NULL
+       ORDER BY a.ends_at ASC`,
+      ['LIVE']
     );
 
     return result.rows.map(auction => {
-      const endTime = new Date(auction.end_time);
+      const endTime = new Date(auction.ends_at);
       const timeRemaining = endTime - new Date();
 
       return {
