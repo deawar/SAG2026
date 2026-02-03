@@ -15,6 +15,13 @@ require('dotenv').config();
  * Import Middleware
  */
 const { loginLimiter, apiLimiter, paymentLimiter, authLimiter, bidLimiter } = require('./middleware/rateLimitMiddleware');
+const {
+  sanitizeInput,
+  authLimiter: securityAuthLimiter,
+  paymentLimiter: securityPaymentLimiter,
+  idempotencyMiddleware,
+  securityLogger
+} = require('./middleware/securityMiddleware');
 
 /**
  * Import Routes
@@ -99,6 +106,15 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+/**
+ * Security Middleware (Applied to all requests)
+ * Order matters: logger → sanitizer → idempotency → rate limiting
+ */
+app.use(securityLogger); // Log suspicious patterns
+app.use(sanitizeInput); // Sanitize all input
+app.use(idempotencyMiddleware); // Handle idempotency for payments
+app.use(apiLimiter); // General rate limiting
 
 /**
  * Request Logging Middleware (Development Only)
