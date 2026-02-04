@@ -10,11 +10,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function initializePage() {
     console.log('=== initializePage called ===');
     
-    // Initialize authentication UI
-    updateAuthUI();
+    // Initialize navbar (shared across all pages)
+    UIComponents.initializeNavbar();
     
-    // Setup event listeners
-    setupEventListeners();
+    // Setup page-specific event listeners
+    setupPageEventListeners();
     
     // Load featured auctions
     await loadFeaturedAuctions();
@@ -30,85 +30,10 @@ async function initializePage() {
 }
 
 /**
- * Update authentication UI based on auth state
+ * Setup page-specific event listeners (not shared navbar)
  */
-function updateAuthUI() {
-    const loginBtn = document.getElementById('login-btn');
-    const registerBtn = document.getElementById('register-btn');
-    const userMenuWrapper = document.querySelector('.user-menu-wrapper');
-    const userMenuBtn = document.getElementById('user-menu-btn');
-    const userName = document.getElementById('user-name');
-
-    if (authManager.isAuthenticated() && authManager.getUser()) {
-        const user = authManager.getUser();
-        if (loginBtn) loginBtn.style.display = 'none';
-        if (registerBtn) registerBtn.style.display = 'none';
-        if (userMenuWrapper) userMenuWrapper.style.display = 'flex';
-        if (userMenuBtn && userName) {
-            userName.textContent = user.first_name || user.firstName || user.email;
-        }
-    } else {
-        if (loginBtn) loginBtn.style.display = 'block';
-        if (registerBtn) registerBtn.style.display = 'block';
-        if (userMenuWrapper) userMenuWrapper.style.display = 'none';
-    }
-
-    // Listen for auth changes
-    authManager.onChange((user) => {
-        updateAuthUI();
-    });
-}
-
-/**
- * Setup event listeners
- */
-function setupEventListeners() {
-    console.log('=== setupEventListeners called ===');
-    
-    // Login button
-    const loginBtn = document.getElementById('login-btn');
-    console.log('Login button found:', !!loginBtn);
-    if (loginBtn) {
-        loginBtn.addEventListener('click', () => {
-            console.log('Login button clicked');
-            UIComponents.showModal('login-modal');
-        });
-    }
-
-    // Register button
-    const registerBtn = document.getElementById('register-btn');
-    console.log('Register button found:', !!registerBtn);
-    if (registerBtn) {
-        registerBtn.addEventListener('click', () => {
-            console.log('Register button clicked');
-            UIComponents.showModal('register-modal');
-        });
-    }
-
-    // User menu toggle
-    const userMenuBtn = document.getElementById('user-menu-btn');
-    const userDropdown = document.getElementById('user-dropdown');
-    if (userMenuBtn && userDropdown) {
-        userMenuBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            userDropdown.style.display = userDropdown.style.display === 'none' ? 'block' : 'none';
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!userMenuBtn.contains(e.target) && !userDropdown.contains(e.target)) {
-                userDropdown.style.display = 'none';
-            }
-        });
-    }
-
-    // Logout button
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
-            await handleLogout();
-        });
-    }
+function setupPageEventListeners() {
+    console.log('=== setupPageEventListeners called ===');
 
     // Mobile menu toggle
     const menuToggle = document.getElementById('menu-toggle');
@@ -116,14 +41,6 @@ function setupEventListeners() {
     if (menuToggle && navMenu) {
         menuToggle.addEventListener('click', () => {
             navMenu.classList.toggle('active');
-        });
-    }
-
-    // Browse Auctions button
-    const browseBtn = document.querySelector('[href="/auctions.html"]');
-    if (browseBtn) {
-        browseBtn.addEventListener('click', (e) => {
-            // Navigation will happen naturally
         });
     }
 
