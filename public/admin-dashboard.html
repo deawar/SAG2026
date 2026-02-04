@@ -601,6 +601,75 @@
     <!-- Alert Container -->
     <div id="alert-container" class="alert-container" role="region" aria-live="polite"></div>
 
+    <!-- Modal: Login -->
+    <div id="login-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="login-title" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" aria-label="Close login modal">&times;</button>
+            <h2 id="login-title">Login</h2>
+            <form id="login-form" class="form">
+                <div class="form-group">
+                    <label for="login-email">Email Address</label>
+                    <input type="email" id="login-email" name="email" required aria-required="true">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" name="password" required aria-required="true">
+                </div>
+                <div class="form-group">
+                    <label for="login-remember">
+                        <input type="checkbox" id="login-remember" name="remember">
+                        Remember me
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+            <p class="text-center">Don't have an account? <button class="link-btn" id="switch-to-register">Sign up</button></p>
+        </div>
+    </div>
+
+    <!-- Modal: Register -->
+    <div id="register-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="register-title" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" aria-label="Close registration modal">&times;</button>
+            <h2 id="register-title">Create Account</h2>
+            <form id="register-form" class="form">
+                <div class="form-group">
+                    <label for="register-first-name">First Name</label>
+                    <input type="text" id="register-first-name" name="firstName" required aria-required="true">
+                </div>
+                <div class="form-group">
+                    <label for="register-last-name">Last Name</label>
+                    <input type="text" id="register-last-name" name="lastName" required aria-required="true">
+                </div>
+                <div class="form-group">
+                    <label for="register-email">Email Address</label>
+                    <input type="email" id="register-email" name="email" required aria-required="true">
+                </div>
+                <div class="form-group">
+                    <label for="register-phone">Mobile Phone Number</label>
+                    <input type="tel" id="register-phone" name="phone" placeholder="+1 (555) 123-4567" pattern="[0-9+\-\s\(\)]{10,}" required aria-required="true">
+                    <small>Required for 2FA, communications, and payment verification</small>
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Password</label>
+                    <input type="password" id="register-password" name="password" required aria-required="true">
+                </div>
+                <div class="form-group">
+                    <label for="register-confirm">Confirm Password</label>
+                    <input type="password" id="register-confirm" name="password_confirm" required aria-required="true">
+                </div>
+                <div class="form-group">
+                    <label for="register-terms">
+                        <input type="checkbox" id="register-terms" name="terms" required aria-required="true">
+                        I agree to the Terms of Service
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary">Create Account</button>
+            </form>
+            <p class="text-center">Already have an account? <button class="link-btn" id="switch-to-login">Login</button></p>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="footer" role="contentinfo">
         <div class="container">
