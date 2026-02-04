@@ -980,6 +980,54 @@ class UIComponents {
             });
         }
     }
+
+    /**
+     * Require authentication - redirect to home if not logged in
+     * Call this on protected pages that require login
+     * @param {string} redirectTo - Page to redirect to if not authenticated (default: home page)
+     * @returns {boolean} - True if authenticated, false if not
+     */
+    static requireAuth(redirectTo = '/') {
+        // Wait for authManager to be available
+        if (!authManager) {
+            console.warn('AuthManager not yet initialized');
+            return false;
+        }
+
+        if (!authManager.isAuthenticated()) {
+            // Redirect to home page (or specified page) where user can register/login
+            window.location.href = redirectTo;
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Require admin authentication - redirect to home if not logged in as admin
+     * Call this on admin pages
+     * @param {string} redirectTo - Page to redirect to if not authenticated
+     * @returns {boolean} - True if authenticated and is admin, false otherwise
+     */
+    static requireAdminAuth(redirectTo = '/') {
+        if (!authManager) {
+            console.warn('AuthManager not yet initialized');
+            return false;
+        }
+
+        if (!authManager.isAuthenticated()) {
+            window.location.href = redirectTo;
+            return false;
+        }
+
+        const user = authManager.getUser();
+        if (!user || !user.role || !user.role.includes('ADMIN')) {
+            window.location.href = redirectTo;
+            return false;
+        }
+
+        return true;
+    }
 }
 
 // Create global instance
