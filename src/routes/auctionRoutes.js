@@ -24,11 +24,15 @@ router.post(
  * GET /api/auctions
  * List auctions with filtering and pagination
  * Query params: status, schoolId, limit, offset, sortBy, sortOrder
- * Access: Public
+ * Access: Authenticated users only
  */
-router.get('/', async (req, res) => {
-  await auctionController.listAuctions(req, res);
-});
+router.get(
+  '/',
+  authMiddleware.verifyToken,
+  async (req, res) => {
+    await auctionController.listAuctions(req, res);
+  }
+);
 
 /**
  * GET /api/auctions/active/list
@@ -44,7 +48,7 @@ router.get(
 /**
  * GET /api/auctions/:auctionId
  * Get auction details
- * Access: Public (authenticated users)
+ * Access: Authenticated users only
  */
 router.get(
   '/:auctionId',
