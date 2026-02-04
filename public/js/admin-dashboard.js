@@ -673,6 +673,10 @@ class AdminDashboard {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize navbar (shared across all pages)
+    UIComponents.initializeNavbar();
+    
+    // Initialize admin dashboard
     window.adminDashboard = new AdminDashboard();
 });
 
