@@ -747,6 +747,9 @@ class UserDashboard {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    // Require authentication - redirect to home if not logged in
+    UIComponents.requireAuth('/');
+    
     // Initialize navbar (shared across all pages)
     UIComponents.initializeNavbar();
     
