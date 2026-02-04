@@ -68,6 +68,38 @@
                             <p class="step-subtitle">Basic details to create your account</p>
                         </div>
 
+                        <!-- Account Type Selection -->
+                        <div class="form-group">
+                            <label>Account Type <span aria-label="required">*</span></label>
+                            <div class="radio-group" role="radiogroup" aria-required="true">
+                                <div class="radio-item">
+                                    <input 
+                                        type="radio" 
+                                        id="account-student" 
+                                        name="account_type" 
+                                        value="student" 
+                                        checked
+                                        required
+                                        aria-describedby="student-desc"
+                                    >
+                                    <label for="account-student">Student</label>
+                                    <small id="student-desc" class="radio-desc">I want to bid on artwork (need invitation link)</small>
+                                </div>
+                                <div class="radio-item">
+                                    <input 
+                                        type="radio" 
+                                        id="account-teacher" 
+                                        name="account_type" 
+                                        value="teacher" 
+                                        required
+                                        aria-describedby="teacher-desc"
+                                    >
+                                    <label for="account-teacher">Teacher</label>
+                                    <small id="teacher-desc" class="radio-desc">I want to manage students and upload artwork</small>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Full Name -->
                         <div class="form-group">
                             <label for="full-name">Full Name <span aria-label="required">*</span></label>
