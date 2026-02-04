@@ -673,6 +673,9 @@ class AdminDashboard {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    // Require admin authentication - redirect to home if not logged in as admin
+    UIComponents.requireAdminAuth('/');
+    
     // Initialize navbar (shared across all pages)
     UIComponents.initializeNavbar();
     
