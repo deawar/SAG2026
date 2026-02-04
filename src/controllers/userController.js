@@ -23,7 +23,7 @@ class UserController {
    */
   async register(req, res, next) {
     try {
-      const { email, password, firstName, lastName, dateOfBirth, schoolId, phone, role = 'STUDENT' } = req.body;
+      const { email, password, firstName, lastName, dateOfBirth, schoolId, phone, role } = req.body;
 
       // 1. Validate required fields
       if (!email || !password || !firstName || !lastName) {
@@ -52,20 +52,14 @@ class UserController {
         });
       }
 
-      // 4. Validate role
-      if (!ValidationUtils.validateRole(role)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid role',
-          errors: ['role']
-        });
-      }
-
-      // 5. Sanitize inputs
+      // 4. Sanitize inputs
       const sanitizedEmail = ValidationUtils.sanitizeString(email, 254).toLowerCase();
       const sanitizedFirstName = ValidationUtils.sanitizeString(firstName, 100);
       const sanitizedLastName = ValidationUtils.sanitizeString(lastName, 100);
       const sanitizedPhone = phone ? ValidationUtils.sanitizeString(phone, 20) : null;
+
+      // 5. Determine final role (always default to STUDENT for security, ignore provided role)
+      const finalRole = ValidationUtils.validateRole(role) ? role : 'STUDENT';
 
       // 6. Create user in database
       const user = await this.userModel.create({
@@ -76,7 +70,7 @@ class UserController {
         phoneNumber: sanitizedPhone,
         dateOfBirth,
         schoolId,
-        role
+        role: finalRole
       });
 
       // 7. Generate tokens
@@ -135,7 +129,16 @@ class UserController {
         });
       }
 
-      // 2. Sanitize email
+      // 2. Validate email format
+      if (!ValidationUtils.validateEmail(email)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid email format',
+          errors: ['email']
+        });
+      }
+
+      // 3. Sanitize email
       const sanitizedEmail = ValidationUtils.sanitizeString(email, 254).toLowerCase();
 
       // 3. Retrieve user by email
