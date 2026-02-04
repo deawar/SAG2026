@@ -632,7 +632,31 @@ CREATE INDEX idx_dashboard_metrics_recorded ON dashboard_metrics(recorded_at);
 -- Cannot use subqueries in CHECK constraints in PostgreSQL
 
 -- ============================================================================
--- 11. Create Partitions for Large Tables (optional, for >1M rows)
+-- 11. Registration Tokens Table (for teacher-managed student signup)
+-- ============================================================================
+
+CREATE TABLE registration_tokens (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  token VARCHAR(255) UNIQUE NOT NULL,
+  teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  student_email CITEXT NOT NULL,
+  student_name VARCHAR(200),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  used_at TIMESTAMP WITH TIME ZONE,
+  created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  token_expires_at TIMESTAMP WITH TIME ZONE DEFAULT (CURRENT_TIMESTAMP + INTERVAL '30 days'),
+  CONSTRAINT token_not_empty CHECK (length(trim(token)) > 0),
+  CONSTRAINT email_valid CHECK (student_email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$')
+);
+
+CREATE INDEX idx_registration_tokens_token ON registration_tokens(token);
+CREATE INDEX idx_registration_tokens_teacher_id ON registration_tokens(teacher_id);
+CREATE INDEX idx_registration_tokens_student_email ON registration_tokens(student_email);
+CREATE INDEX idx_registration_tokens_used_at ON registration_tokens(used_at) WHERE used_at IS NULL;
+CREATE INDEX idx_registration_tokens_expires_at ON registration_tokens(token_expires_at);
+
+-- ============================================================================
+-- 12. Create Partitions for Large Tables (optional, for >1M rows)
 -- ============================================================================
 
 -- Audit logs can be partitioned by date for performance

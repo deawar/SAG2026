@@ -23,7 +23,7 @@ class UserController {
    */
   async register(req, res, next) {
     try {
-      const { email, password, firstName, lastName, dateOfBirth, schoolId, phone, role } = req.body;
+      const { email, password, firstName, lastName, dateOfBirth, schoolId, phone, accountType } = req.body;
 
       // 1. Validate required fields
       if (!email || !password || !firstName || !lastName) {
@@ -58,8 +58,11 @@ class UserController {
       const sanitizedLastName = ValidationUtils.sanitizeString(lastName, 100);
       const sanitizedPhone = phone ? ValidationUtils.sanitizeString(phone, 20) : null;
 
-      // 5. Determine final role (always default to STUDENT for security, ignore provided role)
-      const finalRole = ValidationUtils.validateRole(role) ? role : 'STUDENT';
+      // 5. Determine role based on account type
+      let finalRole = 'STUDENT'; // Default to student
+      if (accountType === 'teacher') {
+        finalRole = 'TEACHER';
+      }
 
       // 6. Create user in database
       const user = await this.userModel.create({
