@@ -1,10 +1,12 @@
 /**
  * Auction Controller
  * Handles HTTP requests for auction creation, management, and retrieval
+ * CRITICAL: All responses filtered by user role + visibility rules
  */
 
 const auctionService = require('../services/auctionService');
 const { pool } = require('../models/index');
+const roleHierarchyUtils = require('../utils/roleHierarchyUtils');
 
 class AuctionController {
   /**
@@ -49,12 +51,21 @@ class AuctionController {
   /**
    * GET /api/auctions/:auctionId
    * Get auction details
+   * VISIBILITY: Filtered by user role (SITE_ADMIN > SCHOOL_ADMIN > TEACHER > STUDENT)
    */
   async getAuction(req, res) {
     try {
       const { auctionId } = req.params;
 
       const result = await auctionService.getAuction(auctionId);
+
+      // ===== CRITICAL: Apply visibility filtering =====
+      if (!roleHierarchyUtils.canViewAuction(req.user, result)) {
+        return res.status(403).json({
+          success: false,
+          message: 'You do not have permission to view this auction'
+        });
+      }
 
       return res.status(200).json({
         success: true,
@@ -213,6 +224,11 @@ class AuctionController {
   /**
    * GET /api/auctions
    * List auctions with filtering and pagination
+   * VISIBILITY: Filtered by user role
+   * - SITE_ADMIN: all auctions
+   * - SCHOOL_ADMIN: own school only
+   * - TEACHER: approved auctions in own school
+   * - STUDENT/BIDDER: approved auctions in own school
    */
   async listAuctions(req, res) {
     try {
@@ -227,7 +243,18 @@ class AuctionController {
         sortOrder
       });
 
-      return res.status(200).json(result);
+      // ===== CRITICAL: Apply role-based visibility filtering =====
+      const filteredAuctions = roleHierarchyUtils.filterAuctionsByRole(
+        req.user,
+        result.auctions || []
+      );
+
+      return res.status(200).json({
+        success: true,
+        count: filteredAuctions.length,
+        total: result.total,
+        auctions: filteredAuctions
+      });
     } catch (error) {
       console.error('Error listing auctions:', error);
       return res.status(400).json({
@@ -282,6 +309,10 @@ class AuctionController {
   /**
    * GET /api/auctions/:auctionId/artwork
    * Get all artwork in an auction
+   * VISIBILITY: Filtered by approval status
+   * - SITE_ADMIN/SCHOOL_ADMIN: all artwork
+   * - TEACHER: own submissions + approved artwork
+   * - STUDENT/BIDDER: approved artwork only
    */
   async getAuctionArtwork(req, res) {
     try {
@@ -304,10 +335,22 @@ class AuctionController {
         });
       }
 
+      // ===== CRITICAL: Filter artwork by role + approval status =====
+      const filteredArtwork = roleHierarchyUtils.filterArtworkByRole(
+        req.user,
+        result.rows
+      );
+
+      // ===== CRITICAL: Sanitize sensitive fields for STUDENT/BIDDER =====
+      const sanitizedArtwork = roleHierarchyUtils.sanitizeArrayByRole(
+        filteredArtwork,
+        req.user.role
+      );
+
       return res.status(200).json({
         success: true,
-        count: result.rows.length,
-        artwork: result.rows.map(piece => ({
+        count: sanitizedArtwork.length,
+        artwork: sanitizedArtwork.map(piece => ({
           artworkId: piece.id,
           title: piece.title,
           description: piece.description,
