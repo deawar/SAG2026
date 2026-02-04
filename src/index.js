@@ -12,6 +12,7 @@ const fs = require('fs');
 const app = require('./app');
 const { Database } = require('./models');
 const realtimeService = require('./services/realtimeService');
+const { encodeHTML } = require('./middleware/securityMiddleware');
 
 /**
  * Configuration
@@ -109,6 +110,7 @@ async function startServer() {
     /**
      * Global Error Handler
      * Catches all errors from routes and middleware
+     * Encodes error messages to prevent XSS
      */
     app.use((err, req, res, next) => {
       console.error('Global Error Handler:', {
@@ -120,9 +122,12 @@ async function startServer() {
       });
 
       const statusCode = err.statusCode || err.status || 500;
-      const message = process.env.NODE_ENV === 'production'
+      let message = process.env.NODE_ENV === 'production'
         ? (statusCode === 500 ? 'Internal Server Error' : err.message)
         : err.message;
+
+      // Encode HTML in error message to prevent XSS
+      message = encodeHTML(message);
 
       res.status(statusCode).json({
         error: err.name || 'Error',
