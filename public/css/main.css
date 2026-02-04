@@ -249,6 +249,13 @@ a:focus {
     border-radius: var(--radius-md);
 }
 
+.logo-img {
+    height: 40px;
+    width: auto;
+    max-width: 150px;
+    object-fit: contain;
+}
+
 .logo-text {
     letter-spacing: -0.02em;
 }
