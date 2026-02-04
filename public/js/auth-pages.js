@@ -714,6 +714,10 @@ class AuthPages {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize navbar (shared across all pages)
+    UIComponents.initializeNavbar();
+    
+    // Initialize auth pages
     window.authPages = new AuthPages();
 });
 

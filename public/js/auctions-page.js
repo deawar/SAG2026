@@ -430,6 +430,10 @@ class AuctionsPage {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize navbar (shared across all pages)
+    UIComponents.initializeNavbar();
+    
+    // Initialize auctions page
     window.auctionsPage = new AuctionsPage();
 });
 

@@ -747,6 +747,10 @@ class UserDashboard {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize navbar (shared across all pages)
+    UIComponents.initializeNavbar();
+    
+    // Initialize user dashboard
     window.userDashboard = new UserDashboard();
 });
 

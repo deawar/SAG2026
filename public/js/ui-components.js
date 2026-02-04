@@ -873,6 +873,113 @@ class UIComponents {
 
         return updateCountdown();
     }
+
+    /**
+     * Initialize navbar auth UI and event listeners
+     * Call this on DOMContentLoaded for all pages
+     */
+    static initializeNavbar() {
+        // Update auth UI based on user state
+        this.updateAuthUI();
+        
+        // Setup navbar event listeners
+        this.setupNavbarEventListeners();
+    }
+
+    /**
+     * Update navbar auth UI based on authentication state
+     */
+    static updateAuthUI() {
+        const loginBtn = document.getElementById('login-btn');
+        const registerBtn = document.getElementById('register-btn');
+        const userMenuWrapper = document.querySelector('.user-menu-wrapper');
+        const userMenuBtn = document.getElementById('user-menu-btn');
+        const userName = document.getElementById('user-name');
+
+        if (authManager && authManager.isAuthenticated() && authManager.getUser()) {
+            const user = authManager.getUser();
+            if (loginBtn) loginBtn.style.display = 'none';
+            if (registerBtn) registerBtn.style.display = 'none';
+            if (userMenuWrapper) userMenuWrapper.style.display = 'flex';
+            if (userMenuBtn && userName) {
+                userName.textContent = user.first_name || user.firstName || user.email;
+            }
+        } else {
+            if (loginBtn) loginBtn.style.display = 'block';
+            if (registerBtn) registerBtn.style.display = 'block';
+            if (userMenuWrapper) userMenuWrapper.style.display = 'none';
+        }
+
+        // Listen for auth changes
+        if (authManager) {
+            authManager.onChange(() => {
+                this.updateAuthUI();
+            });
+        }
+    }
+
+    /**
+     * Setup navbar event listeners (login, register, user menu)
+     */
+    static setupNavbarEventListeners() {
+        // Login button
+        const loginBtn = document.getElementById('login-btn');
+        if (loginBtn) {
+            loginBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.showModal('login-modal');
+            });
+        }
+
+        // Register button
+        const registerBtn = document.getElementById('register-btn');
+        if (registerBtn) {
+            registerBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.showModal('register-modal');
+            });
+        }
+
+        // User menu toggle
+        const userMenuBtn = document.getElementById('user-menu-btn');
+        const userDropdown = document.getElementById('user-dropdown');
+        if (userMenuBtn && userDropdown) {
+            userMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdown.style.display = userDropdown.style.display === 'none' ? 'block' : 'none';
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!userMenuBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+                    userDropdown.style.display = 'none';
+                }
+            });
+        }
+
+        // Logout button
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (authManager) {
+                    authManager.logout();
+                    window.location.href = '/';
+                }
+            });
+        }
+
+        // Admin logout button (if on admin page)
+        const adminLogoutBtn = document.getElementById('admin-logout-btn');
+        if (adminLogoutBtn) {
+            adminLogoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (authManager) {
+                    authManager.logout();
+                    window.location.href = '/';
+                }
+            });
+        }
+    }
 }
 
 // Create global instance
