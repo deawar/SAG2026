@@ -11,3 +11,9 @@ coverage/
 Thumbs.db
 backups/
 uploads/
+# Sensitive/Private Documentation (Not for Public Repos)
+ACCOUNT_SETUP_GUIDE.md
+ACCOUNT_SETUP_QUICK_REFERENCE.md
+DOCUMENTATION_INDEX_ACCOUNTS.md
+ACCOUNT_SETUP_DELIVERY_SUMMARY.md
+
