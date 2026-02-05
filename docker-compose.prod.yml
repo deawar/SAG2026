@@ -3,15 +3,19 @@
 
 version: '3.8'
 
+# Load environment variables from .env file
+env_file:
+  - .env
+
 services:
   # PostgreSQL Database Service (Production)
   db:
     image: postgres:15-alpine
     container_name: silent-auction-gallery-db
     environment:
-      POSTGRES_DB: silent_auction_gallery
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: xP@rDj53tMXJBpKGAP3EiLz4
+      POSTGRES_DB: ${DB_NAME:-silent_auction_gallery}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8"
       # Performance tuning
       POSTGRES_MAX_CONNECTIONS: 100
@@ -51,7 +55,7 @@ services:
 
   # Node.js Application Service (Production)
   app:
-    image: ${DOCKER_REGISTRY:-docker.io}/${DOCKER_IMAGE:-sag2026}:${DOCKER_TAG:-latest}
+    image: silent-auction-gallery:${DOCKER_TAG:-latest}
     container_name: sag-app-prod
     environment:
       # Server
@@ -60,17 +64,17 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       
       # Database
-      DATABASE_HOST: postgres
-      DATABASE_PORT: ${DATABASE_PORT:-5432}
-      DATABASE_NAME: ${DATABASE_NAME}
-      DATABASE_USER: ${DATABASE_USER}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
-      DATABASE_SSL: ${DATABASE_SSL:-true}
+      DATABASE_HOST: ${DB_HOST:-db}
+      DATABASE_PORT: ${DB_PORT:-5432}
+      DATABASE_NAME: ${DB_NAME:-silent_auction_gallery}
+      DATABASE_USER: ${DB_USER:-postgres}
+      DATABASE_PASSWORD: ${DB_PASSWORD}
+      DATABASE_SSL: ${DB_SSL:-false}
       
       # JWT Configuration (from secrets/env)
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
-      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
+      JWT_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_EXPIRES_IN: ${JWT_ACCESS_EXPIRY:-900s}
+      REFRESH_TOKEN_SECRET: ${JWT_REFRESH_SECRET}
       
       # TOTP Configuration
       TOTP_ISSUER: ${TOTP_ISSUER:-SAG2026}
