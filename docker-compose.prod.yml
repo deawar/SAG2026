@@ -3,15 +3,12 @@
 
 version: '3.8'
 
-# Load environment variables from .env file
-env_file:
-  - .env
-
 services:
   # PostgreSQL Database Service (Production)
   db:
     image: postgres:15-alpine
     container_name: silent-auction-gallery-db
+    env_file: .env
     environment:
       POSTGRES_DB: ${DB_NAME:-silent_auction_gallery}
       POSTGRES_USER: ${DB_USER:-postgres}
@@ -57,6 +54,7 @@ services:
   app:
     image: silent-auction-gallery:${DOCKER_TAG:-latest}
     container_name: sag-app-prod
+    env_file: .env
     environment:
       # Server
       NODE_ENV: production
