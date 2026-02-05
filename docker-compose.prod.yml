@@ -5,13 +5,13 @@ version: '3.8'
 
 services:
   # PostgreSQL Database Service (Production)
-  postgres:
+  db:
     image: postgres:15-alpine
-    container_name: sag-postgres-prod
+    container_name: silent-auction-gallery-db
     environment:
-      POSTGRES_DB: ${DATABASE_NAME}
-      POSTGRES_USER: ${DATABASE_USER}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: silent_auction_gallery
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: xP@rDj53tMXJBpKGAP3EiLz4
       POSTGRES_INITDB_ARGS: "--encoding=UTF8"
       # Performance tuning
       POSTGRES_MAX_CONNECTIONS: 100
