@@ -181,10 +181,20 @@
                                 placeholder="••••••••"
                                 required
                                 aria-required="true"
-                                aria-describedby="password-error password-help"
+                                aria-describedby="password-error password-help password-requirements"
                                 autocomplete="new-password"
                             >
-                            <small id="password-help" class="help-text">At least 8 characters, with uppercase, lowercase, numbers, and symbols</small>
+                            <small id="password-help" class="help-text">Minimum 12 characters required</small>
+                            <div id="password-requirements" class="password-requirements">
+                                <h4>Password must contain:</h4>
+                                <ul role="list">
+                                    <li id="req-length" class="requirement"><span class="req-check">✗</span> At least 12 characters</li>
+                                    <li id="req-uppercase" class="requirement"><span class="req-check">✗</span> Uppercase letter (A-Z)</li>
+                                    <li id="req-lowercase" class="requirement"><span class="req-check">✗</span> Lowercase letter (a-z)</li>
+                                    <li id="req-number" class="requirement"><span class="req-check">✗</span> Number (0-9)</li>
+                                    <li id="req-special" class="requirement"><span class="req-check">✗</span> Special character (!@#$%^&*)</li>
+                                </ul>
+                            </div>
                             <small id="password-error" class="error-message" role="alert"></small>
                         </div>
 
