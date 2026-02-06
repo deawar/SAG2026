@@ -154,15 +154,39 @@ class AuthPages {
             if (!email?.value.trim()) errors.email = 'Email is required';
             else if (!UIComponents.validateEmail(email.value)) errors.email = 'Invalid email format';
             if (!dob?.value) errors.dob = 'Date of birth is required';
-            if (!password?.value) errors.password = 'Password is required';
-            else {
-                const strength = UIComponents.validatePassword(password.value);
-                if (strength.score < 2) errors.password = 'Password too weak';
+            if (!password?.value) {
+                errors.password = 'Password is required';
+            } else {
+                // Check password complexity - must have all requirements
+                const pwd = password.value;
+                const requirements = {
+                    minLength: pwd.length >= 12,
+                    uppercase: /[A-Z]/.test(pwd),
+                    lowercase: /[a-z]/.test(pwd),
+                    number: /[0-9]/.test(pwd),
+                    special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)
+                };
+
+                const allMet = Object.values(requirements).every(req => req === true);
+                
+                if (!allMet) {
+                    const missing = [];
+                    if (!requirements.minLength) missing.push('12+ characters');
+                    if (!requirements.uppercase) missing.push('uppercase letter');
+                    if (!requirements.lowercase) missing.push('lowercase letter');
+                    if (!requirements.number) missing.push('number');
+                    if (!requirements.special) missing.push('special character');
+                    errors.password = `Password must contain: ${missing.join(', ')}`;
+                }
             }
             if (confirmPass?.value !== password?.value) errors.confirmpass = 'Passwords do not match';
 
             if (Object.keys(errors).length > 0) {
                 UIComponents.displayFormErrors(form, errors);
+                // Also show a toast for the password error
+                if (errors.password) {
+                    UIComponents.createToast({ message: errors.password, type: 'error' });
+                }
                 return false;
             }
         } else if (step === 2) {
@@ -306,7 +330,9 @@ class AuthPages {
             UIComponents.hideLoading(loader);
 
             if (!response.ok) {
-                UIComponents.showAlert(data.message || 'Registration failed', 'error');
+                const errorMessage = data.message || 'Registration failed';
+                UIComponents.createToast({ message: errorMessage, type: 'error' });
+                UIComponents.showAlert(errorMessage, 'error');
                 return;
             }
 
@@ -314,7 +340,7 @@ class AuthPages {
             setTimeout(() => window.location.href = '/login.html', 1500);
         } catch (error) {
             console.error('Registration error:', error);
-            UIComponents.createToast({ message: 'Connection error', type: 'error' });
+            UIComponents.createToast({ message: 'Connection error: ' + error.message, type: 'error' });
         }
     }
 
