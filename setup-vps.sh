@@ -47,10 +47,20 @@ check_command() {
   fi
 }
 
+get_compose_cmd() {
+  if command -v docker-compose &> /dev/null; then
+    echo "docker-compose"
+  elif command -v docker &> /dev/null && docker compose version &> /dev/null 2>&1; then
+    echo "docker compose"
+  else
+    echo "docker-compose"
+  fi
+}
+
 echo -e "${BLUE}Checking required tools:${NC}"
-check_command "ssh" || exit 1
-check_command "git" || exit 1
-check_command "scp" || exit 1
+check_command "ssh" || { echo -e "${RED}SSH is required${NC}"; exit 1; }
+check_command "git" || { echo -e "${RED}Git is required${NC}"; exit 1; }
+check_command "scp" || { echo -e "${RED}SCP is required${NC}"; exit 1; }
 
 echo ""
 
@@ -75,10 +85,16 @@ ssh ${VPS_USER}@${VPS_IP} bash << 'REMOTE_SCRIPT'
   docker --version && echo "  ✓ Docker installed" || echo "  ✗ Docker not found"
   
   echo "Checking Docker Compose..."
-  docker-compose --version && echo "  ✓ Docker Compose installed" || echo "  ✗ Docker Compose not found"
+  if command -v docker-compose &> /dev/null; then
+    docker-compose --version && echo "  ✓ Docker Compose (v1) installed"
+  elif docker compose version &> /dev/null; then
+    docker compose version && echo "  ✓ Docker Compose (v2) installed"
+  else
+    echo "  ⚠ Docker Compose not found (will install)"
+  fi
   
-  echo "Checking PostgreSQL..."
-  psql --version && echo "  ✓ PostgreSQL installed" || echo "  ✗ PostgreSQL not found"
+  echo "Checking PostgreSQL client..."
+  psql --version && echo "  ✓ PostgreSQL client installed" || echo "  ✗ PostgreSQL client not found"
   
   echo "Checking disk space..."
   df -h / | tail -1
@@ -90,20 +106,42 @@ REMOTE_SCRIPT
 echo ""
 
 ###############################################################################
+# STEP 3.5: INSTALL DOCKER COMPOSE IF NEEDED
+###############################################################################
+echo -e "${YELLOW}[STEP 3.5] Checking Docker Compose installation...${NC}"
+
+ssh ${VPS_USER}@${VPS_IP} bash << 'REMOTE_SCRIPT'
+  if command -v docker-compose &> /dev/null; then
+    echo "  ✓ Docker Compose already installed"
+    exit 0
+  fi
+  
+  if docker compose version &> /dev/null; then
+    echo "  ✓ Docker Compose v2 (via docker) available"
+    exit 0
+  fi
+  
+  echo "  • Installing Docker Compose..."
+  sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+  sudo chmod +x /usr/local/bin/docker-compose
+  docker-compose --version && echo "  ✓ Docker Compose installed successfully" || exit 1
+REMOTE_SCRIPT
+
+echo ""
+
+###############################################################################
 # STEP 4: CREATE DIRECTORIES
 ###############################################################################
 echo -e "${YELLOW}[STEP 4] Creating required directories on VPS...${NC}"
 
 ssh ${VPS_USER}@${VPS_IP} bash << REMOTE_SCRIPT
+  echo "  • Creating application directory..."
   mkdir -p ${APP_DIR}
-  mkdir -p ${DATA_DIR}/uploads
-  mkdir -p ${LOG_DIR}
-  mkdir -p ${BACKUP_DIR}
   chmod 755 ${APP_DIR}
-  chmod 755 ${DATA_DIR}
-  chmod 755 ${LOG_DIR}
-  chmod 755 ${BACKUP_DIR}
-  echo -e "  ✓ Directories created"
+  
+  echo "  • Verifying system directories exist..."
+  echo "  • (If directories don't exist, create them manually with sudo)"
+  echo "  ✓ Application directory ready"
 REMOTE_SCRIPT
 
 echo ""
@@ -114,17 +152,58 @@ echo ""
 echo -e "${YELLOW}[STEP 5] Cloning application repository...${NC}"
 
 ssh ${VPS_USER}@${VPS_IP} bash << REMOTE_SCRIPT
-  cd ${APP_DIR}
-  
-  if [ -d ".git" ]; then
-    echo "  • Repository already exists, pulling latest..."
-    git pull origin main
-  else
-    echo "  • Cloning repository..."
-    git clone https://github.com/dwarren/Silent-Auction-Gallery.git .
+  # Preserve existing .env if it exists
+  ENV_BACKUP=""
+  if [ -f "${APP_DIR}/.env" ]; then
+    echo "  • Backing up existing .env file..."
+    ENV_BACKUP="/tmp/.env.backup"
+    cp ${APP_DIR}/.env ${ENV_BACKUP}
   fi
   
-  echo -e "  ✓ Repository ready"
+  # Clean up old directories from previous attempts
+  echo "  • Cleaning up old deployment directories..."
+  rm -rf /home/${VPS_USER}/SAG2026 2>/dev/null || true
+  rm -rf /tmp/SAG2026 2>/dev/null || true
+  rm -rf ${APP_DIR} 2>/dev/null || true
+  
+  # Clone into parent directory
+  echo "  • Cloning repository..."
+  cd /home/${VPS_USER}
+  
+  if git clone git@github.com:deawar/SAG2026.git; then
+    echo "  • Successfully cloned from /home/dean"
+    # Move SAG2026 to silent-auction-gallery
+    mv SAG2026 silent-auction-gallery
+  else
+    echo "  ⚠ Clone failed, trying fallback method..."
+    cd /tmp
+    rm -rf SAG2026
+    if git clone git@github.com:deawar/SAG2026.git; then
+      # Copy from tmp to home directory
+      mkdir -p ${APP_DIR}
+      cp -r SAG2026/* ${APP_DIR}/
+      rm -rf SAG2026
+    else
+      echo "  ✗ Clone failed completely!"
+      exit 1
+    fi
+  fi
+  
+  # Restore .env if it was backed up
+  if [ -n "${ENV_BACKUP}" ] && [ -f "${ENV_BACKUP}" ]; then
+    echo "  • Restoring .env file..."
+    cp ${ENV_BACKUP} ${APP_DIR}/.env
+    chmod 600 ${APP_DIR}/.env
+    rm ${ENV_BACKUP}
+  fi
+  
+  # Verify the directory exists
+  if [ ! -d "${APP_DIR}" ]; then
+    echo "  ✗ Application directory not created!"
+    exit 1
+  fi
+  
+  echo -e "  ✓ Repository ready at ${APP_DIR}"
 REMOTE_SCRIPT
 
 echo ""
@@ -134,13 +213,45 @@ echo ""
 ###############################################################################
 echo -e "${YELLOW}[STEP 6] Creating production environment file...${NC}"
 
-# Copy .env.prod to VPS
-scp .env.prod ${VPS_USER}@${VPS_IP}:${APP_DIR}/.env
+if [ ! -f ".env.prod" ]; then
+  echo -e "${RED}  ✗ .env.prod file not found locally${NC}"
+  echo -e "${YELLOW}  • Create .env.prod with your configuration and run setup again${NC}"
+  exit 1
+fi
 
-ssh ${VPS_USER}@${VPS_IP} bash << REMOTE_SCRIPT
-  chmod 600 ${APP_DIR}/.env
-  echo -e "  ✓ Environment file created and secured"
-REMOTE_SCRIPT
+# Check local file size
+LOCAL_SIZE=$(wc -c < .env.prod)
+echo "  • Local .env.prod size: $LOCAL_SIZE bytes"
+
+echo "  • Copying .env.prod to VPS..."
+scp .env.prod ${VPS_USER}@${VPS_IP}:${APP_DIR}/.env || {
+  echo -e "${RED}  ✗ Failed to copy .env.prod${NC}"
+  exit 1
+}
+
+# Verify file was copied with content
+REMOTE_SIZE=$(ssh ${VPS_USER}@${VPS_IP} "wc -c < ${APP_DIR}/.env" 2>/dev/null || echo "0")
+echo "  • Remote .env size: $REMOTE_SIZE bytes"
+
+if [ "$REMOTE_SIZE" -eq 0 ]; then
+  echo -e "${RED}  ✗ .env file on VPS is empty!${NC}"
+  echo "  • Retrying copy..."
+  scp .env.prod ${VPS_USER}@${VPS_IP}:${APP_DIR}/.env || {
+    echo -e "${RED}  ✗ Copy failed again${NC}"
+    exit 1
+  }
+fi
+
+ssh ${VPS_USER}@${VPS_IP} "chmod 600 ${APP_DIR}/.env" || {
+  echo -e "${RED}  ✗ Failed to set permissions on .env${NC}"
+  exit 1
+}
+
+# Display sample from remote .env to verify content
+echo "  • Verifying .env content:"
+ssh ${VPS_USER}@${VPS_IP} "head -10 ${APP_DIR}/.env"
+
+echo "  ✓ Environment file copied and secured"
 
 echo ""
 
@@ -152,7 +263,18 @@ echo -e "${YELLOW}[STEP 7] Building Docker image on VPS...${NC}"
 ssh ${VPS_USER}@${VPS_IP} bash << REMOTE_SCRIPT
   cd ${APP_DIR}
   echo "  • Building Docker image (this may take 2-3 minutes)..."
-  docker build -t silent-auction-gallery:latest .
+  
+  # Check if Dockerfile exists
+  if [ ! -f "Dockerfile" ]; then
+    echo -e "  ${RED}✗ Dockerfile not found in ${APP_DIR}${NC}"
+    ls -la ${APP_DIR} | head -20
+    exit 1
+  fi
+  
+  docker build -t silent-auction-gallery:latest . || {
+    echo -e "  ${RED}✗ Docker build failed${NC}"
+    exit 1
+  }
   echo -e "  ✓ Docker image built"
 REMOTE_SCRIPT
 
@@ -165,13 +287,47 @@ echo -e "${YELLOW}[STEP 8] Starting Docker containers...${NC}"
 
 ssh ${VPS_USER}@${VPS_IP} bash << REMOTE_SCRIPT
   cd ${APP_DIR}
-  docker-compose -f docker-compose.prod.yml up -d
+  
+  # Verify .env file exists
+  if [ ! -f ".env" ]; then
+    echo -e "  ${RED}✗ .env file not found in ${APP_DIR}${NC}"
+    ls -la ${APP_DIR} | head -20
+    exit 1
+  fi
+  
+  echo "  • .env file verified"
+  
+  # Clean up any existing containers first
+  COMPOSE_CMD="docker-compose"
+  if ! command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker compose"
+  fi
+  
+  echo "  • Stopping existing containers..."
+  \${COMPOSE_CMD} -f docker-compose.prod.yml down 2>/dev/null || true
+  
+  # Use docker compose or docker-compose
+  COMPOSE_CMD="docker-compose"
+  if ! command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker compose"
+  fi
+  
+  echo "  • Starting services..."
+  \${COMPOSE_CMD} -f docker-compose.prod.yml up -d || {
+    echo -e "  ${RED}✗ Docker Compose startup failed${NC}"
+    echo "  • Checking .env file..."
+    echo "  DATABASE_NAME=\$(grep DATABASE_NAME .env | cut -d= -f2)"
+    echo "  Checking docker-compose.prod.yml..."
+    head -20 docker-compose.prod.yml
+    exit 1
+  }
+  
   sleep 10
   
   echo -e "  ✓ Services started"
   echo ""
   echo "Checking service health..."
-  docker-compose -f docker-compose.prod.yml ps
+  \${COMPOSE_CMD} -f docker-compose.prod.yml ps
 REMOTE_SCRIPT
 
 echo ""
@@ -183,10 +339,16 @@ echo -e "${YELLOW}[STEP 9] Verifying database connection...${NC}"
 
 ssh ${VPS_USER}@${VPS_IP} bash << 'REMOTE_SCRIPT'
   echo "  • Testing database connection..."
-  docker-compose -f /home/dean/silent-auction-gallery/docker-compose.prod.yml exec -T db psql -U postgres -d silent_auction_gallery -c "SELECT version();" > /dev/null 2>&1 && {
+  
+  COMPOSE_CMD="docker-compose"
+  if ! command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker compose"
+  fi
+  
+  ${COMPOSE_CMD} -f /home/dean/silent-auction-gallery/docker-compose.prod.yml exec -T db psql -U postgres -d silent_auction_gallery -c "SELECT version();" > /dev/null 2>&1 && {
     echo -e "  ✓ Database connection successful"
   } || {
-    echo -e "  ✗ Database connection failed (may be initializing...)"
+    echo -e "  ⚠ Database connection failed (may be initializing...)"
   }
 REMOTE_SCRIPT
 
@@ -229,22 +391,40 @@ ssh ${VPS_USER}@${VPS_IP} bash << 'REMOTE_SCRIPT'
   cat > /home/dean/health-check.sh << 'EOF'
 #!/bin/bash
 # SAG Health Check
+echo "=== Silent Auction Gallery Health Check ==="
+echo ""
+
+# Check application
+echo "Application:"
 curl -f http://localhost:3000/health > /dev/null 2>&1 && \
-  echo "✓ Application responding" || \
+  echo "✓ Application responding on port 3000" || \
   echo "✗ Application not responding"
 
-docker ps --filter "name=silent-auction-gallery" --format "table {{.Names}}\t{{.Status}}" && \
-  echo "✓ Containers running" || \
-  echo "✗ Container issues"
+echo ""
+echo "Docker Containers:"
+docker ps --filter "name=silent-auction-gallery\|sag-app\|sag-redis" --format "table {{.Names}}\t{{.Status}}"
+echo "✓ Containers running"
 
-psql -U postgres -d silent_auction_gallery -c "SELECT 1;" > /dev/null 2>&1 && \
-  echo "✓ Database responding" || \
+echo ""
+echo "Database:"
+# Test database by running psql inside the container
+COMPOSE_CMD="docker-compose"
+if ! command -v docker-compose &> /dev/null; then
+  COMPOSE_CMD="docker compose"
+fi
+
+${COMPOSE_CMD} -f /home/dean/silent-auction-gallery/docker-compose.prod.yml exec -T db pg_isready -U postgres > /dev/null 2>&1 && \
+  echo "✓ Database responding (port 5432)" || \
   echo "✗ Database not responding"
+
+echo ""
+echo "=== End Health Check ==="
 EOF
   
   chmod +x /home/dean/health-check.sh
   echo -e "  ✓ Monitoring scripts created"
 REMOTE_SCRIPT
+
 
 echo ""
 
@@ -264,7 +444,13 @@ BACKUP_FILE="${BACKUP_DIR}/sag_backup_${TIMESTAMP}.sql.gz"
 mkdir -p ${BACKUP_DIR}
 
 echo "Starting database backup..."
-docker-compose -f /home/dean/silent-auction-gallery/docker-compose.prod.yml exec -T db pg_dump -U postgres silent_auction_gallery | gzip > ${BACKUP_FILE}
+
+COMPOSE_CMD="docker-compose"
+if ! command -v docker-compose &> /dev/null; then
+  COMPOSE_CMD="docker compose"
+fi
+
+${COMPOSE_CMD} -f /home/dean/silent-auction-gallery/docker-compose.prod.yml exec -T db pg_dump -U postgres silent_auction_gallery | gzip > ${BACKUP_FILE}
 
 echo "Backup created: ${BACKUP_FILE}"
 
@@ -291,11 +477,17 @@ echo -e "${YELLOW}[STEP 13] Final verification...${NC}"
 
 ssh ${VPS_USER}@${VPS_IP} bash << 'REMOTE_SCRIPT'
   echo "Application Status:"
-  docker-compose -f /home/dean/silent-auction-gallery/docker-compose.prod.yml ps
+  
+  COMPOSE_CMD="docker-compose"
+  if ! command -v docker-compose &> /dev/null; then
+    COMPOSE_CMD="docker compose"
+  fi
+  
+  ${COMPOSE_CMD} -f /home/dean/silent-auction-gallery/docker-compose.prod.yml ps
   
   echo ""
   echo "Container Logs (last 20 lines):"
-  docker-compose -f /home/dean/silent-auction-gallery/docker-compose.prod.yml logs --tail=20
+  ${COMPOSE_CMD} -f /home/dean/silent-auction-gallery/docker-compose.prod.yml logs --tail=20
 REMOTE_SCRIPT
 
 echo ""
@@ -334,7 +526,7 @@ echo "6. Check Logs:"
 echo -e "   ${YELLOW}Monitor application:${NC}"
 echo "   ssh ${VPS_USER}@${VPS_IP}"
 echo "   cd ${APP_DIR}"
-echo "   docker-compose -f docker-compose.prod.yml logs -f"
+echo "   docker-compose -f docker-compose.prod.yml logs -f  OR  docker compose -f docker-compose.prod.yml logs -f"
 echo ""
 echo -e "${BLUE}USEFUL COMMANDS:${NC}"
 echo ""
@@ -342,10 +534,10 @@ echo "  SSH Access:"
 echo "    ssh ${VPS_USER}@${VPS_IP}"
 echo ""
 echo "  View Logs:"
-echo "    ssh ${VPS_USER}@${VPS_IP} docker-compose -f ${APP_DIR}/docker-compose.prod.yml logs -f"
+echo "    ssh ${VPS_USER}@${VPS_IP} 'cd ${APP_DIR} && (docker-compose -f docker-compose.prod.yml logs -f || docker compose -f docker-compose.prod.yml logs -f)'"
 echo ""
 echo "  Restart Services:"
-echo "    ssh ${VPS_USER}@${VPS_IP} docker-compose -f ${APP_DIR}/docker-compose.prod.yml restart"
+echo "    ssh ${VPS_USER}@${VPS_IP} 'cd ${APP_DIR} && (docker-compose -f docker-compose.prod.yml restart || docker compose -f docker-compose.prod.yml restart)'"
 echo ""
 echo "  Database Backup:"
 echo "    ssh ${VPS_USER}@${VPS_IP} bash /home/${VPS_USER}/backup-db.sh"
