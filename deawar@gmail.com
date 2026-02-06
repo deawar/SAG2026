@@ -7,7 +7,7 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=silent_auction_gallery
 DB_USER=SAG_DB
-DB_PASSWORD=ba2hB5cVTL14YPCg
+DB_PASSWORD=sTrongPassWordHere
 
 # HTTPS Configuration (optional)
 # Set to 'true' to enable HTTPS, 'false' for HTTP only
@@ -21,4 +21,4 @@ JWT_ACCESS_SECRET=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1
 JWT_REFRESH_SECRET=z9y8x7w6v5u4t3s2r1q0p9o8n7m6l5k4j3i2h1g0f9e8d7c6b5a4z3y2x1w0v9u
 
 # Encryption Key - For sensitive data encryption
-ENCRYPTION_KEY=e1d2c3b4a5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0
+ENCRYPTION_KEY=p6q7r8s9t0u1v2w38i9j0k1l2m3n4o5p6q7r8s2m3n4o5p6q7z6a7b8c9d0
