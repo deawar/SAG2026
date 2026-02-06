@@ -150,95 +150,10 @@ async function handleLogin(event) {
  */
 async function handleRegister(event) {
     event.preventDefault();
-    console.log('Register form submitted');
+    console.log('Register form submitted - redirecting to registration page');
 
-    const firstName = document.getElementById('register-first-name')?.value;
-    const lastName = document.getElementById('register-last-name')?.value;
-    const email = document.getElementById('register-email').value;
-    const phone = document.getElementById('register-phone').value;
-    const password = document.getElementById('register-password').value;
-    const passwordConfirm = document.getElementById('register-confirm').value;
-    const terms = document.getElementById('register-terms').checked;
-
-    console.log('Form data:', { firstName, lastName, email, phone, passwordConfirm: '***', terms });
-
-    // Validate
-    if (!email || !password || !phone) {
-        console.warn('Missing required field (email, password, or phone)');
-        UIComponents.showAlert('Please fill in all required fields', 'error');
-        return;
-    }
-
-    if (!firstName || !lastName) {
-        console.warn('Missing name fields');
-        UIComponents.showAlert('First name and last name are required', 'error');
-        return;
-    }
-
-    if (password !== passwordConfirm) {
-        console.warn('Passwords do not match');
-        UIComponents.showAlert('Passwords do not match', 'error');
-        return;
-    }
-
-    if (!terms) {
-        console.warn('Terms not agreed');
-        UIComponents.showAlert('You must agree to the terms', 'error');
-        return;
-    }
-
-    // Validate phone format (basic validation - digits, spaces, +, -, parentheses)
-    const phoneRegex = /^[0-9+\-\s\(\)]{10,}$/;
-    if (!phoneRegex.test(phone)) {
-        console.warn('Invalid phone format:', phone);
-        UIComponents.showAlert('Please enter a valid phone number', 'error');
-        return;
-    }
-
-    const loader = UIComponents.showLoading('Creating account...');
-    console.log('Calling authManager.register...');
-
-    try {
-        const result = await authManager.register({
-            firstName,
-            lastName,
-            email,
-            phone,
-            password,
-        });
-
-        console.log('Register result:', result);
-
-        if (result.success) {
-            UIComponents.hideLoading(loader);
-            UIComponents.showAlert('Account created successfully!', 'success', 3000);
-            
-            // Close modal
-            const modal = document.getElementById('register-modal');
-            if (modal) modal.style.display = 'none';
-
-            // Clear form
-            document.getElementById('register-form').reset();
-
-            // Update UI
-            updateAuthUI();
-
-            // Connect WebSocket
-            try {
-                await websocketClient.connect();
-            } catch (error) {
-                console.warn('Failed to connect WebSocket:', error);
-            }
-        } else {
-            UIComponents.hideLoading(loader);
-            console.error('Registration failed:', result.error);
-            UIComponents.showAlert(result.error || 'Registration failed', 'error', 5000);
-        }
-    } catch (error) {
-        UIComponents.hideLoading(loader);
-        console.error('Registration error:', error);
-        UIComponents.showAlert('Registration error: ' + error.message, 'error', 5000);
-    }
+    // Redirect to the dedicated multi-step registration page
+    window.location.href = '/register.html';
 }
 
 /**
