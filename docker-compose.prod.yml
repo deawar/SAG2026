@@ -1,7 +1,7 @@
 # Silent Auction Gallery - Docker Compose Production Environment
 # Use this for production-like deployment with optimization and security
 
-version: '3.8'
+version: '3.9'
 
 services:
   # PostgreSQL Database Service (Production)
@@ -101,7 +101,7 @@ services:
       - "${PORT:-5000}:${PORT:-5000}"
     
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
       redis:
         condition: service_healthy
