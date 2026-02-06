@@ -60,6 +60,16 @@ function setupPageEventListeners() {
     if (registerForm) {
         console.log('Attaching submit listener to register form');
         registerForm.addEventListener('submit', handleRegister);
+        
+        // Also attach to button click for reliability
+        const submitBtn = registerForm.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            console.log('Attaching click listener to register button');
+            submitBtn.addEventListener('click', (e) => {
+                console.log('Register button clicked');
+                handleRegister(e);
+            });
+        }
     } else {
         console.error('Register form NOT found in DOM');
     }
