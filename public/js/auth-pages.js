@@ -113,9 +113,15 @@ class AuthPages {
 
         const nextBtn = form.querySelector('.btn-next');
         const backBtn = form.querySelector('.btn-back');
+        const passwordInput = form.querySelector('input[name="password"]');
 
         nextBtn?.addEventListener('click', () => this.nextRegisterStep(form));
         backBtn?.addEventListener('click', () => this.prevRegisterStep(form));
+
+        // Password requirement checker
+        if (passwordInput) {
+            passwordInput.addEventListener('input', () => this.updatePasswordRequirements(passwordInput));
+        }
 
         // Age verification listener
         const dobInput = form.querySelector('input[name="dob"]');
@@ -700,6 +706,43 @@ class AuthPages {
         const isValid = input.value.length >= 8;
         input.classList.toggle('error', !isValid && input.value);
         return isValid;
+    }
+
+    /**
+     * Update password requirements checklist
+     */
+    updatePasswordRequirements(passwordInput) {
+        const password = passwordInput.value;
+        
+        // Define requirements
+        const requirements = {
+            'req-length': password.length >= 12,
+            'req-uppercase': /[A-Z]/.test(password),
+            'req-lowercase': /[a-z]/.test(password),
+            'req-number': /[0-9]/.test(password),
+            'req-special': /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+        };
+
+        // Update UI
+        Object.keys(requirements).forEach(reqId => {
+            const reqElement = document.getElementById(reqId);
+            if (reqElement) {
+                reqElement.classList.toggle('met', requirements[reqId]);
+                const check = reqElement.querySelector('.req-check');
+                if (check) {
+                    check.textContent = requirements[reqId] ? '✓' : '✗';
+                }
+            }
+        });
+
+        // Check if all requirements are met
+        const allMet = Object.values(requirements).every(req => req === true);
+        
+        // Update password input styling
+        if (password) {
+            passwordInput.classList.toggle('valid', allMet);
+            passwordInput.classList.toggle('error', !allMet);
+        }
     }
 
     /**
