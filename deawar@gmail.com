@@ -1,0 +1,24 @@
+# Environment Configuration
+# Add your environment variables here
+
+NODE_ENV=development
+PORT=3000
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=silent_auction_gallery
+DB_USER=SAG_DB
+DB_PASSWORD=sTrongPassWordHere
+
+# HTTPS Configuration (optional)
+# Set to 'true' to enable HTTPS, 'false' for HTTP only
+HTTPS_ENABLED=false
+# SSL_KEY_PATH=./ssl/key.pem
+# SSL_CERT_PATH=./ssl/cert.pem
+
+# JWT Secrets - Must be at least 32 characters for HS256
+# Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+JWT_ACCESS_SECRET=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2
+JWT_REFRESH_SECRET=z9y8x7w6v5u4t3s2r1q0p9o8n7m6l5k4j3i2h1g0f9e8d7c6b5a4z3y2x1w0v9u
+
+# Encryption Key - For sensitive data encryption
+ENCRYPTION_KEY=p6q7r8s9t0u1v2w38i9j0k1l2m3n4o5p6q7r8s2m3n4o5p6q7z6a7b8c9d0
