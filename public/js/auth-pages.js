@@ -111,8 +111,8 @@ class AuthPages {
         const form = document.getElementById('register-form');
         if (!form) return;
 
-        const nextBtn = form.querySelector('.btn-next');
-        const backBtn = form.querySelector('.btn-back');
+        const nextBtn = form.querySelector('#next-step-btn') || form.querySelector('.btn-next');
+        const backBtn = form.querySelector('#prev-step-btn') || form.querySelector('.btn-back');
         const passwordInput = form.querySelector('input[name="password"]');
 
         nextBtn?.addEventListener('click', () => this.nextRegisterStep(form));
@@ -121,6 +121,8 @@ class AuthPages {
         // Password requirement checker
         if (passwordInput) {
             passwordInput.addEventListener('input', () => this.updatePasswordRequirements(passwordInput));
+            // Initialize requirements on page load
+            this.updatePasswordRequirements(passwordInput);
         }
 
         // Age verification listener
