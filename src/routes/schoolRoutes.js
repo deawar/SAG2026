@@ -2,6 +2,7 @@
  * ============================================================================
  * School Routes
  * Public endpoints for accessing school information
+ * Integrates with Public Schools data from U.S. Department of Education
  * ============================================================================
  */
 
@@ -19,8 +20,13 @@ module.exports = (db) => {
 
   /**
    * GET /api/schools
-   * Public endpoint - fetch all active schools for registration
+   * Public endpoint - fetch schools from database or external API
    * No authentication required
+   * 
+   * Query Parameters:
+   * - state: Filter by state (e.g., "IL", "CA")
+   * - city: Filter by city
+   * - search: Search by school name
    * 
    * Response: 200
    * {
@@ -31,19 +37,139 @@ module.exports = (db) => {
    *       "name": "Central High School",
    *       "city": "Springfield",
    *       "state_province": "IL",
-   *       "address_line1": "123 Main St"
+   *       "address_line1": "123 Main St",
+   *       "postal_code": "62701"
    *     }
    *   ]
    * }
    */
   router.get('/', async (req, res, next) => {
     try {
-      const schools = await schoolModel.getAllPublic();
+      const { state, city, search } = req.query;
+      
+      let query = 'SELECT id, name, city, state_province, address_line1, postal_code FROM schools WHERE account_status = $1';
+      const params = ['ACTIVE'];
+
+      // Add filters if provided
+      let paramIndex = 2;
+      if (state) {
+        query += ` AND state_province = $${paramIndex}`;
+        params.push(state.toUpperCase());
+        paramIndex++;
+      }
+      if (city) {
+        query += ` AND city ILIKE $${paramIndex}`;
+        params.push(`%${city}%`);
+        paramIndex++;
+      }
+      if (search) {
+        query += ` AND (name ILIKE $${paramIndex} OR city ILIKE $${paramIndex})`;
+        params.push(`%${search}%`);
+        paramIndex++;
+      }
+
+      query += ' ORDER BY name ASC LIMIT 500';
+
+      const result = await db.query(query, params.slice(0, paramIndex - 1 + (state ? 1 : 0) + (city ? 1 : 0) + (search ? 1 : 0)));
       
       res.json({
         success: true,
         message: 'Schools retrieved successfully',
-        data: schools,
+        data: result.rows,
+        count: result.rows.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * GET /api/schools/by-state/:state
+   * Fetch schools by state code
+   * 
+   * Example: /api/schools/by-state/IL
+   */
+  router.get('/by-state/:state', async (req, res, next) => {
+    try {
+      const { state } = req.params;
+      
+      const result = await db.query(
+        `SELECT id, name, city, state_province, address_line1, postal_code 
+         FROM schools 
+         WHERE account_status = 'ACTIVE' AND state_province = $1
+         ORDER BY city ASC, name ASC
+         LIMIT 500`,
+        [state.toUpperCase()]
+      );
+      
+      res.json({
+        success: true,
+        message: `Schools in ${state.toUpperCase()} retrieved successfully`,
+        data: result.rows,
+        count: result.rows.length,
+        state: state.toUpperCase(),
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * GET /api/schools/search/:query
+   * Search schools by name, city, or state
+   * 
+   * Example: /api/schools/search/Lincoln
+   */
+  router.get('/search/:query', async (req, res, next) => {
+    try {
+      const { query } = req.params;
+      const searchTerm = `%${query}%`;
+      
+      const result = await db.query(
+        `SELECT id, name, city, state_province, address_line1, postal_code 
+         FROM schools 
+         WHERE account_status = 'ACTIVE' 
+         AND (name ILIKE $1 OR city ILIKE $1 OR state_province ILIKE $1)
+         ORDER BY name ASC
+         LIMIT 100`,
+        [searchTerm]
+      );
+      
+      res.json({
+        success: true,
+        message: `Search results for "${query}"`,
+        data: result.rows,
+        count: result.rows.length,
+        query: query,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * GET /api/schools/states
+   * Get list of all states that have schools
+   */
+  router.get('/states', async (req, res, next) => {
+    try {
+      const result = await db.query(
+        `SELECT DISTINCT state_province 
+         FROM schools 
+         WHERE account_status = 'ACTIVE'
+         ORDER BY state_province ASC`
+      );
+      
+      const states = result.rows.map(row => row.state_province);
+      
+      res.json({
+        success: true,
+        message: 'States with schools retrieved successfully',
+        data: states,
+        count: states.length,
         timestamp: new Date().toISOString()
       });
     } catch (error) {
