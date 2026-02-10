@@ -36,6 +36,9 @@ const biddingRoutes = require('./routes/biddingRoutes');
  */
 const app = express();
 
+// Trust proxy for reverse proxy/load balancer headers
+app.set('trust proxy', 1);
+
 // Store for WebSocket server (will be set by index.js)
 app.wsServer = null;
 
