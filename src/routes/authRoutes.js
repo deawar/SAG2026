@@ -219,6 +219,40 @@ router.post('/2fa/setup', authMiddleware.verifyToken, (req, res, next) => {
 });
 
 /**
+ * GET /api/auth
+ * Info endpoint - returns available auth endpoints
+ * Auth: Not required
+ * 
+ * Response: 200
+ * {
+ *   "success": true,
+ *   "data": {
+ *     "endpoints": [...],
+ *     "status": "ok"
+ *   }
+ * }
+ */
+router.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Authentication API - Available endpoints',
+    data: {
+      status: 'operational',
+      endpoints: [
+        { method: 'POST', path: '/api/auth/register', description: 'Register new user' },
+        { method: 'POST', path: '/api/auth/login', description: 'User login' },
+        { method: 'POST', path: '/api/auth/logout', description: 'User logout' },
+        { method: 'POST', path: '/api/auth/refresh', description: 'Refresh access token' },
+        { method: 'POST', path: '/api/auth/verify-2fa', description: 'Verify 2FA code' },
+        { method: 'POST', path: '/api/auth/2fa/setup', description: 'Setup 2FA' },
+        { method: 'POST', path: '/api/auth/2fa/verify', description: 'Verify and enable 2FA' }
+      ]
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
  * POST /api/auth/2fa/verify
  * Verify and enable 2FA
  * Auth: Required
