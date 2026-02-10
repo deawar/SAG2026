@@ -114,9 +114,15 @@ class AuthPages {
         const nextBtn = form.querySelector('#next-step-btn') || form.querySelector('.btn-next');
         const backBtn = form.querySelector('#prev-step-btn') || form.querySelector('.btn-back');
         const passwordInput = form.querySelector('input[name="password"]');
+        const schoolSelect = form.querySelector('select[name="school_id"]');
 
         nextBtn?.addEventListener('click', () => this.nextRegisterStep(form));
         backBtn?.addEventListener('click', () => this.prevRegisterStep(form));
+
+        // Load schools on page init
+        if (schoolSelect) {
+          this.loadSchools(schoolSelect);
+        }
 
         // Password requirement checker
         if (passwordInput) {
@@ -135,6 +141,36 @@ class AuthPages {
     }
 
     /**
+     * Load schools from API and populate dropdown
+     */
+    async loadSchools(selectElement) {
+      try {
+        const response = await fetch('/api/schools');
+        const data = await response.json();
+
+        if (!data.success || !data.data) {
+          console.error('Failed to load schools:', data.message);
+          UIComponents.createToast({ message: 'Could not load schools', type: 'error' });
+          return;
+        }
+
+        // Clear existing options except the placeholder
+        selectElement.innerHTML = '<option value="">Select your school</option>';
+
+        // Add schools to dropdown
+        data.data.forEach(school => {
+          const option = document.createElement('option');
+          option.value = school.id;
+          option.textContent = `${school.name} - ${school.city}, ${school.state_province}`;
+          selectElement.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error loading schools:', error);
+        UIComponents.createToast({ message: 'Connection error loading schools', type: 'error' });
+      }
+    }
+
+    /**
      * Validate current register step
      */
     validateRegisterStep(form) {
@@ -145,6 +181,7 @@ class AuthPages {
             const fullName = form.querySelector('input[name="full-name"]');
             const email = form.querySelector('input[name="email"]');
             const dob = form.querySelector('input[name="dob"]');
+            const school = form.querySelector('select[name="school_id"]');
             const password = form.querySelector('input[name="password"]');
             const confirmPass = form.querySelector('input[name="confirm-password"]');
 
@@ -154,6 +191,7 @@ class AuthPages {
             if (!email?.value.trim()) errors.email = 'Email is required';
             else if (!UIComponents.validateEmail(email.value)) errors.email = 'Invalid email format';
             if (!dob?.value) errors.dob = 'Date of birth is required';
+            if (!school?.value) errors.school = 'School is required';
             if (!password?.value) {
                 errors.password = 'Password is required';
             } else {
@@ -190,10 +228,10 @@ class AuthPages {
                 return false;
             }
         } else if (step === 2) {
-            const street = form.querySelector('input[name="street"]');
+            const street = form.querySelector('input[name="street_address"]');
             const city = form.querySelector('input[name="city"]');
             const state = form.querySelector('input[name="state"]');
-            const zip = form.querySelector('input[name="zip"]');
+            const zip = form.querySelector('input[name="postal_code"]');
 
             const errors = {};
             if (!street?.value.trim()) errors.street = 'Street address is required';

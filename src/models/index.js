@@ -703,6 +703,17 @@ class SchoolModel {
 
     return result.rows;
   }
+
+  async getAllPublic() {
+    const result = await this.db.query(
+      `SELECT id, name, city, state_province, address_line1 FROM schools 
+       WHERE account_status = 'ACTIVE'
+       ORDER BY name ASC`,
+      []
+    );
+
+    return result.rows;
+  }
 }
 
 // ============================================================================
