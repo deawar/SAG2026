@@ -85,6 +85,18 @@ async function startServer() {
       } catch (routeErr) {
         console.error('❌ ERROR mounting auth routes:', routeErr);
       }
+
+      /**
+       * Mount School Routes (public, no auth required)
+       */
+      console.log('Mounting school routes...');
+      try {
+        const schoolRoutes = require('./routes/schoolRoutes')(db);
+        app.use('/api/schools', schoolRoutes);
+        console.log('✅ School routes mounted');
+      } catch (routeErr) {
+        console.error('❌ ERROR mounting school routes:', routeErr);
+      }
     } else {
       console.warn('⚠️  Skipping auth routes (database unavailable)');
     }
