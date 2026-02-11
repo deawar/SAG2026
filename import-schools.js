@@ -21,6 +21,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { Pool } = require('pg');
+require('dotenv').config();
 
 /**
  * Configuration
@@ -38,11 +39,11 @@ const config = {
  * Database connection pool
  */
 const pool = new Pool({
-  host: process.env.PG_HOST || 'localhost',
-  port: process.env.PG_PORT || 5432,
-  database: process.env.PG_DATABASE || 'auction_gallery',
-  user: process.env.PG_USER || 'postgres',
-  password: process.env.PG_PASSWORD,
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  database: process.env.DB_NAME || 'silent_auction_gallery',
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || '',
 });
 
 /**
@@ -138,7 +139,6 @@ async function importSampleSchools() {
         const result = await client.query(
           `INSERT INTO schools (name, city, state_province, address_line1, postal_code, account_status)
            VALUES ($1, $2, $3, $4, $5, 'ACTIVE')
-           ON CONFLICT (name, city, state_province) DO NOTHING
            RETURNING id`,
           [
             school.name,
