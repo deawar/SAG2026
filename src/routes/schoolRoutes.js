@@ -70,7 +70,7 @@ module.exports = (db) => {
 
       query += ' ORDER BY name ASC LIMIT 500';
 
-      const result = await db.query(query, params.slice(0, paramIndex - 1 + (state ? 1 : 0) + (city ? 1 : 0) + (search ? 1 : 0)));
+      const result = await db.query(query, params);
       
       res.json({
         success: true,
