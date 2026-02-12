@@ -115,6 +115,7 @@ class AuthPages {
         const backBtn = form.querySelector('#prev-step-btn') || form.querySelector('.btn-back');
         const passwordInput = form.querySelector('input[name="password"]');
         const schoolSelect = form.querySelector('select[name="school_id"]');
+        const schoolSearch = form.querySelector('#school-search');
 
         nextBtn?.addEventListener('click', () => this.nextRegisterStep(form));
         backBtn?.addEventListener('click', () => this.prevRegisterStep(form));
@@ -122,6 +123,33 @@ class AuthPages {
         // Load schools on page init
         if (schoolSelect) {
           this.loadSchools(schoolSelect);
+        }
+        
+        // Set up school search functionality
+        if (schoolSearch && schoolSelect) {
+          // Debounce search input
+          let searchTimeout;
+          schoolSearch.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            const query = e.target.value.trim();
+            
+            if (query.length >= 2) {
+              searchTimeout = setTimeout(() => {
+                this.searchSchools(query, schoolSelect);
+              }, 300);
+            } else if (query.length === 0) {
+              // Reload all schools
+              this.loadSchools(schoolSelect);
+            }
+          });
+          
+          // Allow selection by pressing Enter
+          schoolSearch.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              schoolSelect.focus();
+            }
+          });
         }
 
         // Password requirement checker
@@ -142,10 +170,27 @@ class AuthPages {
 
     /**
      * Load schools from API and populate dropdown
+     * Supports searching by state, city, or school name
      */
     async loadSchools(selectElement) {
       try {
-        const response = await fetch('/api/schools');
+        const form = selectElement.closest('form');
+        const stateInput = form?.querySelector('input[name="state"]');
+        const cityInput = form?.querySelector('input[name="city"]');
+        
+        let url = '/api/schools';
+        const params = new URLSearchParams();
+        
+        // If state selected, filter by state
+        if (stateInput?.value) {
+          params.append('state', stateInput.value);
+        }
+        
+        if (params.toString()) {
+          url += '?' + params.toString();
+        }
+        
+        const response = await fetch(url);
         const data = await response.json();
 
         if (!data.success || !data.data) {
@@ -164,9 +209,49 @@ class AuthPages {
           option.textContent = `${school.name} - ${school.city}, ${school.state_province}`;
           selectElement.appendChild(option);
         });
+        
+        // Show count if many schools loaded
+        if (data.data.length >= 500) {
+          const hint = document.createElement('option');
+          hint.disabled = true;
+          hint.textContent = `... and ${data.count} more (use search to filter)`;
+          selectElement.appendChild(hint);
+        }
       } catch (error) {
         console.error('Error loading schools:', error);
         UIComponents.createToast({ message: 'Connection error loading schools', type: 'error' });
+      }
+    }
+    
+    /**
+     * Search schools by name, city, or state
+     * @param {string} query - Search query
+     * @param {HTMLElement} selectElement - School select element
+     */
+    async searchSchools(query, selectElement) {
+      if (!query || query.length < 2) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/schools/search/${encodeURIComponent(query)}`);
+        const data = await response.json();
+
+        if (!data.success || !data.data) {
+          return;
+        }
+
+        // Clear and repopulate dropdown
+        selectElement.innerHTML = '<option value="">Select your school</option>';
+        
+        data.data.forEach(school => {
+          const option = document.createElement('option');
+          option.value = school.id;
+          option.textContent = `${school.name} - ${school.city}, ${school.state_province}`;
+          selectElement.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error searching schools:', error);
       }
     }
 
