@@ -37,6 +37,19 @@ CREATE TABLE schools (
 CREATE INDEX idx_schools_name ON schools(name);
 CREATE INDEX idx_schools_status ON schools(account_status);
 
+-- School Data Cache Table (for NCES API sync tracking)
+CREATE TABLE school_data_cache (
+  id VARCHAR(100) PRIMARY KEY,
+  total_count INT DEFAULT 0,
+  last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  last_sync_status VARCHAR(20) DEFAULT 'PENDING' CHECK (last_sync_status IN ('PENDING', 'SUCCESS', 'FAILED', 'PARTIAL')),
+  error_message TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_school_data_cache_last_updated ON school_data_cache(last_updated);
+
 -- Users Table (references schools via school_id)
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

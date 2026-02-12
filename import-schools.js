@@ -1,16 +1,16 @@
 /**
  * ============================================================================
  * School Data Importer
- * Imports real U.S. schools from public data sources
+ * Imports real U.S. schools from NCES API with fallback to hardcoded data
  * 
- * This script imports schools from the National Center for Education Statistics (NCES)
- * database, providing real school data for the Silent Auction Gallery platform.
+ * This script fetches schools from the National Center for Education Statistics (NCES)
+ * database with automatic caching and fallback support.
  * 
  * Usage:
- *   node import-schools.js [--source=nces|--state=IL|--limit=1000]
+ *   node import-schools.js [--force-refresh] [--state=IL] [--limit=1000]
  * 
  * Options:
- *   --source: Data source ('nces', 'ipeds', or 'public-schools-api')
+ *   --force-refresh: Bypass cache and fetch fresh from NCES API
  *   --state: Filter by state code (e.g., 'IL', 'CA', 'TX')
  *   --limit: Maximum number of schools to import
  *   --clear: Clear existing schools before import
@@ -19,20 +19,18 @@
 
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
 const { Pool } = require('pg');
+const SchoolDataService = require('./src/services/schoolDataService');
 require('dotenv').config();
 
 /**
  * Configuration
  */
 const config = {
-  source: process.argv.includes('--source=public-schools-api') ? 'public-schools-api' : 'nces',
+  forceRefresh: process.argv.includes('--force-refresh'),
   state: process.argv.find(arg => arg.startsWith('--state='))?.split('=')[1],
   limit: parseInt(process.argv.find(arg => arg.startsWith('--limit='))?.split('=')[1] || '10000'),
   clear: process.argv.includes('--clear'),
-  // Public Schools API endpoint
-  publicSchoolsApiUrl: 'https://data.nces.ed.gov/oncvs/api/v1/schools',
 };
 
 /**
@@ -47,126 +45,97 @@ const pool = new Pool({
 });
 
 /**
- * Sample real schools data (U.S. Department of Education NCES data)
- * This is a curated list of public schools across major U.S. states
+ * Import schools into database
  */
-const realSchoolsData = [
-  // Illinois
-  { name: 'Lincoln High School', city: 'Chicago', state: 'IL', zip: '60619', address: '1111 E. 116th St.' },
-  { name: 'Northside High School', city: 'Chicago', state: 'IL', zip: '60614', address: '4840 N. Ashland Ave.' },
-  { name: 'Perspective High School', city: 'Chicago', state: 'IL', zip: '60647', address: '2345 W. Division St.' },
-  { name: 'Springfield High School', city: 'Springfield', state: 'IL', zip: '62702', address: '1301 S. MacArthur Blvd.' },
-  
-  // California
-  { name: 'Lincoln High School', city: 'Los Angeles', state: 'CA', zip: '90001', address: '4121 Martin Luther King Jr. Blvd.' },
-  { name: 'Franklin High School', city: 'Los Angeles', state: 'CA', zip: '90015', address: '820 S. Olive St.' },
-  { name: 'Fremont High School', city: 'Los Angeles', state: 'CA', zip: '90037', address: '7676 S. Normandie Ave.' },
-  { name: 'Roosevelt High School', city: 'Los Angeles', state: 'CA', zip: '90022', address: '456 S. Mathews St.' },
-  { name: 'Berkeley High School', city: 'Berkeley', state: 'CA', zip: '94704', address: '1980 Allston Way' },
-  { name: 'Stanford Online High School', city: 'Stanford', state: 'CA', zip: '94305', address: '520 Galvez St.' },
-  
-  // New York
-  { name: 'Stuyvesant High School', city: 'New York', state: 'NY', zip: '10007', address: '345 Chambers St.' },
-  { name: 'University Heights High School', city: 'New York', state: 'NY', zip: '10452', address: '351 E. 169th St.' },
-  { name: 'Brooklyn Technical High School', city: 'New York', state: 'NY', zip: '11201', address: '29 Fort Greene Pl.' },
-  
-  // Texas
-  { name: 'Austin High School', city: 'Austin', state: 'TX', zip: '78751', address: '1715 W. Cesar Chavez St.' },
-  { name: 'James Madison High School', city: 'Houston', state: 'TX', zip: '77003', address: '3210 Bellfort St.' },
-  { name: 'Lincoln High School', city: 'Dallas', state: 'TX', zip: '75220', address: '3601 South Westmoreland Rd.' },
-  
-  // Florida
-  { name: 'Titusville High School', city: 'Titusville', state: 'FL', zip: '32780', address: '2635 S. Washington Ave.' },
-  { name: 'Lincoln High School', city: 'Miami', state: 'FL', zip: '33127', address: '141 W. 41st St.' },
-  
-  // Massachusetts
-  { name: 'Boston Latin School', city: 'Boston', state: 'MA', zip: '02115', address: '78 Avenue Louis Pasteur' },
-  { name: 'Newton North High School', city: 'Newtonville', state: 'MA', zip: '02460', address: '360 Watertown St.' },
-  
-  // Pennsylvania
-  { name: 'Central High School', city: 'Philadelphia', state: 'PA', zip: '19103', address: '1700 W. Poplar St.' },
-  { name: 'Thomas Jefferson University High School', city: 'Philadelphia', state: 'PA', zip: '19148', address: '4410 Frankford Ave.' },
-  
-  // Ohio
-  { name: 'Thomas Jefferson High School', city: 'Columbus', state: 'OH', zip: '43224', address: '4400 Refugee Rd.' },
-  { name: 'Cleveland High School', city: 'Cleveland', state: 'OH', zip: '44103', address: '7000 Euclid Ave.' },
-  
-  // Washington
-  { name: 'Franklin High School', city: 'Seattle', state: 'WA', zip: '98144', address: '3013 S. Mount Baker Blvd.' },
-  { name: 'Mercer Island High School', city: 'Mercer Island', state: 'WA', zip: '98040', address: '9100 SE 42nd St.' },
-];
-
-/**
- * Format address and postal code
- */
-function formatAddress(address) {
-  return (address || 'Address not provided').substring(0, 100);
-}
-
-/**
- * Import schools from sample data
- */
-async function importSampleSchools() {
-  console.log('📚 Starting school data import from sample NCES data...');
-  
+async function importSchools() {
   const client = await pool.connect();
-  
+  let imported = 0;
+  let errors = 0;
+
   try {
+    // Initialize service
+    const schoolDataService = new SchoolDataService(pool);
+
+    // Get schools (from NCES API, cache, or hardcoded fallback)
+    console.log('');
+    const schools = await schoolDataService.getSchools(config.state, config.forceRefresh);
+
+    if (!schools || schools.length === 0) {
+      console.error('❌ No schools to import');
+      return;
+    }
+
+    console.log(`\n📚 Starting import of ${schools.length} schools...\n`);
+
     // Begin transaction
     await client.query('BEGIN');
-    
+
     // Clear existing schools if requested
     if (config.clear) {
       console.log('🗑️  Clearing existing schools...');
-      await client.query('DELETE FROM schools WHERE id NOT IN (SELECT id FROM schools LIMIT 1)');
+      await client.query('DELETE FROM schools WHERE account_status = $1', ['ACTIVE']);
     }
-    
-    let imported = 0;
-    let errors = 0;
-    
-    for (const school of realSchoolsData) {
-      // Filter by state if specified
-      if (config.state && school.state !== config.state) {
-        continue;
-      }
-      
+
+    // Insert schools
+    for (const school of schools) {
       // Stop at limit
       if (imported >= config.limit) {
         break;
       }
-      
+
       try {
+        // Normalize school data
+        const schoolData = {
+          name: school.name || school.school_name || 'Unknown School',
+          city: school.city || 'Unknown',
+          state_province: school.state_province || school.state || 'US',
+          address_line1: school.address_line1 || school.address || 'Address not provided',
+          postal_code: school.postal_code || school.zip || 'Unknown',
+          district: school.district || null,
+          phone_number: school.phone_number || null,
+          website_url: school.website_url || null,
+          account_status: 'ACTIVE'
+        };
+
         const result = await client.query(
-          `INSERT INTO schools (name, city, state_province, address_line1, postal_code, account_status)
-           VALUES ($1, $2, $3, $4, $5, 'ACTIVE')
+          `INSERT INTO schools (name, city, state_province, address_line1, postal_code, district, phone_number, website_url, account_status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
            RETURNING id`,
           [
-            school.name,
-            school.city,
-            school.state,
-            formatAddress(school.address),
-            school.zip
+            schoolData.name,
+            schoolData.city,
+            schoolData.state_province,
+            schoolData.address_line1.substring(0, 255),
+            schoolData.postal_code,
+            schoolData.district,
+            schoolData.phone_number,
+            schoolData.website_url,
+            schoolData.account_status
           ]
         );
-        
+
         if (result.rows.length > 0) {
           imported++;
-          process.stdout.write(`\r✅ Imported: ${imported}/${Math.min(config.limit, realSchoolsData.length)}`);
+          process.stdout.write(`\r✅ Imported: ${imported}/${Math.min(config.limit, schools.length)}`);
         }
       } catch (error) {
-        console.error(`\n❌ Error importing school ${school.name}: ${error.message}`);
-        errors++;
+        // Skip duplicates silently, log other errors
+        if (!error.message.includes('duplicate')) {
+          console.error(`\n❌ Error importing school ${school.name}: ${error.message}`);
+          errors++;
+        }
       }
     }
-    
+
     // Commit transaction
     await client.query('COMMIT');
-    
+
     console.log(`\n\n✨ Import complete!`);
     console.log(`   Imported: ${imported} schools`);
     console.log(`   Errors: ${errors}`);
     console.log(`   Total schools in database: ${await getSchoolCount(client)}`);
-    
+    console.log(`\n✅ Import successful!`);
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('❌ Import failed:', error.message);
@@ -185,66 +154,32 @@ async function getSchoolCount(client) {
 }
 
 /**
- * Fetch from NCES API
- */
-function httpsGet(url) {
-  return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(data));
-        } catch (e) {
-          reject(e);
-        }
-      });
-    }).on('error', reject);
-  });
-}
-
-/**
  * Main execution
  */
 async function main() {
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║         School Data Import Utility                        ║
-║  Imports real U.S. schools from Department of Education   ║
+║  Imports U.S. schools from NCES API (with caching)        ║
 ╚═══════════════════════════════════════════════════════════╝
   `);
-  
+
   console.log(`Configuration:`);
-  console.log(`  Source: ${config.source}`);
+  console.log(`  Force Refresh: ${config.forceRefresh}`);
   console.log(`  Limit: ${config.limit} schools`);
   if (config.state) console.log(`  State Filter: ${config.state}`);
   if (config.clear) console.log(`  ⚠️  Will clear existing schools`);
-  console.log('');
-  
+
   try {
     // Test database connection
-    console.log('🔗 Testing database connection...');
+    console.log('\n🔗 Testing database connection...');
     const result = await pool.query('SELECT NOW()');
     console.log('✅ Database connected\n');
-    
-    // Import based on source
-    switch (config.source) {
-      case 'public-schools-api':
-        console.log('📥 Fetching from Public Schools API...');
-        // Note: This would require the Public Schools API to be running
-        console.log('⚠️  Public Schools API integration requires separate deployment');
-        await importSampleSchools();
-        break;
-      
-      case 'nces':
-      default:
-        await importSampleSchools();
-        break;
-    }
-    
-    console.log('\n✅ Import successful!');
+
+    // Run import
+    await importSchools();
     process.exit(0);
-    
+
   } catch (error) {
     console.error('❌ Fatal error:', error.message);
     process.exit(1);
@@ -262,3 +197,4 @@ process.on('SIGINT', async () => {
 
 // Run import
 main();
+
