@@ -50,6 +50,7 @@ RUN npm ci --production --no-audit 2>/dev/null || npm install --production --no-
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/schema.sql ./
+COPY --from=builder /app/import-schools.js ./
 
 # Set permissions for node user
 RUN chown -R node:node /app
