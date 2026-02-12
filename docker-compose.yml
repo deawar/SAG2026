@@ -9,12 +9,12 @@ services:
     image: postgres:15-alpine
     container_name: sag-postgres-dev
     environment:
-      POSTGRES_DB: ${DATABASE_NAME:-sag_db}
-      POSTGRES_USER: ${DATABASE_USER:-postgres}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-sag_db}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8"
     ports:
-      - "${DATABASE_PORT:-5432}:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       # Mount schema file for automatic initialization
       - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
@@ -23,7 +23,7 @@ services:
     networks:
       - sag-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -48,11 +48,11 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-debug}
       
       # Database
-      DATABASE_HOST: postgres
-      DATABASE_PORT: ${DATABASE_PORT:-5432}
-      DATABASE_NAME: ${DATABASE_NAME:-sag_db}
-      DATABASE_USER: ${DATABASE_USER:-postgres}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      DB_HOST: postgres
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-sag_db}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
       
       # JWT Configuration
       JWT_SECRET: ${JWT_SECRET:-dev_secret_key_change_in_production}
