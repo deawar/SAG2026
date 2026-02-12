@@ -152,9 +152,25 @@
                             <small id="dob-error" class="error-message" role="alert"></small>
                         </div>
 
-                        <!-- School Selection -->
+                        <!-- School Selection with Search -->
                         <div class="form-group">
-                            <label for="school">School <span aria-label="required">*</span></label>
+                            <label for="school-search">Find Your School <span aria-label="required">*</span></label>
+                            <p class="school-search-help">Search by school name or location</p>
+                            
+                            <!-- Search Input -->
+                            <input 
+                                type="text" 
+                                id="school-search" 
+                                class="form-control"
+                                placeholder="Type school name (e.g., Lincoln High)"
+                                aria-describedby="school-search-help"
+                            >
+                            <small id="school-search-help" class="help-text">Start typing to search schools</small>
+                        </div>
+
+                        <!-- School Dropdown -->
+                        <div class="form-group">
+                            <label for="school">Select School <span aria-label="required">*</span></label>
                             <select 
                                 id="school" 
                                 name="school_id"
@@ -163,8 +179,8 @@
                                 aria-required="true"
                                 aria-describedby="school-error school-help"
                             >
-                                <option value="">Select your school</option>
-                                <!-- Populated by JavaScript -->
+                                <option value="">-- Select your school --</option>
+                                <!-- Populated by JavaScript with search results -->
                             </select>
                             <small id="school-help" class="help-text">Select the school you attend</small>
                             <small id="school-error" class="error-message" role="alert"></small>
