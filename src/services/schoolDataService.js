@@ -258,7 +258,7 @@ class SchoolDataService {
       { name: 'Franklin High School', city: 'Seattle', state_province: 'WA', zip: '98144', address_line1: '3013 S. Mount Baker Blvd.' },
       { name: 'Mercer Island High School', city: 'Mercer Island', state_province: 'WA', zip: '98040', address_line1: '9100 SE 42nd St.' },
       
-      // Georgia (10 schools - expanded for geographic coverage)
+      // Georgia (15 schools - expanded for geographic coverage)
       { name: 'Northside High School', city: 'Atlanta', state_province: 'GA', zip: '30309', address_line1: '1256 Walnut Street' },
       { name: 'Marietta High School', city: 'Marietta', state_province: 'GA', zip: '30060', address_line1: '1171 Cobb Parkway' },
       { name: 'Grady High School', city: 'Atlanta', state_province: 'GA', zip: '30307', address_line1: '130 Courtland Street' },
@@ -269,6 +269,11 @@ class SchoolDataService {
       { name: 'Woodstock High School', city: 'Woodstock', state_province: 'GA', zip: '30189', address_line1: '7710 Woodstock Lane' },
       { name: 'Richmond Hill High School', city: 'Richmond Hill', state_province: 'GA', zip: '31324', address_line1: '4125 Timber Creek Drive' },
       { name: 'Savannah Arts Academy', city: 'Savannah', state_province: 'GA', zip: '31405', address_line1: '2 E. 52nd Street' },
+      { name: 'North Oconee High School', city: 'Bogart', state_province: 'GA', zip: '30622', address_line1: '1000 Epps Bridge Parkway' },
+      { name: 'Alpharetta High School', city: 'Alpharetta', state_province: 'GA', zip: '30005', address_line1: '3955 Webb Road' },
+      { name: 'Johns Creek High School', city: 'Johns Creek', state_province: 'GA', zip: '30097', address_line1: '9500 Medlock Bridge Road' },
+      { name: 'Centennial High School', city: 'Roswell', state_province: 'GA', zip: '30076', address_line1: '2255 Cameron Road' },
+      { name: 'Mill Creek High School', city: 'Alpharetta', state_province: 'GA', zip: '30022', address_line1: '14321 Jones Road' },
       
       // Tennessee
       { name: 'Central High School', city: 'Nashville', state_province: 'TN', zip: '37203', address_line1: '2501 Blakemore Avenue' },
