@@ -250,10 +250,11 @@ a:focus {
 }
 
 .logo-img {
-    height: 40px;
+    height: 100px;
     width: auto;
     max-width: 150px;
     object-fit: contain;
+    border-radius: 50%;
 }
 
 .logo-text {
