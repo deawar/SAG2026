@@ -178,32 +178,32 @@ networks:
 # Docker Compose Commands
 # ============================================================================
 # Start all services:
-#   docker-compose up
+#   docker compose up
 #
 # Start in background:
-#   docker-compose up -d
+#   docker compose up -d
 #
 # View logs:
-#   docker-compose logs
-#   docker-compose logs -f app           # Follow app logs
-#   docker-compose logs -f postgres      # Follow postgres logs
+#   docker compose logs
+#   docker compose logs -f app           # Follow app logs
+#   docker compose logs -f postgres      # Follow postgres logs
 #
 # Stop all services:
-#   docker-compose down
+#   docker compose down
 #
 # Stop and remove volumes:
-#   docker-compose down -v
+#   docker compose down -v
 #
 # Rebuild images:
-#   docker-compose up --build
+#   docker compose up --build
 #
 # Run commands in service:
-#   docker-compose exec app npm test
-#   docker-compose exec app npm run lint
-#   docker-compose exec postgres psql -U postgres -d sag_db
+#   docker compose exec app npm test
+#   docker compose exec app npm run lint
+#   docker compose exec postgres psql -U postgres -d sag_db
 #
 # View service status:
-#   docker-compose ps
+#   docker compose ps
 #
 # View resource usage:
 #   docker stats
