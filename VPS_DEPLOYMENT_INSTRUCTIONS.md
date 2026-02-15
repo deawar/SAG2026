@@ -110,13 +110,13 @@ This will take 2-3 minutes. Output should show successful build with "Successful
 ### Step 7: Start Services
 
 ```bash
-docker-compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 Verify services started:
 
 ```bash
-docker-compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml ps
 ```
 
 Should show:
@@ -126,7 +126,7 @@ Should show:
 ### Step 8: Check Application Logs
 
 ```bash
-docker-compose -f docker-compose.prod.yml logs app
+docker compose -f docker-compose.prod.yml logs app
 ```
 
 Look for: "Server running on port 3000"
@@ -134,7 +134,7 @@ Look for: "Server running on port 3000"
 ### Step 9: Test Database Connection
 
 ```bash
-docker-compose -f docker-compose.prod.yml exec db psql -U postgres -d silent_auction_gallery -c "SELECT version();"
+docker compose -f docker-compose.prod.yml exec db psql -U postgres -d silent_auction_gallery -c "SELECT version();"
 ```
 
 Should return PostgreSQL version info.
@@ -179,7 +179,7 @@ SSL_CERT_PATH=/etc/letsencrypt/live/SAG.live/fullchain.pem
 Restart application:
 
 ```bash
-docker-compose -f docker-compose.prod.yml restart app
+docker compose -f docker-compose.prod.yml restart app
 ```
 
 ### Setup DNS Records
@@ -319,19 +319,19 @@ docker-compose -f ~/silent-auction-gallery/docker-compose.prod.yml exec db bash 
 Real-time logs:
 
 ```bash
-docker-compose -f ~/silent-auction-gallery/docker-compose.prod.yml logs -f app
+docker compose -f ~/silent-auction-gallery/docker-compose.prod.yml logs -f app
 ```
 
 Last 100 lines:
 
 ```bash
-docker-compose -f ~/silent-auction-gallery/docker-compose.prod.yml logs --tail=100 app
+docker compose -f ~/silent-auction-gallery/docker-compose.prod.yml logs --tail=100 app
 ```
 
 Database logs:
 
 ```bash
-docker-compose -f ~/silent-auction-gallery/docker-compose.prod.yml logs -f db
+docker compose -f ~/silent-auction-gallery/docker-compose.prod.yml logs -f db
 ```
 
 ### Restart Services
@@ -339,13 +339,13 @@ docker-compose -f ~/silent-auction-gallery/docker-compose.prod.yml logs -f db
 Restart all services:
 
 ```bash
-docker-compose -f ~/silent-auction-gallery/docker-compose.prod.yml restart
+docker compose -f ~/silent-auction-gallery/docker-compose.prod.yml restart
 ```
 
 Restart just the app:
 
 ```bash
-docker-compose -f ~/silent-auction-gallery/docker-compose.prod.yml restart app
+docker compose -f ~/silent-auction-gallery/docker-compose.prod.yml restart app
 ```
 
 ### Update Application
@@ -394,13 +394,13 @@ docker-compose -f docker-compose.prod.yml restart app
 Check database is running:
 
 ```bash
-docker-compose -f docker-compose.prod.yml ps db
+docker compose -f docker-compose.prod.yml ps db
 ```
 
 If not running, start it:
 
 ```bash
-docker-compose -f docker-compose.prod.yml up -d db
+docker compose -f docker-compose.prod.yml up -d db
 ```
 
 Test connection:
@@ -416,13 +416,13 @@ If prompted for password, enter: `xP@rDj53tMXJBpKGAP3EiLz4`
 Check container status:
 
 ```bash
-docker-compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml ps
 ```
 
 If container crashed, view logs:
 
 ```bash
-docker-compose -f docker-compose.prod.yml logs app
+docker compose -f docker-compose.prod.yml logs app
 ```
 
 Restart container:

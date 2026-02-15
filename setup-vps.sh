@@ -298,22 +298,11 @@ ssh ${VPS_USER}@${VPS_IP} bash << REMOTE_SCRIPT
   echo "  • .env file verified"
   
   # Clean up any existing containers first
-  COMPOSE_CMD="docker-compose"
-  if ! command -v docker-compose &> /dev/null; then
-    COMPOSE_CMD="docker compose"
-  fi
-  
   echo "  • Stopping existing containers..."
-  \${COMPOSE_CMD} -f docker-compose.prod.yml down 2>/dev/null || true
-  
-  # Use docker compose or docker-compose
-  COMPOSE_CMD="docker-compose"
-  if ! command -v docker-compose &> /dev/null; then
-    COMPOSE_CMD="docker compose"
-  fi
+  docker compose -f docker-compose.prod.yml down 2>/dev/null || true
   
   echo "  • Starting services..."
-  \${COMPOSE_CMD} -f docker-compose.prod.yml up -d || {
+  docker compose -f docker-compose.prod.yml up -d || {
     echo -e "  ${RED}✗ Docker Compose startup failed${NC}"
     echo "  • Checking .env file..."
     echo "  DATABASE_NAME=\$(grep DATABASE_NAME .env | cut -d= -f2)"
@@ -327,7 +316,7 @@ ssh ${VPS_USER}@${VPS_IP} bash << REMOTE_SCRIPT
   echo -e "  ✓ Services started"
   echo ""
   echo "Checking service health..."
-  \${COMPOSE_CMD} -f docker-compose.prod.yml ps
+  docker compose -f docker-compose.prod.yml ps
 REMOTE_SCRIPT
 
 echo ""
@@ -408,12 +397,7 @@ echo "✓ Containers running"
 echo ""
 echo "Database:"
 # Test database by running psql inside the container
-COMPOSE_CMD="docker-compose"
-if ! command -v docker-compose &> /dev/null; then
-  COMPOSE_CMD="docker compose"
-fi
-
-${COMPOSE_CMD} -f /home/dean/silent-auction-gallery/docker-compose.prod.yml exec -T db pg_isready -U postgres > /dev/null 2>&1 && \
+docker compose -f /home/dean/silent-auction-gallery/docker-compose.prod.yml exec -T db pg_isready -U postgres > /dev/null 2>&1 && \
   echo "✓ Database responding (port 5432)" || \
   echo "✗ Database not responding"
 
@@ -445,12 +429,7 @@ mkdir -p ${BACKUP_DIR}
 
 echo "Starting database backup..."
 
-COMPOSE_CMD="docker-compose"
-if ! command -v docker-compose &> /dev/null; then
-  COMPOSE_CMD="docker compose"
-fi
-
-${COMPOSE_CMD} -f /home/dean/silent-auction-gallery/docker-compose.prod.yml exec -T db pg_dump -U postgres silent_auction_gallery | gzip > ${BACKUP_FILE}
+docker compose -f /home/dean/silent-auction-gallery/docker-compose.prod.yml exec -T db psql -U postgres -d silent_auction_gallery -c "SELECT version();" > /dev/null 2>&1 && {
 
 echo "Backup created: ${BACKUP_FILE}"
 
@@ -478,16 +457,11 @@ echo -e "${YELLOW}[STEP 13] Final verification...${NC}"
 ssh ${VPS_USER}@${VPS_IP} bash << 'REMOTE_SCRIPT'
   echo "Application Status:"
   
-  COMPOSE_CMD="docker-compose"
-  if ! command -v docker-compose &> /dev/null; then
-    COMPOSE_CMD="docker compose"
-  fi
-  
-  ${COMPOSE_CMD} -f /home/dean/silent-auction-gallery/docker-compose.prod.yml ps
+  docker compose -f /home/dean/silent-auction-gallery/docker-compose.prod.yml ps
   
   echo ""
   echo "Container Logs (last 20 lines):"
-  ${COMPOSE_CMD} -f /home/dean/silent-auction-gallery/docker-compose.prod.yml logs --tail=20
+  docker compose -f /home/dean/silent-auction-gallery/docker-compose.prod.yml logs --tail=20
 REMOTE_SCRIPT
 
 echo ""
@@ -526,7 +500,7 @@ echo "6. Check Logs:"
 echo -e "   ${YELLOW}Monitor application:${NC}"
 echo "   ssh ${VPS_USER}@${VPS_IP}"
 echo "   cd ${APP_DIR}"
-echo "   docker-compose -f docker-compose.prod.yml logs -f  OR  docker compose -f docker-compose.prod.yml logs -f"
+echo "   docker compose -f docker-compose.prod.yml logs -f"
 echo ""
 echo -e "${BLUE}USEFUL COMMANDS:${NC}"
 echo ""
@@ -534,10 +508,10 @@ echo "  SSH Access:"
 echo "    ssh ${VPS_USER}@${VPS_IP}"
 echo ""
 echo "  View Logs:"
-echo "    ssh ${VPS_USER}@${VPS_IP} 'cd ${APP_DIR} && (docker-compose -f docker-compose.prod.yml logs -f || docker compose -f docker-compose.prod.yml logs -f)'"
+echo "    ssh ${VPS_USER}@${VPS_IP} 'cd ${APP_DIR} && docker compose -f docker-compose.prod.yml logs -f'"
 echo ""
 echo "  Restart Services:"
-echo "    ssh ${VPS_USER}@${VPS_IP} 'cd ${APP_DIR} && (docker-compose -f docker-compose.prod.yml restart || docker compose -f docker-compose.prod.yml restart)'"
+echo "    ssh ${VPS_USER}@${VPS_IP} 'cd ${APP_DIR} && docker compose -f docker-compose.prod.yml restart'"
 echo ""
 echo "  Database Backup:"
 echo "    ssh ${VPS_USER}@${VPS_IP} bash /home/${VPS_USER}/backup-db.sh"
