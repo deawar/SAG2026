@@ -17,7 +17,7 @@ Server OS:                   [Ubuntu/Debian/Other?]
 **Questions to answer:**
 - [ ] Server OS and version? (e.g., Ubuntu 22.04)
 - [ ] Is Docker already installed? (`docker --version`)
-- [ ] Is Docker Compose installed? (`docker-compose --version`)
+- [ ] Is Docker Compose installed? (`docker compose version`)
 - [ ] Available disk space? (`df -h`)
 - [ ] Available RAM? (`free -h`)
 - [ ] Can I SSH without password? (✓ SSH key already set up)
@@ -194,8 +194,8 @@ Set up on VPS but with:
 
 ### **Phase 1: Test Locally (TODAY - 15 minutes)**
 ```bash
-# Run docker-compose locally to verify everything works
-docker-compose up --build
+# Run docker compose locally to verify everything works
+docker compose up --build
 
 # Check endpoints
 curl http://localhost:3000
@@ -220,11 +220,11 @@ git clone https://github.com/...
 # Create .env.prod file
 nano .env.prod
 
-# Run with docker-compose
-docker-compose -f docker-compose.prod.yml up -d
+# Run with docker compose
+docker compose -f docker-compose.prod.yml up -d
 
 # Monitor logs
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ---
@@ -232,7 +232,7 @@ docker-compose logs -f
 ## 📋 Deployment Checklist
 
 ### **Pre-Deployment (Local Testing)**
-- [ ] Run `docker-compose up` locally
+- [ ] Run `docker compose up` locally
 - [ ] Test login page at `http://localhost:3000`
 - [ ] Test account creation workflow
 - [ ] Test role hierarchy
@@ -242,7 +242,7 @@ docker-compose logs -f
 
 ### **VPS Deployment**
 - [ ] Server access confirmed (SSH working)
-- [ ] Docker/Docker-Compose installed on VPS
+- [ ] Docker/Docker Compose installed on VPS
 - [ ] Git repository cloned on VPS
 - [ ] `.env.prod` file created with secrets
 - [ ] Database password secured
@@ -267,7 +267,7 @@ docker-compose logs -f
 I can create these ready-to-use scripts for you:
 
 1. **`setup-dev-server.sh`** - Automated VPS setup
-   - Install Docker/Docker-Compose
+   - Install Docker/Docker Compose
    - Clone repo
    - Set up directories
    - Create .env file template
@@ -313,7 +313,7 @@ I can create these ready-to-use scripts for you:
 
 **Priority 1 (Critical):**
 1. [ ] Server OS version
-2. [ ] Is Docker/Docker-Compose installed?
+2. [ ] Is Docker/Docker Compose installed?
 3. [ ] What port should app use? (3000 is default)
 4. [ ] Database password (create secure one)
 
@@ -354,7 +354,7 @@ docker-compose up --build
 # 1. SSH to server
 # 2. Install Docker (if needed)
 # 3. Clone repo
-# 4. Run docker-compose
+# 4. Run docker compose
 # 5. Test everything works
 ```
 
@@ -365,7 +365,7 @@ docker-compose up --build
 With the information above, I can:
 - ✅ Generate deployment scripts
 - ✅ Create `.env.prod` template
-- ✅ Set up docker-compose for production
+- ✅ Set up docker compose for production
 - ✅ Configure monitoring/logging
 - ✅ Create health check endpoints
 - ✅ Set up automated backups
@@ -385,7 +385,7 @@ With the information above, I can:
 
 **Then I'll:**
 1. Create deployment scripts
-2. Set up docker-compose for VPS
+2. Set up docker compose for VPS
 3. Create monitoring solution
 4. Document everything
 5. Deploy and test with you

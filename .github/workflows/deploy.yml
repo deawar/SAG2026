@@ -145,10 +145,10 @@ jobs:
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
             cd ${{ secrets.STAGING_APP_DIR }}
-            docker-compose -f docker-compose.prod.yml pull
-            docker-compose -f docker-compose.prod.yml up -d
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d
             sleep 10
-            docker-compose -f docker-compose.prod.yml exec -T app npm run test:smoke || true
+            docker compose -f docker-compose.prod.yml exec -T app npm run test:smoke || true
         continue-on-error: false
 
       - name: Run smoke tests
@@ -198,7 +198,7 @@ jobs:
           script: |
             cd ${{ secrets.PROD_APP_DIR }}
             mkdir -p backups
-            docker-compose -f docker-compose.prod.yml exec -T postgres pg_dump -U ${{ secrets.DATABASE_USER }} ${{ secrets.DATABASE_NAME }} > backups/backup-$(date +%Y%m%d-%H%M%S).sql
+            docker compose -f docker-compose.prod.yml exec -T postgres pg_dump -U ${{ secrets.DATABASE_USER }} ${{ secrets.DATABASE_NAME }} > backups/backup-$(date +%Y%m%d-%H%M%S).sql
             echo "Database backup completed"
 
       - name: Deploy to production environment
@@ -209,8 +209,8 @@ jobs:
           key: ${{ secrets.PROD_SSH_KEY }}
           script: |
             cd ${{ secrets.PROD_APP_DIR }}
-            docker-compose -f docker-compose.prod.yml pull
-            docker-compose -f docker-compose.prod.yml up -d
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d
             sleep 15
             if ! curl -f http://localhost/health; then
               echo "Health check failed, rolling back..."
