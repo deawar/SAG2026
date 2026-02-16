@@ -21,8 +21,6 @@ async function resetUsersAndCreateAdmin() {
   const client = await pool.connect();
   
   try {
-    await client.query('BEGIN');
-    
     // Step 1: Disable foreign key constraints temporarily
     console.log('Step 1: Disabling foreign key constraints...');
     await client.query('SET session_replication_role = REPLICA');
@@ -32,7 +30,6 @@ async function resetUsersAndCreateAdmin() {
     
     const tables = [
       'audit_logs',
-      'bid_approvals',
       'bids',
       'artwork_images',
       'artwork',
@@ -50,7 +47,7 @@ async function resetUsersAndCreateAdmin() {
         const result = await client.query(`DELETE FROM ${table}`);
         console.log(`  ✓ Cleared ${table}: ${result.rowCount} rows deleted`);
       } catch (err) {
-        console.warn(`  ⚠ Could not clear ${table}: ${err.message}`);
+        console.warn(`  ⚠ Could not clear ${table}: ${err.message.split('\n')[0]}`);
       }
     }
     
@@ -102,12 +99,8 @@ async function resetUsersAndCreateAdmin() {
     console.log('═══════════════════════════════════════════════\n');
     console.log('⚠️  SAVE THESE CREDENTIALS - You can only see the password once!\n');
     
-    await client.query('COMMIT');
-    
   } catch (err) {
-    await client.query('ROLLBACK');
     console.error('❌ Error:', err.message);
-    console.error('\nRollback completed. No changes were made.');
     process.exit(1);
   } finally {
     client.release();
