@@ -26,7 +26,7 @@ class UserDashboard {
         try {
             const response = await fetch('/api/user/profile', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
@@ -41,7 +41,8 @@ class UserDashboard {
                 return;
             }
 
-            this.user = data.user;
+            // Use data.data (the API response structure)
+            this.user = data.data;
             this.displayUserData();
         } catch (error) {
             console.error('Load user data error:', error);
@@ -60,26 +61,21 @@ class UserDashboard {
 
         // Update profile section
         const nameInput = document.querySelector('input[name="full-name"]');
-        if (nameInput) nameInput.value = this.user.fullName || '';
+        if (nameInput) nameInput.value = `${this.user.firstName || ''} ${this.user.lastName || ''}`.trim();
 
         const emailInput = document.querySelector('input[name="email"]');
         if (emailInput) emailInput.value = this.user.email || '';
 
         const phoneInput = document.querySelector('input[name="phone"]');
-        if (phoneInput) phoneInput.value = this.user.phone || '';
+        if (phoneInput) phoneInput.value = this.user.phoneNumber || '';
 
-        // Update address section
-        const streetInput = document.querySelector('input[name="street"]');
-        if (streetInput) streetInput.value = this.user.address?.street || '';
+        // Update role display
+        const roleDisplay = document.querySelector('[data-role-display]');
+        if (roleDisplay) roleDisplay.textContent = (this.user.role || 'User').toUpperCase();
 
-        const cityInput = document.querySelector('input[name="city"]');
-        if (cityInput) cityInput.value = this.user.address?.city || '';
-
-        const stateInput = document.querySelector('input[name="state"]');
-        if (stateInput) stateInput.value = this.user.address?.state || '';
-
-        const zipInput = document.querySelector('input[name="zip"]');
-        if (zipInput) zipInput.value = this.user.address?.zip || '';
+        // Update account status display
+        const statusDisplay = document.querySelector('[data-status-display]');
+        if (statusDisplay) statusDisplay.textContent = this.user.accountStatus === 'ACTIVE' ? 'Active' : 'Inactive';
 
         // Update notification preferences
         this.loadNotificationPreferences();
