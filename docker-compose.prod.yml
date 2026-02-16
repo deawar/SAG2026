@@ -101,6 +101,11 @@ services:
     ports:
       - "3000:${PORT:-3000}"
     
+    volumes:
+      # Mount school data files for import
+      - ./ceeb.csv:/app/ceeb.csv:ro
+      - ./import-ceeb-csv.js:/app/import-ceeb-csv.js:ro
+    
     depends_on:
       db:
         condition: service_healthy
