@@ -87,6 +87,20 @@ async function startServer() {
       }
 
       /**
+       * Mount User Routes (requires authentication)
+       */
+      console.log('Mounting user routes...');
+      try {
+        const userRoutes = require('./routes/userRoutes')(db);
+        const authMiddleware = require('./middleware/authMiddleware');
+        app.use('/api/user', authMiddleware.verifyToken);
+        app.use('/api/user', userRoutes);
+        console.log('✅ User routes mounted');
+      } catch (routeErr) {
+        console.error('❌ ERROR mounting user routes:', routeErr);
+      }
+
+      /**
        * Mount School Routes (public, no auth required)
        */
       console.log('Mounting school routes...');
@@ -226,6 +240,7 @@ async function startServer() {
       console.log('Endpoints available:');
       console.log(`  Health Check:     GET ${protocol}://localhost:${PORT}/health`);
       console.log(`  Auth API:         ${protocol}://localhost:${PORT}/api/auth`);
+      console.log(`  User API:         ${protocol}://localhost:${PORT}/api/user (requires auth)`);
       console.log(`  Auction API:      ${protocol}://localhost:${PORT}/api/auctions`);
       console.log(`  Payment API:      ${protocol}://localhost:${PORT}/api/payments`);
       console.log(`  Bidding API:      ${protocol}://localhost:${PORT}/api/bidding`);
