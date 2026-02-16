@@ -47,11 +47,12 @@ module.exports = (db) => {
     try {
       const { state, city, search } = req.query;
       
-      let query = 'SELECT id, name, city, state_province, address_line1, postal_code FROM schools WHERE account_status = $1';
-      const params = ['ACTIVE'];
+      // Build query - don't filter by status, get all schools
+      let query = 'SELECT id, name, city, state_province, address_line1, postal_code FROM schools WHERE 1=1';
+      const params = [];
 
       // Add filters if provided
-      let paramIndex = 2;
+      let paramIndex = 1;
       if (state) {
         query += ` AND state_province = $${paramIndex}`;
         params.push(state.toUpperCase());
@@ -72,11 +73,47 @@ module.exports = (db) => {
 
       const result = await db.query(query, params);
       
+      // Log for debugging
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[SCHOOLS API] Query returned ${result.rows.length} schools`, { state, city, search });
+      }
+      
       res.json({
         success: true,
         message: 'Schools retrieved successfully',
         data: result.rows,
         count: result.rows.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * GET /api/schools/states
+   * Get list of all states that have schools
+   * MUST be defined before /search/:query to avoid being caught by :query parameter
+   */
+  router.get('/states', async (req, res, next) => {
+    try {
+      const result = await db.query(
+        `SELECT DISTINCT state_province 
+         FROM schools 
+         ORDER BY state_province ASC`
+      );
+      
+      const states = result.rows.map(row => row.state_province);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[SCHOOLS API] /states returned ${states.length} states`);
+      }
+      
+      res.json({
+        success: true,
+        message: 'States with schools retrieved successfully',
+        data: states,
+        count: states.length,
         timestamp: new Date().toISOString()
       });
     } catch (error) {
@@ -97,11 +134,15 @@ module.exports = (db) => {
       const result = await db.query(
         `SELECT id, name, city, state_province, address_line1, postal_code 
          FROM schools 
-         WHERE account_status = 'ACTIVE' AND state_province = $1
+         WHERE state_province = $1
          ORDER BY city ASC, name ASC
          LIMIT 500`,
         [state.toUpperCase()]
       );
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[SCHOOLS API] /by-state/${state} returned ${result.rows.length} schools`);
+      }
       
       res.json({
         success: true,
@@ -119,6 +160,7 @@ module.exports = (db) => {
   /**
    * GET /api/schools/search/:query
    * Search schools by name, city, or state
+   * MUST be defined after /states to avoid catching /states in :query
    * 
    * Example: /api/schools/search/Lincoln
    */
@@ -130,12 +172,15 @@ module.exports = (db) => {
       const result = await db.query(
         `SELECT id, name, city, state_province, address_line1, postal_code 
          FROM schools 
-         WHERE account_status = 'ACTIVE' 
-         AND (name ILIKE $1 OR city ILIKE $1 OR state_province ILIKE $1)
+         WHERE (name ILIKE $1 OR city ILIKE $1 OR state_province ILIKE $1)
          ORDER BY name ASC
          LIMIT 100`,
         [searchTerm]
       );
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[SCHOOLS API] /search/${query} returned ${result.rows.length} schools`);
+      }
       
       res.json({
         success: true,
@@ -143,33 +188,6 @@ module.exports = (db) => {
         data: result.rows,
         count: result.rows.length,
         query: query,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  /**
-   * GET /api/schools/states
-   * Get list of all states that have schools
-   */
-  router.get('/states', async (req, res, next) => {
-    try {
-      const result = await db.query(
-        `SELECT DISTINCT state_province 
-         FROM schools 
-         WHERE account_status = 'ACTIVE'
-         ORDER BY state_province ASC`
-      );
-      
-      const states = result.rows.map(row => row.state_province);
-      
-      res.json({
-        success: true,
-        message: 'States with schools retrieved successfully',
-        data: states,
-        count: states.length,
         timestamp: new Date().toISOString()
       });
     } catch (error) {
