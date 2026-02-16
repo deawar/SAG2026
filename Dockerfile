@@ -51,6 +51,7 @@ COPY --from=builder /app/src ./src
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/schema.sql ./
 COPY --from=builder /app/import-schools.js ./
+COPY --from=builder /app/reset-users-and-create-admin.js ./
 
 # Set permissions for node user
 RUN chown -R node:node /app
