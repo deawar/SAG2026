@@ -387,6 +387,56 @@ class UserController {
       next(error);
     }
   }
+
+  /**
+   * Get user profile (requires authentication)
+   * GET /api/user/profile
+   * 
+   * @param {Object} req - Express request
+   * @param {Object} res - Express response
+   * @param {Function} next - Express next middleware
+   */
+  async getProfile(req, res, next) {
+    try {
+      // User ID comes from JWT token (verified by auth middleware)
+      const userId = req.user?.id;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        });
+      }
+
+      // Retrieve user profile (exclude sensitive fields)
+      const user = await this.userModel.getById(userId, false);
+
+      return res.json({
+        success: true,
+        message: 'User profile retrieved successfully',
+        data: {
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phoneNumber: user.phone_number,
+          role: user.role,
+          schoolId: user.school_id,
+          accountStatus: user.account_status,
+          lastLogin: user.last_login,
+          createdAt: user.created_at
+        }
+      });
+    } catch (error) {
+      if (error.message === 'USER_NOT_FOUND') {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+      next(error);
+    }
+  }
 }
 
 module.exports = UserController;
