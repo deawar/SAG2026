@@ -1,8 +1,6 @@
 # Silent Auction Gallery - Docker Compose Production Environment
 # Use this for production-like deployment with optimization and security
 
-version: '3.9'
-
 services:
   # PostgreSQL Database Service (Production)
   db:
@@ -53,6 +51,9 @@ services:
 
   # Node.js Application Service (Production)
   app:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: silent-auction-gallery:${DOCKER_TAG:-latest}
     container_name: sag-app-prod
     env_file: .env
