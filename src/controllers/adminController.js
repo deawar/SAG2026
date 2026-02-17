@@ -231,10 +231,13 @@ class AdminController {
       const { status } = req.query;
       const adminId = req.user.id;
 
+      // If no status provided, list all auctions
       if (!status) {
-        return res.status(400).json({
-          success: false,
-          error: 'STATUS_REQUIRED'
+        const auctions = await adminService.listAllAuctions(adminId);
+        return res.status(200).json({
+          success: true,
+          auctions,
+          count: auctions.length
         });
       }
 

@@ -18,7 +18,7 @@ class AuctionController {
       const { title, description, schoolId, charityId, startTime, endTime, platformFeePercentage, autoExtendEnabled, autoExtendMinutes, artworkIds } = req.body;
 
       // Validate user is admin or school admin
-      if (!['site_admin', 'school_admin'].includes(req.user?.role)) {
+      if (!['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(req.user?.role)) {
         return res.status(403).json({
           success: false,
           message: 'Only admins can create auctions'
@@ -89,7 +89,7 @@ class AuctionController {
       const { auctionId } = req.params;
 
       // Validate user is admin or school admin
-      if (!['site_admin', 'school_admin'].includes(req.user?.role)) {
+      if (!['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(req.user?.role)) {
         return res.status(403).json({
           success: false,
           message: 'Only admins can update auctions'
@@ -117,7 +117,7 @@ class AuctionController {
       const { auctionId } = req.params;
 
       // Validate user is admin or school admin
-      if (!['site_admin', 'school_admin'].includes(req.user?.role)) {
+      if (!['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(req.user?.role)) {
         return res.status(403).json({
           success: false,
           message: 'Only admins can start auctions'
@@ -145,7 +145,7 @@ class AuctionController {
       const { auctionId } = req.params;
 
       // Validate user is admin or school admin
-      if (!['site_admin', 'school_admin'].includes(req.user?.role)) {
+      if (!['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(req.user?.role)) {
         return res.status(403).json({
           success: false,
           message: 'Only admins can end auctions'
@@ -174,7 +174,7 @@ class AuctionController {
       const { minutesToExtend } = req.body;
 
       // Validate user is admin or school admin
-      if (!['site_admin', 'school_admin'].includes(req.user?.role)) {
+      if (!['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(req.user?.role)) {
         return res.status(403).json({
           success: false,
           message: 'Only admins can extend auctions'
@@ -202,7 +202,7 @@ class AuctionController {
       const { auctionId } = req.params;
 
       // Validate user is admin or school admin
-      if (!['site_admin', 'school_admin'].includes(req.user?.role)) {
+      if (!['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(req.user?.role)) {
         return res.status(403).json({
           success: false,
           message: 'Only admins can delete auctions'

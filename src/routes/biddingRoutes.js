@@ -214,7 +214,7 @@ router.get('/auction/:auctionId/winner', async (req, res) => {
  * POST /api/bidding/auction/:auctionId/close
  * Close an auction (admin only)
  */
-router.post('/auction/:auctionId/close', authMiddleware.verifyToken, authMiddleware.verifyRole('admin'), async (req, res) => {
+router.post('/auction/:auctionId/close', authMiddleware.verifyToken, authMiddleware.verifyRole('SITE_ADMIN', 'SCHOOL_ADMIN'), async (req, res) => {
   try {
     const { auctionId } = req.params;
 
@@ -242,7 +242,7 @@ router.post('/auction/:auctionId/close', authMiddleware.verifyToken, authMiddlew
  * GET /api/bidding/stats
  * Get real-time statistics
  */
-router.get('/stats', authMiddleware.verifyToken, authMiddleware.verifyRole('admin'), (req, res) => {
+router.get('/stats', authMiddleware.verifyToken, authMiddleware.verifyRole('SITE_ADMIN', 'SCHOOL_ADMIN'), (req, res) => {
   try {
     const stats = realtimeService.getStats();
 
