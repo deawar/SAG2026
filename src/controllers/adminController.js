@@ -13,6 +13,33 @@ const adminService = new AdminService();
  * AdminController - Handles all HTTP requests for admin operations
  */
 class AdminController {
+  constructor() {
+    // Bind all methods so 'this' works when Express calls them as callbacks
+    this.getUserById = this.getUserById.bind(this);
+    this.listUsers = this.listUsers.bind(this);
+    this.updateUserRole = this.updateUserRole.bind(this);
+    this.deactivateUser = this.deactivateUser.bind(this);
+    this.exportUserData = this.exportUserData.bind(this);
+    this.getAuctionById = this.getAuctionById.bind(this);
+    this.listAuctionsByStatus = this.listAuctionsByStatus.bind(this);
+    this.approveAuction = this.approveAuction.bind(this);
+    this.rejectAuction = this.rejectAuction.bind(this);
+    this.setAuctionFee = this.setAuctionFee.bind(this);
+    this.extendAuction = this.extendAuction.bind(this);
+    this.closeForcibly = this.closeForcibly.bind(this);
+    this.getPaymentById = this.getPaymentById.bind(this);
+    this.listPayments = this.listPayments.bind(this);
+    this.processRefund = this.processRefund.bind(this);
+    this.getPaymentStatistics = this.getPaymentStatistics.bind(this);
+    this.generateGDPRReport = this.generateGDPRReport.bind(this);
+    this.generateCOPPAReport = this.generateCOPPAReport.bind(this);
+    this.generateFERPAReport = this.generateFERPAReport.bind(this);
+    this.generateCCPAReport = this.generateCCPAReport.bind(this);
+    this.getAuditLogs = this.getAuditLogs.bind(this);
+    this.getDashboardStats = this.getDashboardStats.bind(this);
+    this.getSystemHealth = this.getSystemHealth.bind(this);
+  }
+
   /**
    * ========== USER MANAGEMENT ENDPOINTS (5 methods) ==========
    */
