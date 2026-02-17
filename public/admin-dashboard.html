@@ -181,11 +181,20 @@
                         <button class="btn btn-primary" id="create-auction-btn" type="button" aria-label="Create a new auction">
                             <span aria-hidden="true">+</span> Create New Auction
                         </button>
-                        <input 
-                            type="search" 
-                            id="auction-search" 
-                            class="form-control" 
-                            placeholder="Search auctions..." 
+                        <select id="auction-status-filter" class="form-control" aria-label="Filter auctions by status" style="max-width:200px;">
+                            <option value="">All Statuses</option>
+                            <option value="DRAFT">Draft</option>
+                            <option value="PENDING_APPROVAL">Pending Approval</option>
+                            <option value="APPROVED">Approved</option>
+                            <option value="LIVE">Live</option>
+                            <option value="ENDED">Ended</option>
+                            <option value="CANCELLED">Cancelled</option>
+                        </select>
+                        <input
+                            type="search"
+                            id="auction-search"
+                            class="form-control"
+                            placeholder="Search auctions..."
                             aria-label="Search auctions by title or ID"
                             style="flex:1;"
                         >

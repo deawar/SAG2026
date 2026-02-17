@@ -16,7 +16,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 router.post(
   '/',
   authMiddleware.verifyToken,
-  authMiddleware.verifyRole('site_admin', 'school_admin'),
+  authMiddleware.verifyRole('SITE_ADMIN', 'SCHOOL_ADMIN'),
   (req, res) => auctionController.createAuction(req, res)
 );
 
@@ -86,7 +86,7 @@ router.get(
 router.put(
   '/:auctionId',
   authMiddleware.verifyToken,
-  authMiddleware.verifyRole('site_admin', 'school_admin'),
+  authMiddleware.verifyRole('SITE_ADMIN', 'SCHOOL_ADMIN'),
   (req, res) => auctionController.updateAuction(req, res)
 );
 
@@ -98,7 +98,7 @@ router.put(
 router.post(
   '/:auctionId/start',
   authMiddleware.verifyToken,
-  authMiddleware.verifyRole('site_admin', 'school_admin'),
+  authMiddleware.verifyRole('SITE_ADMIN', 'SCHOOL_ADMIN'),
   (req, res) => auctionController.startAuction(req, res)
 );
 
@@ -110,7 +110,7 @@ router.post(
 router.post(
   '/:auctionId/end',
   authMiddleware.verifyToken,
-  authMiddleware.verifyRole('site_admin', 'school_admin'),
+  authMiddleware.verifyRole('SITE_ADMIN', 'SCHOOL_ADMIN'),
   (req, res) => auctionController.endAuction(req, res)
 );
 
@@ -122,7 +122,7 @@ router.post(
 router.post(
   '/:auctionId/extend',
   authMiddleware.verifyToken,
-  authMiddleware.verifyRole('site_admin', 'school_admin'),
+  authMiddleware.verifyRole('SITE_ADMIN', 'SCHOOL_ADMIN'),
   (req, res) => auctionController.extendAuction(req, res)
 );
 
@@ -134,7 +134,7 @@ router.post(
 router.delete(
   '/:auctionId',
   authMiddleware.verifyToken,
-  authMiddleware.verifyRole('site_admin', 'school_admin'),
+  authMiddleware.verifyRole('SITE_ADMIN', 'SCHOOL_ADMIN'),
   (req, res) => auctionController.deleteAuction(req, res)
 );
 

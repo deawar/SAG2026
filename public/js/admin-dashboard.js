@@ -131,6 +131,12 @@ class AdminDashboard {
             createBtn.addEventListener('click', () => this.showCreateAuctionModal());
         }
 
+        // Auction status filter
+        const auctionFilter = document.getElementById('auction-status-filter');
+        if (auctionFilter) {
+            auctionFilter.addEventListener('change', () => this.loadAuctions(auctionFilter.value));
+        }
+
         // Add user button
         const createUserBtn = document.getElementById('create-user-btn');
         if (createUserBtn) {
@@ -265,9 +271,12 @@ class AdminDashboard {
     /**
      * Load auctions
      */
-    async loadAuctions(status = 'LIVE') {
+    async loadAuctions(status = '') {
         try {
-            const response = await fetch(`/api/admin/auctions?status=${encodeURIComponent(status)}`, {
+            const url = status
+                ? `/api/admin/auctions?status=${encodeURIComponent(status)}`
+                : '/api/admin/auctions';
+            const response = await fetch(url, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
@@ -294,14 +303,26 @@ class AdminDashboard {
 
         tbody.innerHTML = '';
 
+        if (auctions.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6">No auctions found.</td></tr>';
+            return;
+        }
+
         auctions.forEach(auction => {
             const row = document.createElement('tr');
+            const status = auction.auction_status || auction.status || '';
+            const endsAt = auction.ends_at ? new Date(auction.ends_at).toLocaleDateString() : '';
+            const statusClass = {
+                'LIVE': 'success', 'APPROVED': 'success', 'DRAFT': 'warning',
+                'PENDING_APPROVAL': 'warning', 'ENDED': 'error', 'CANCELLED': 'error'
+            }[status] || 'default';
+
             row.innerHTML = `
-                <td>${this.escapeHtml(auction.title)}</td>
-                <td>${auction.status}</td>
-                <td>${auction.bidCount}</td>
-                <td>${UIComponents.formatCurrency(auction.currentBid)}</td>
-                <td>${UIComponents.formatDate(auction.createdAt)}</td>
+                <td>${this.escapeHtml(auction.title || '')}</td>
+                <td><span class="badge badge-${statusClass}">${status}</span></td>
+                <td>-</td>
+                <td>-</td>
+                <td>${endsAt}</td>
                 <td>
                     <button class="btn btn-sm btn-primary" data-edit-auction="${auction.id}">Edit</button>
                     <button class="btn btn-sm btn-danger" data-delete-auction="${auction.id}">Delete</button>
@@ -309,7 +330,6 @@ class AdminDashboard {
             `;
             tbody.appendChild(row);
 
-            // Attach action listeners
             row.querySelector(`[data-edit-auction]`)?.addEventListener('click', () => {
                 this.editAuction(auction.id);
             });
@@ -790,9 +810,85 @@ class AdminDashboard {
     showCreateAuctionModal() {
         const titleEl = document.getElementById('auction-modal-title');
         if (titleEl) titleEl.textContent = 'Create New Auction';
+
         const form = document.getElementById('auction-form');
-        if (form) form.reset();
+        if (form) {
+            form.innerHTML = `
+                <div class="form-group">
+                    <label for="auction-title">Title</label>
+                    <input type="text" id="auction-title" name="auction-title" class="form-control" required placeholder="Auction title">
+                </div>
+                <div class="form-group">
+                    <label for="auction-description">Description</label>
+                    <textarea id="auction-description" name="auction-description" class="form-control" rows="3" placeholder="Auction description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="auction-start">Start Date/Time</label>
+                    <input type="datetime-local" id="auction-start" name="auction-start" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="auction-end">End Date/Time</label>
+                    <input type="datetime-local" id="auction-end" name="auction-end" class="form-control" required>
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+                    <button type="button" class="btn btn-secondary" onclick="UIComponents.hideModal('auction-form-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Auction</button>
+                </div>
+            `;
+
+            // Remove old listener and add new one
+            const newForm = form.cloneNode(true);
+            form.parentNode.replaceChild(newForm, form);
+            newForm.addEventListener('submit', (e) => this.handleCreateAuction(e));
+        }
+
         UIComponents.showModal('auction-form-modal');
+    }
+
+    async handleCreateAuction(e) {
+        e.preventDefault();
+        const title = document.getElementById('auction-title').value.trim();
+        const description = document.getElementById('auction-description').value.trim();
+        const startTime = document.getElementById('auction-start').value;
+        const endTime = document.getElementById('auction-end').value;
+
+        if (!title || !startTime || !endTime) {
+            UIComponents.showAlert('Please fill in all required fields', 'error');
+            return;
+        }
+
+        if (new Date(endTime) <= new Date(startTime)) {
+            UIComponents.showAlert('End time must be after start time', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/auctions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                },
+                body: JSON.stringify({
+                    title,
+                    description,
+                    startTime,
+                    endTime,
+                }),
+            });
+
+            if (response.ok) {
+                UIComponents.hideModal('auction-form-modal');
+                UIComponents.createToast({ message: 'Auction created successfully', type: 'success' });
+                this.loadAuctions();
+            } else {
+                const data = await response.json();
+                UIComponents.showAlert(data.message || 'Failed to create auction', 'error');
+            }
+        } catch (error) {
+            console.error('Create auction error:', error);
+            UIComponents.showAlert('Failed to create auction', 'error');
+        }
     }
 
     /**
