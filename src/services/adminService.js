@@ -34,7 +34,7 @@ class AdminService {
 
     // Get user
     const result = await pool.query(
-      'SELECT id, email, first_name, last_name, phone_number, role, school_id, status, created_at FROM users WHERE id = $1',
+      'SELECT id, email, first_name, last_name, phone_number, role, school_id, account_status, created_at FROM users WHERE id = $1',
       [userId]
     );
 
@@ -64,7 +64,7 @@ class AdminService {
     const { role, status, search, page = 1, limit = 20 } = filters;
     const offset = (page - 1) * limit;
 
-    let query = 'SELECT id, email, first_name, last_name, role, status, school_id, created_at FROM users WHERE 1=1';
+    let query = 'SELECT id, email, first_name, last_name, role, account_status, school_id, created_at FROM users WHERE 1=1';
     const params = [];
 
     // Multi-tenant isolation
@@ -83,7 +83,7 @@ class AdminService {
     }
 
     if (status) {
-      query += ` AND status = $${params.length + 1}`;
+      query += ` AND account_status = $${params.length + 1}`;
       params.push(status);
     }
 
@@ -111,7 +111,7 @@ class AdminService {
       countParams.push(role);
     }
     if (status) {
-      countQuery += ` AND status = $${countParams.length + 1}`;
+      countQuery += ` AND account_status = $${countParams.length + 1}`;
       countParams.push(status);
     }
 
@@ -190,7 +190,7 @@ class AdminService {
 
     // Get user to check school ownership
     const userResult = await pool.query(
-      'SELECT id, school_id, status FROM users WHERE id = $1',
+      'SELECT id, school_id, account_status FROM users WHERE id = $1',
       [userId]
     );
 
@@ -207,7 +207,7 @@ class AdminService {
 
     // Update status to INACTIVE
     await pool.query(
-      'UPDATE users SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      'UPDATE users SET account_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
       ['INACTIVE', userId]
     );
 
@@ -217,8 +217,8 @@ class AdminService {
       'USER_DEACTIVATED',
       'USER',
       userId,
-      { status: user.status },
-      { status: 'INACTIVE' },
+      { account_status: user.account_status },
+      { account_status: 'INACTIVE' },
       reason || 'Admin deactivated user'
     );
 
@@ -233,7 +233,7 @@ class AdminService {
     const result = await pool.query(
       `SELECT 
         u.id, u.email, u.first_name, u.last_name, u.phone_number,
-        u.date_of_birth, u.role, u.status, u.created_at, u.updated_at,
+        u.date_of_birth, u.role, u.account_status, u.created_at, u.updated_at,
         s.name as school_name
       FROM users u
       LEFT JOIN schools s ON u.school_id = s.id
@@ -249,19 +249,19 @@ class AdminService {
 
     // Get user's auction history
     const auctionsResult = await pool.query(
-      'SELECT id, title, status, created_at FROM auctions WHERE created_by = $1 ORDER BY created_at DESC',
+      'SELECT id, title, auction_status, created_at FROM auctions WHERE created_by_user_id = $1 ORDER BY created_at DESC',
       [userId]
     );
 
     // Get user's bid history
     const bidsResult = await pool.query(
-      'SELECT b.id, b.amount, b.status, b.placed_at FROM bids b WHERE b.user_id = $1 ORDER BY b.placed_at DESC',
+      'SELECT b.id, b.bid_amount, b.bid_status, b.placed_at FROM bids b WHERE b.placed_by_user_id = $1 ORDER BY b.placed_at DESC',
       [userId]
     );
 
     // Get user's payments
     const paymentsResult = await pool.query(
-      'SELECT id, amount, status, created_at FROM payments WHERE user_id = $1 ORDER BY created_at DESC',
+      'SELECT id, total_amount, transaction_status, created_at FROM transactions WHERE buyer_user_id = $1 ORDER BY created_at DESC',
       [userId]
     );
 
@@ -319,7 +319,7 @@ class AdminService {
       throw new Error('INVALID_STATUS');
     }
 
-    let query = 'SELECT a.id, a.title, a.status, a.school_id, a.created_by, a.created_at FROM auctions a WHERE a.status = $1';
+    let query = 'SELECT a.id, a.title, a.auction_status, a.school_id, a.created_by_user_id, a.created_at FROM auctions a WHERE a.auction_status = $1';
     const params = [status];
 
     // Multi-tenant isolation
@@ -345,7 +345,7 @@ class AdminService {
 
     // Get auction
     const auctionResult = await pool.query(
-      'SELECT id, status, school_id FROM auctions WHERE id = $1',
+      'SELECT id, auction_status, school_id FROM auctions WHERE id = $1',
       [auctionId]
     );
 
@@ -361,13 +361,13 @@ class AdminService {
     }
 
     // Check status
-    if (auction.status !== 'PENDING_APPROVAL') {
+    if (auction.auction_status !== 'PENDING_APPROVAL') {
       throw new Error('INVALID_STATE_TRANSITION');
     }
 
     // Update status
     await pool.query(
-      'UPDATE auctions SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      'UPDATE auctions SET auction_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
       ['APPROVED', auctionId]
     );
 
@@ -377,8 +377,8 @@ class AdminService {
       'AUCTION_APPROVED',
       'AUCTION',
       auctionId,
-      { status: 'PENDING_APPROVAL' },
-      { status: 'APPROVED' },
+      { auction_status: 'PENDING_APPROVAL' },
+      { auction_status: 'APPROVED' },
       'Admin approved auction for listing'
     );
 
@@ -392,7 +392,7 @@ class AdminService {
     const admin = await this.verifyAdminAccess(adminId);
 
     const auctionResult = await pool.query(
-      'SELECT id, status, school_id FROM auctions WHERE id = $1',
+      'SELECT id, auction_status, school_id FROM auctions WHERE id = $1',
       [auctionId]
     );
 
@@ -407,13 +407,13 @@ class AdminService {
       throw new Error('CROSS_SCHOOL_ACCESS_DENIED');
     }
 
-    if (auction.status !== 'PENDING_APPROVAL') {
+    if (auction.auction_status !== 'PENDING_APPROVAL') {
       throw new Error('INVALID_STATE_TRANSITION');
     }
 
     // Update status
     await pool.query(
-      'UPDATE auctions SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      'UPDATE auctions SET auction_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
       ['REJECTED', auctionId]
     );
 
@@ -423,8 +423,8 @@ class AdminService {
       'AUCTION_REJECTED',
       'AUCTION',
       auctionId,
-      { status: 'PENDING_APPROVAL' },
-      { status: 'REJECTED' },
+      { auction_status: 'PENDING_APPROVAL' },
+      { auction_status: 'REJECTED' },
       reason || 'Admin rejected auction'
     );
 
@@ -490,7 +490,7 @@ class AdminService {
     }
 
     const auctionResult = await pool.query(
-      'SELECT id, school_id, end_time FROM auctions WHERE id = $1',
+      'SELECT id, school_id, ends_at FROM auctions WHERE id = $1',
       [auctionId]
     );
 
@@ -505,12 +505,12 @@ class AdminService {
       throw new Error('CROSS_SCHOOL_ACCESS_DENIED');
     }
 
-    const oldEndTime = auction.end_time;
-    const newEndTime = new Date(new Date(auction.end_time).getTime() + hours * 60 * 60 * 1000);
+    const oldEndTime = auction.ends_at;
+    const newEndTime = new Date(new Date(auction.ends_at).getTime() + hours * 60 * 60 * 1000);
 
     // Update end time
     await pool.query(
-      'UPDATE auctions SET end_time = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      'UPDATE auctions SET ends_at = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
       [newEndTime, auctionId]
     );
 
@@ -520,8 +520,8 @@ class AdminService {
       'AUCTION_EXTENDED',
       'AUCTION',
       auctionId,
-      { end_time: oldEndTime },
-      { end_time: newEndTime },
+      { ends_at: oldEndTime },
+      { ends_at: newEndTime },
       `Admin extended auction by ${hours} hours`
     );
 
@@ -535,7 +535,7 @@ class AdminService {
     const admin = await this.verifyAdminAccess(adminId);
 
     const auctionResult = await pool.query(
-      'SELECT id, school_id, status FROM auctions WHERE id = $1',
+      'SELECT id, school_id, auction_status FROM auctions WHERE id = $1',
       [auctionId]
     );
 
@@ -550,14 +550,14 @@ class AdminService {
       throw new Error('CROSS_SCHOOL_ACCESS_DENIED');
     }
 
-    if (auction.status === 'CLOSED') {
+    if (auction.auction_status === 'CANCELLED') {
       throw new Error('AUCTION_ALREADY_CLOSED');
     }
 
     // Update status
     await pool.query(
-      'UPDATE auctions SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      ['CLOSED', auctionId]
+      'UPDATE auctions SET auction_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      ['CANCELLED', auctionId]
     );
 
     // Audit log
@@ -566,8 +566,8 @@ class AdminService {
       'AUCTION_FORCE_CLOSED',
       'AUCTION',
       auctionId,
-      { status: auction.status },
-      { status: 'CLOSED' },
+      { auction_status: auction.auction_status },
+      { auction_status: 'CANCELLED' },
       reason || 'Admin force closed auction'
     );
 
@@ -585,9 +585,9 @@ class AdminService {
     const admin = await this.verifyAdminAccess(adminId);
 
     const result = await pool.query(
-      `SELECT p.*, u.email FROM payments p
-       LEFT JOIN users u ON p.user_id = u.id
-       WHERE p.id = $1`,
+      `SELECT t.*, u.email FROM transactions t
+       LEFT JOIN users u ON t.buyer_user_id = u.id
+       WHERE t.id = $1`,
       [paymentId]
     );
 
@@ -609,37 +609,32 @@ class AdminService {
     const { status, gateway, minAmount, maxAmount, page = 1, limit = 20 } = filters;
     const offset = (page - 1) * limit;
 
-    let query = `SELECT p.id, p.user_id, p.amount, p.status, p.gateway, p.created_at
-                 FROM payments p WHERE 1=1`;
+    let query = `SELECT t.id, t.buyer_user_id, t.total_amount, t.transaction_status, t.created_at
+                 FROM transactions t WHERE 1=1`;
     const params = [];
 
     // Multi-tenant isolation for SCHOOL_ADMIN
     if (admin.role === 'SCHOOL_ADMIN') {
-      query += ` AND p.user_id IN (SELECT id FROM users WHERE school_id = $${params.length + 1})`;
+      query += ` AND t.buyer_user_id IN (SELECT id FROM users WHERE school_id = $${params.length + 1})`;
       params.push(admin.school_id);
     }
 
     if (status) {
-      query += ` AND p.status = $${params.length + 1}`;
+      query += ` AND t.transaction_status = $${params.length + 1}`;
       params.push(status);
     }
 
-    if (gateway) {
-      query += ` AND p.gateway = $${params.length + 1}`;
-      params.push(gateway);
-    }
-
     if (minAmount) {
-      query += ` AND p.amount >= $${params.length + 1}`;
+      query += ` AND t.total_amount >= $${params.length + 1}`;
       params.push(minAmount);
     }
 
     if (maxAmount) {
-      query += ` AND p.amount <= $${params.length + 1}`;
+      query += ` AND t.total_amount <= $${params.length + 1}`;
       params.push(maxAmount);
     }
 
-    query += ` ORDER BY p.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    query += ` ORDER BY t.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limit, offset);
 
     const result = await pool.query(query, params);
@@ -656,7 +651,7 @@ class AdminService {
     const admin = await this.verifyAdminAccess(adminId);
 
     const paymentResult = await pool.query(
-      'SELECT id, amount, status FROM payments WHERE id = $1',
+      'SELECT id, total_amount, transaction_status FROM transactions WHERE id = $1',
       [paymentId]
     );
 
@@ -666,15 +661,15 @@ class AdminService {
 
     const payment = paymentResult.rows[0];
 
-    if (amount > payment.amount) {
+    if (amount > payment.total_amount) {
       throw new Error('REFUND_EXCEEDS_PAYMENT');
     }
 
-    // Update payment status
-    const newStatus = amount === payment.amount ? 'REFUNDED' : 'PARTIALLY_REFUNDED';
+    // Update transaction status
+    const newStatus = amount === payment.total_amount ? 'REFUNDED' : 'REFUNDED';
     await pool.query(
-      'UPDATE payments SET status = $1, refunded_amount = COALESCE(refunded_amount, 0) + $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
-      [newStatus, amount, paymentId]
+      'UPDATE transactions SET transaction_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [newStatus, paymentId]
     );
 
     // Audit log
@@ -683,8 +678,8 @@ class AdminService {
       'PAYMENT_REFUNDED',
       'PAYMENT',
       paymentId,
-      { status: payment.status, amount: payment.amount },
-      { status: newStatus, refundedAmount: amount },
+      { transaction_status: payment.transaction_status, total_amount: payment.total_amount },
+      { transaction_status: newStatus, refundedAmount: amount },
       reason || 'Admin processed refund'
     );
 
@@ -718,22 +713,21 @@ class AdminService {
         throw new Error('INVALID_PERIOD');
     }
 
-    let query = `SELECT 
-                  SUM(amount) as total_revenue,
+    let query = `SELECT
+                  SUM(total_amount) as total_revenue,
                   COUNT(*) as transaction_count,
-                  gateway,
-                  status
-                 FROM payments
+                  transaction_status
+                 FROM transactions
                  WHERE created_at >= $1 AND created_at <= $2`;
     const params = [startDate, endDate];
 
     // Multi-tenant isolation
     if (admin.role === 'SCHOOL_ADMIN') {
-      query += ` AND user_id IN (SELECT id FROM users WHERE school_id = $3)`;
+      query += ` AND buyer_user_id IN (SELECT id FROM users WHERE school_id = $3)`;
       params.push(admin.school_id);
     }
 
-    query += ` GROUP BY gateway, status ORDER BY total_revenue DESC`;
+    query += ` GROUP BY transaction_status ORDER BY total_revenue DESC`;
 
     const result = await pool.query(query, params);
 
@@ -1039,10 +1033,10 @@ class AdminService {
    */
   async getDashboardStats(schoolId) {
     const query = `
-      SELECT 
-        (SELECT COUNT(*) FROM auctions WHERE status = 'LIVE' AND school_id = $1) as active_auctions,
-        (SELECT COUNT(*) FROM auctions WHERE status = 'PENDING_APPROVAL' AND school_id = $1) as pending_approvals,
-        (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status = 'COMPLETED' AND created_at >= CURRENT_DATE - INTERVAL '1 day' AND user_id IN (SELECT id FROM users WHERE school_id = $1)) as daily_revenue,
+      SELECT
+        (SELECT COUNT(*) FROM auctions WHERE auction_status = 'LIVE' AND school_id = $1) as active_auctions,
+        (SELECT COUNT(*) FROM auctions WHERE auction_status = 'PENDING_APPROVAL' AND school_id = $1) as pending_approvals,
+        (SELECT COALESCE(SUM(total_amount), 0) FROM transactions WHERE transaction_status = 'COMPLETED' AND created_at >= CURRENT_DATE - INTERVAL '1 day' AND buyer_user_id IN (SELECT id FROM users WHERE school_id = $1)) as daily_revenue,
         (SELECT COUNT(*) FROM users WHERE school_id = $1) as total_users,
         (SELECT COUNT(*) FROM users WHERE role = 'STUDENT' AND school_id = $1) as total_students
     `;
@@ -1086,9 +1080,9 @@ class AdminService {
    */
   async getActiveAuctions(schoolId, limit = 10) {
     const result = await pool.query(
-      `SELECT id, title, status, current_bid, end_time, created_at 
-       FROM auctions 
-       WHERE school_id = $1 AND status IN ('LIVE', 'PENDING_APPROVAL')
+      `SELECT id, title, auction_status, ends_at, created_at
+       FROM auctions
+       WHERE school_id = $1 AND auction_status IN ('LIVE', 'PENDING_APPROVAL')
        ORDER BY created_at DESC
        LIMIT $2`,
       [schoolId, limit]
@@ -1107,7 +1101,7 @@ class AdminService {
    */
   async verifyAdminAccess(adminId) {
     const result = await pool.query(
-      'SELECT id, role, school_id FROM users WHERE id = $1 AND status = $2',
+      'SELECT id, role, school_id FROM users WHERE id = $1 AND account_status = $2',
       [adminId, 'ACTIVE']
     );
 
