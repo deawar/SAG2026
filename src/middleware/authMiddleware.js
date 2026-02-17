@@ -104,6 +104,8 @@ class AuthMiddleware {
    * Verify user role
    */
   verifyRole(...allowedRoles) {
+    // Flatten in case roles are passed as an array: verifyRole(['ADMIN', 'USER'])
+    allowedRoles = allowedRoles.flat();
     return (req, res, next) => {
       if (!req.user) {
         return res.status(401).json({
