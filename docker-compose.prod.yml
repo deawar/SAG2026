@@ -6,7 +6,7 @@ services:
   db:
     image: postgres:15-alpine
     container_name: silent-auction-gallery-db
-    env_file: .env
+    env_file: .env.prod
     environment:
       POSTGRES_DB: ${DB_NAME:-silent_auction_gallery}
       POSTGRES_USER: ${DB_USER:-postgres}
@@ -56,7 +56,7 @@ services:
       dockerfile: Dockerfile
     image: silent-auction-gallery:${DOCKER_TAG:-latest}
     container_name: sag-app-prod
-    env_file: .env
+    env_file: .env.prod
     environment:
       # Server
       NODE_ENV: production
