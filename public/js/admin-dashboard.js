@@ -265,19 +265,21 @@ class AdminDashboard {
     /**
      * Load auctions
      */
-    async loadAuctions() {
+    async loadAuctions(status = 'LIVE') {
         try {
-            const response = await fetch('/api/admin/auctions', {
+            const response = await fetch(`/api/admin/auctions?status=${encodeURIComponent(status)}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                this.displayAuctionsTable(data.auctions);
+            if (!response.ok) {
+                console.error('Load auctions failed:', response.status);
+                return;
             }
+
+            const data = await response.json();
+            this.displayAuctionsTable(data.auctions || []);
         } catch (error) {
             console.error('Load auctions error:', error);
         }
@@ -329,11 +331,13 @@ class AdminDashboard {
                 },
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                this.displayUsersTable(data.users);
+            if (!response.ok) {
+                console.error('Load users failed:', response.status);
+                return;
             }
+
+            const data = await response.json();
+            this.displayUsersTable(data.users || []);
         } catch (error) {
             console.error('Load users error:', error);
         }
@@ -385,11 +389,13 @@ class AdminDashboard {
                 },
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                this.displayPaymentsTable(data.payments);
+            if (!response.ok) {
+                console.error('Load payments failed:', response.status);
+                return;
             }
+
+            const data = await response.json();
+            this.displayPaymentsTable(data.payments || []);
         } catch (error) {
             console.error('Load payments error:', error);
         }
@@ -495,17 +501,19 @@ class AdminDashboard {
      */
     async searchUsers(query) {
         try {
-            const response = await fetch(`/api/admin/users/search?q=${encodeURIComponent(query)}`, {
+            const response = await fetch(`/api/admin/users?search=${encodeURIComponent(query)}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                this.displayUsersTable(data.users);
+            if (!response.ok) {
+                console.error('Search users failed:', response.status);
+                return;
             }
+
+            const data = await response.json();
+            this.displayUsersTable(data.users || []);
         } catch (error) {
             console.error('Search users error:', error);
         }
@@ -516,17 +524,19 @@ class AdminDashboard {
      */
     async searchPayments(query) {
         try {
-            const response = await fetch(`/api/admin/payments/search?q=${encodeURIComponent(query)}`, {
+            const response = await fetch(`/api/admin/payments?status=${encodeURIComponent(query)}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                this.displayPaymentsTable(data.payments);
+            if (!response.ok) {
+                console.error('Search payments failed:', response.status);
+                return;
             }
+
+            const data = await response.json();
+            this.displayPaymentsTable(data.payments || []);
         } catch (error) {
             console.error('Search payments error:', error);
         }
