@@ -131,6 +131,64 @@ class AdminDashboard {
             createBtn.addEventListener('click', () => this.showCreateAuctionModal());
         }
 
+        // Add user button
+        const createUserBtn = document.getElementById('create-user-btn');
+        if (createUserBtn) {
+            createUserBtn.addEventListener('click', () => this.showCreateUserModal());
+        }
+
+        // Admin dropdown toggle
+        const adminUserBtn = document.getElementById('admin-user-btn');
+        const adminDropdown = document.getElementById('admin-dropdown');
+        if (adminUserBtn && adminDropdown) {
+            adminUserBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isOpen = adminDropdown.style.display !== 'none';
+                adminDropdown.style.display = isOpen ? 'none' : 'block';
+                adminUserBtn.setAttribute('aria-expanded', !isOpen);
+            });
+            document.addEventListener('click', (e) => {
+                if (!adminUserBtn.contains(e.target) && !adminDropdown.contains(e.target)) {
+                    adminDropdown.style.display = 'none';
+                    adminUserBtn.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+
+        // Modal close buttons
+        document.querySelectorAll('.modal-close').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modal = btn.closest('.modal');
+                if (modal) {
+                    modal.style.display = 'none';
+                    modal.setAttribute('aria-hidden', 'true');
+                }
+            });
+        });
+
+        // Close modals on backdrop click
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                    modal.setAttribute('aria-hidden', 'true');
+                }
+            });
+        });
+
+        // Navbar tab links
+        document.querySelectorAll('.nav-link[data-tab]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tab = link.getAttribute('data-tab');
+                const panelId = tab + '-tab';
+                this.switchTab(panelId);
+                // Update active nav link
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+            });
+        });
+
         // Search and filter listeners
         const auctionSearch = document.getElementById('auction-search');
         if (auctionSearch) {
@@ -229,7 +287,7 @@ class AdminDashboard {
      * Display auctions table
      */
     displayAuctionsTable(auctions) {
-        const tbody = document.querySelector('table[data-table="auctions"] tbody');
+        const tbody = document.getElementById('auctions-table-body');
         if (!tbody) return;
 
         tbody.innerHTML = '';
@@ -285,19 +343,20 @@ class AdminDashboard {
      * Display users table
      */
     displayUsersTable(users) {
-        const tbody = document.querySelector('table[data-table="users"] tbody');
+        const tbody = document.getElementById('users-table-body');
         if (!tbody) return;
 
         tbody.innerHTML = '';
 
         users.forEach(user => {
             const row = document.createElement('tr');
+            const isActive = user.is_active !== false && user.status !== 'inactive';
             row.innerHTML = `
-                <td>${this.escapeHtml(user.fullName)}</td>
-                <td>${this.escapeHtml(user.email)}</td>
+                <td>${this.escapeHtml(user.fullName || user.full_name || '')}</td>
+                <td>${this.escapeHtml(user.email || '')}</td>
                 <td>${user.role || 'user'}</td>
-                <td>${user.totalBids}</td>
-                <td>${UIComponents.formatDate(user.createdAt)}</td>
+                <td><span class="badge badge-${isActive ? 'success' : 'error'}">${isActive ? 'Active' : 'Inactive'}</span></td>
+                <td>${user.totalBids || 0}</td>
                 <td>
                     <button class="btn btn-sm btn-primary" data-edit-user="${user.id}">Edit</button>
                     <button class="btn btn-sm btn-danger" data-ban-user="${user.id}">Ban</button>
@@ -340,7 +399,7 @@ class AdminDashboard {
      * Display payments table
      */
     displayPaymentsTable(payments) {
-        const tbody = document.querySelector('table[data-table="payments"] tbody');
+        const tbody = document.getElementById('payments-table-body');
         if (!tbody) return;
 
         tbody.innerHTML = '';
@@ -477,16 +536,20 @@ class AdminDashboard {
      * Edit auction
      */
     editAuction(auctionId) {
-        UIComponents.showModal('auction-edit-modal');
+        const titleEl = document.getElementById('auction-modal-title');
+        if (titleEl) titleEl.textContent = 'Edit Auction';
+        UIComponents.showModal('auction-form-modal');
         // Load auction data and populate form
         fetch(`/api/admin/auctions/${auctionId}`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
         })
             .then(r => r.json())
             .then(data => {
-                // Populate modal form
-                document.querySelector('input[name="auction-title"]').value = data.auction.title;
-                // ... populate other fields
+                const form = document.getElementById('auction-form');
+                if (form && data.auction) {
+                    const titleInput = form.querySelector('input[name="auction-title"]');
+                    if (titleInput) titleInput.value = data.auction.title;
+                }
             });
     }
 
@@ -529,15 +592,35 @@ class AdminDashboard {
      * Edit user
      */
     editUser(userId) {
-        UIComponents.showModal('user-edit-modal');
+        UIComponents.showModal('user-detail-modal');
+        const content = document.getElementById('user-detail-content');
+        if (content) content.innerHTML = '<p class="loading-message">Loading user details...</p>';
         // Load user data
         fetch(`/api/admin/users/${userId}`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
         })
             .then(r => r.json())
             .then(data => {
-                // Populate modal form
-                document.querySelector('input[name="user-email"]').value = data.user.email;
+                if (content && data.user) {
+                    content.innerHTML = `
+                        <div class="form-group">
+                            <label>Name</label>
+                            <p>${this.escapeHtml(data.user.fullName || data.user.full_name || '')}</p>
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <p>${this.escapeHtml(data.user.email || '')}</p>
+                        </div>
+                        <div class="form-group">
+                            <label>Role</label>
+                            <p>${this.escapeHtml(data.user.role || '')}</p>
+                        </div>
+                        <div class="form-group">
+                            <label>Status</label>
+                            <p>${data.user.is_active !== false ? 'Active' : 'Inactive'}</p>
+                        </div>
+                    `;
+                }
             });
     }
 
@@ -579,8 +662,97 @@ class AdminDashboard {
     /**
      * Show create auction modal
      */
+    showCreateUserModal() {
+        const titleEl = document.getElementById('user-modal-title');
+        if (titleEl) titleEl.textContent = 'Add New User';
+        const content = document.getElementById('user-detail-content');
+        if (content) {
+            content.innerHTML = `
+                <form id="create-user-form" class="admin-form">
+                    <div class="form-group">
+                        <label for="new-user-name">Full Name</label>
+                        <input type="text" id="new-user-name" class="form-control" required placeholder="Enter full name">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-user-email">Email</label>
+                        <input type="email" id="new-user-email" class="form-control" required placeholder="Enter email address">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-user-role">Role</label>
+                        <select id="new-user-role" class="form-control" required>
+                            <option value="">Select role...</option>
+                            <option value="BIDDER">Bidder</option>
+                            <option value="STUDENT">Student</option>
+                            <option value="TEACHER">Teacher</option>
+                            <option value="SCHOOL_ADMIN">School Admin</option>
+                            <option value="SITE_ADMIN">Site Admin</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-user-password">Temporary Password</label>
+                        <input type="password" id="new-user-password" class="form-control" required placeholder="Enter temporary password">
+                    </div>
+                    <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+                        <button type="button" class="btn btn-secondary" onclick="UIComponents.hideModal('user-detail-modal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create User</button>
+                    </div>
+                </form>
+            `;
+            const form = document.getElementById('create-user-form');
+            if (form) {
+                form.addEventListener('submit', (e) => this.handleCreateUser(e));
+            }
+        }
+        UIComponents.showModal('user-detail-modal');
+    }
+
+    async handleCreateUser(e) {
+        e.preventDefault();
+        const name = document.getElementById('new-user-name').value.trim();
+        const email = document.getElementById('new-user-email').value.trim();
+        const role = document.getElementById('new-user-role').value;
+        const password = document.getElementById('new-user-password').value;
+
+        if (!name || !email || !role || !password) {
+            UIComponents.showAlert('Please fill in all fields', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                },
+                body: JSON.stringify({
+                    fullName: name,
+                    email: email,
+                    password: password,
+                    role: role,
+                }),
+            });
+
+            if (response.ok) {
+                UIComponents.hideModal('user-detail-modal');
+                UIComponents.createToast({ message: 'User created successfully', type: 'success' });
+                this.loadUsers();
+            } else {
+                const data = await response.json();
+                UIComponents.showAlert(data.message || 'Failed to create user', 'error');
+            }
+        } catch (error) {
+            console.error('Create user error:', error);
+            UIComponents.showAlert('Failed to create user', 'error');
+        }
+    }
+
     showCreateAuctionModal() {
-        UIComponents.showModal('auction-create-modal');
+        const titleEl = document.getElementById('auction-modal-title');
+        if (titleEl) titleEl.textContent = 'Create New Auction';
+        const form = document.getElementById('auction-form');
+        if (form) form.reset();
+        UIComponents.showModal('auction-form-modal');
     }
 
     /**
