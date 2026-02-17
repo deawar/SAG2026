@@ -65,36 +65,18 @@ class AdminDashboard {
      * Display statistics cards
      */
     displayStatistics(stats) {
-        const container = document.querySelector('.admin-stats-grid');
-        if (!container) return;
-
-        const cards = [
-            { label: 'Active Auctions', value: stats.activeAuctions || 0, icon: '🔴' },
-            { label: 'Pending Approvals', value: stats.pendingApprovals || 0, icon: '🏆' },
-            { label: 'Revenue', value: `$${(stats.dailyRevenue || 0).toFixed(2)}`, icon: '💰' },
-            { label: 'Active Users', value: stats.totalUsers || 0, icon: '👥' },
-        ];
-
-        cards.forEach(card => {
-            const statCard = container.querySelector(`[data-stat="${card.label.toLowerCase().replace(' ', '-')}"]`);
-            if (statCard) {
-                statCard.setAttribute('aria-live', 'polite');
-                statCard.innerHTML = `
-                    <div class="stat-icon">${card.icon}</div>
-                    <div class="stat-content">
-                        <h3>${card.label}</h3>
-                        <p class="stat-value">${card.value}</p>
-                    </div>
-                `;
-            }
-        });
+        const el = (id) => document.getElementById(id);
+        if (el('stat-active-auctions')) el('stat-active-auctions').textContent = stats.activeAuctions || 0;
+        if (el('stat-total-bids')) el('stat-total-bids').textContent = stats.pendingApprovals || 0;
+        if (el('stat-total-revenue')) el('stat-total-revenue').textContent = `$${(stats.dailyRevenue || 0).toFixed(2)}`;
+        if (el('stat-active-users')) el('stat-active-users').textContent = stats.totalUsers || 0;
     }
 
     /**
      * Display activity log
      */
     displayActivityLog(activities) {
-        const list = document.querySelector('[data-list="activity-log"]');
+        const list = document.getElementById('recent-activity');
         if (!list || !activities) return;
 
         list.innerHTML = '';
@@ -122,23 +104,21 @@ class AdminDashboard {
      * Display health indicators
      */
     displayHealthIndicators(health) {
-        if (!health) return;
+        const container = document.getElementById('system-health');
+        if (!health || !container) return;
 
         const indicators = {
-            'server-status': health.serverStatus,
-            'database-status': health.databaseStatus,
-            'api-status': health.apiStatus,
-            'payment-status': health.paymentStatus,
+            'Database': health.database,
+            'Server': health.serverStatus || 'healthy',
+            'API': health.apiStatus || 'healthy',
         };
 
-        Object.entries(indicators).forEach(([key, status]) => {
-            const indicator = document.querySelector(`[data-health="${key}"]`);
-            if (indicator) {
-                const isHealthy = status === 'healthy';
-                indicator.className = `health-indicator status-${isHealthy ? 'healthy' : 'unhealthy'}`;
-                indicator.textContent = `${isHealthy ? '✓' : '✕'} ${status}`;
-            }
-        });
+        container.innerHTML = Object.entries(indicators).map(([label, status]) => {
+            const isHealthy = (status || '').toUpperCase() === 'HEALTHY' || status === 'healthy';
+            return `<div class="health-indicator status-${isHealthy ? 'healthy' : 'unhealthy'}">
+                ${isHealthy ? '✓' : '✕'} ${label}: ${status || 'unknown'}
+            </div>`;
+        }).join('');
     }
 
     /**
@@ -146,27 +126,27 @@ class AdminDashboard {
      */
     attachEventListeners() {
         // Create auction button
-        const createBtn = document.querySelector('[data-create-auction]');
+        const createBtn = document.getElementById('create-auction-btn');
         if (createBtn) {
             createBtn.addEventListener('click', () => this.showCreateAuctionModal());
         }
 
         // Search and filter listeners
-        const auctionSearch = document.querySelector('input[name="auction-search"]');
+        const auctionSearch = document.getElementById('auction-search');
         if (auctionSearch) {
             auctionSearch.addEventListener('input', UIComponents.debounce(() => {
                 this.searchAuctions(auctionSearch.value);
             }, 500));
         }
 
-        const userSearch = document.querySelector('input[name="user-search"]');
+        const userSearch = document.getElementById('user-search');
         if (userSearch) {
             userSearch.addEventListener('input', UIComponents.debounce(() => {
                 this.searchUsers(userSearch.value);
             }, 500));
         }
 
-        const paymentSearch = document.querySelector('input[name="payment-search"]');
+        const paymentSearch = document.getElementById('payment-search');
         if (paymentSearch) {
             paymentSearch.addEventListener('input', UIComponents.debounce(() => {
                 this.searchPayments(paymentSearch.value);
@@ -181,54 +161,47 @@ class AdminDashboard {
         const tabButtons = document.querySelectorAll('[role="tab"]');
         tabButtons.forEach(btn => {
             btn.addEventListener('click', () => {
-                const tabName = btn.dataset.tab;
-                this.switchTab(tabName);
+                this.switchTab(btn.getAttribute('aria-controls'));
             });
         });
     }
 
     /**
-     * Switch admin tab
+     * Switch admin tab — uses aria-controls panel ID
      */
-    switchTab(tabName) {
+    switchTab(panelId) {
         // Update buttons
-        const tabButtons = document.querySelectorAll('[role="tab"]');
-        tabButtons.forEach(btn => {
+        document.querySelectorAll('[role="tab"]').forEach(btn => {
             btn.classList.remove('active');
             btn.setAttribute('aria-selected', 'false');
         });
 
-        const activeBtn = document.querySelector(`[role="tab"][data-tab="${tabName}"]`);
+        const activeBtn = document.querySelector(`[role="tab"][aria-controls="${panelId}"]`);
         if (activeBtn) {
             activeBtn.classList.add('active');
             activeBtn.setAttribute('aria-selected', 'true');
         }
 
         // Update panels
-        const tabPanels = document.querySelectorAll('[role="tabpanel"]');
-        tabPanels.forEach(panel => {
+        document.querySelectorAll('[role="tabpanel"]').forEach(panel => {
             panel.classList.remove('active');
+            panel.style.display = 'none';
             panel.setAttribute('aria-hidden', 'true');
         });
 
-        const activePanel = document.querySelector(`[role="tabpanel"][data-tab="${tabName}"]`);
+        const activePanel = document.getElementById(panelId);
         if (activePanel) {
             activePanel.classList.add('active');
+            activePanel.style.display = '';
             activePanel.setAttribute('aria-hidden', 'false');
 
-            // Load data for this tab
-            if (tabName === 'auctions') {
-                this.loadAuctions();
-            } else if (tabName === 'users') {
-                this.loadUsers();
-            } else if (tabName === 'payments') {
-                this.loadPayments();
-            } else if (tabName === 'reports') {
-                this.loadReports();
-            }
+            if (panelId === 'auctions-tab') this.loadAuctions();
+            else if (panelId === 'users-tab') this.loadUsers();
+            else if (panelId === 'payments-tab') this.loadPayments();
+            else if (panelId === 'reports-tab') this.loadReports();
         }
 
-        this.currentTab = tabName;
+        this.currentTab = panelId;
     }
 
     /**
@@ -580,20 +553,20 @@ class AdminDashboard {
         if (!confirm) return;
 
         try {
-            const response = await fetch(`/api/admin/users/${userId}/ban`, {
-                method: 'PUT',
+            const response = await fetch(`/api/admin/users/${userId}`, {
+                method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
             if (!response.ok) {
-                UIComponents.showAlert('Failed to ban user', 'error');
+                UIComponents.showAlert('Failed to deactivate user', 'error');
                 return;
             }
 
             UIComponents.createToast({
-                message: 'User banned successfully',
+                message: 'User deactivated successfully',
                 type: 'success',
             });
 
