@@ -695,8 +695,11 @@ class AdminDashboard {
                         <label for="new-user-role">Role</label>
                         <select id="new-user-role" class="form-control" required>
                             <option value="">Select role...</option>
-                            <option value="student">Student</option>
-                            <option value="teacher">Teacher</option>
+                            <option value="STUDENT">Student</option>
+                            <option value="TEACHER">Teacher</option>
+                            <option value="SCHOOL_ADMIN">School Admin</option>
+                            <option value="SITE_ADMIN">Site Admin</option>
+                            <option value="BIDDER">Bidder</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -722,38 +725,62 @@ class AdminDashboard {
         const firstName = document.getElementById('new-user-firstname').value.trim();
         const lastName = document.getElementById('new-user-lastname').value.trim();
         const email = document.getElementById('new-user-email').value.trim();
-        const accountType = document.getElementById('new-user-role').value;
+        const selectedRole = document.getElementById('new-user-role').value;
         const password = document.getElementById('new-user-password').value;
 
-        if (!firstName || !lastName || !email || !accountType || !password) {
+        if (!firstName || !lastName || !email || !selectedRole || !password) {
             UIComponents.showAlert('Please fill in all fields', 'error');
             return;
         }
 
+        // Register endpoint only supports 'student' and 'teacher' accountType.
+        // For other roles, register as teacher first then promote via admin API.
+        const registerAccountType = (selectedRole === 'STUDENT' || selectedRole === 'BIDDER') ? 'student' : 'teacher';
+        const needsPromotion = !['STUDENT', 'TEACHER'].includes(selectedRole);
+
         try {
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+            };
+
+            // Step 1: Register the user
             const response = await fetch('/api/auth/register', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-                },
+                headers,
                 body: JSON.stringify({
-                    firstName: firstName,
-                    lastName: lastName,
-                    email: email,
-                    password: password,
-                    accountType: accountType,
+                    firstName,
+                    lastName,
+                    email,
+                    password,
+                    accountType: registerAccountType,
                 }),
             });
 
-            if (response.ok) {
-                UIComponents.hideModal('user-detail-modal');
-                UIComponents.createToast({ message: 'User created successfully', type: 'success' });
-                this.loadUsers();
-            } else {
+            if (!response.ok) {
                 const data = await response.json();
                 UIComponents.showAlert(data.message || 'Failed to create user', 'error');
+                return;
             }
+
+            const userData = await response.json();
+
+            // Step 2: If role is not STUDENT or TEACHER, promote via admin endpoint
+            if (needsPromotion && userData.user && userData.user.id) {
+                const roleRes = await fetch(`/api/admin/users/${userData.user.id}/role`, {
+                    method: 'PUT',
+                    headers,
+                    body: JSON.stringify({ newRole: selectedRole }),
+                });
+
+                if (!roleRes.ok) {
+                    UIComponents.createToast({ message: `User created but role promotion to ${selectedRole} failed. Update role manually.`, type: 'warning' });
+                }
+            }
+
+            UIComponents.hideModal('user-detail-modal');
+            UIComponents.createToast({ message: 'User created successfully', type: 'success' });
+            this.loadUsers();
         } catch (error) {
             console.error('Create user error:', error);
             UIComponents.showAlert('Failed to create user', 'error');
