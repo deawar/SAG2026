@@ -139,7 +139,7 @@ class BidController {
       const requestingUserId = req.user?.id;
 
       // Users can only view their own history unless they're admin
-      if (userId !== requestingUserId && !['site_admin', 'school_admin'].includes(req.user?.role)) {
+      if (userId !== requestingUserId && !['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(req.user?.role)) {
         return res.status(403).json({
           success: false,
           message: 'Access denied'
@@ -172,7 +172,7 @@ class BidController {
       const requestingUserId = req.user?.id;
 
       // Users can only view their own auctions unless they're admin
-      if (userId !== requestingUserId && !['site_admin', 'school_admin'].includes(req.user?.role)) {
+      if (userId !== requestingUserId && !['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(req.user?.role)) {
         return res.status(403).json({
           success: false,
           message: 'Access denied'

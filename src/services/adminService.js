@@ -309,6 +309,26 @@ class AdminService {
   }
 
   /**
+   * List all auctions (no status filter)
+   */
+  async listAllAuctions(adminId) {
+    const admin = await this.verifyAdminAccess(adminId);
+
+    let query = 'SELECT a.id, a.title, a.auction_status, a.school_id, a.created_by_user_id, a.starts_at, a.ends_at, a.created_at FROM auctions a WHERE 1=1';
+    const params = [];
+
+    if (admin.role === 'SCHOOL_ADMIN') {
+      query += ' AND a.school_id = $1';
+      params.push(admin.school_id);
+    }
+
+    query += ' ORDER BY a.created_at DESC LIMIT 100';
+
+    const result = await pool.query(query, params);
+    return result.rows;
+  }
+
+  /**
    * List auctions by status with pagination
    */
   async listAuctionsByStatus(status, adminId) {
