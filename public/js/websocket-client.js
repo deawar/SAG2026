@@ -408,10 +408,12 @@ class WebSocketClient {
 // Create global instance
 window.websocketClient = new WebSocketClient();
 
-// Auto-connect if token exists
-if (localStorage.getItem('auth_token')) {
-    window.websocketClient.connect().catch(error => {
-        console.warn('Failed to auto-connect WebSocket:', error);
+// Auto-connect if token exists, but only on pages that use real-time features
+// Skip auto-connect on admin dashboard since it doesn't need WebSocket
+const isAdminPage = window.location.pathname.includes('admin-dashboard');
+if (localStorage.getItem('auth_token') && !isAdminPage) {
+    window.websocketClient.connect().catch(() => {
+        // Silently handle - WebSocket is optional, app works without it
     });
 }
 
