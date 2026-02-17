@@ -50,11 +50,11 @@ async function startServer() {
     console.log('\nTesting database connection...');
     try {
       const dbConfig = {
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        database: process.env.DB_NAME,
+        user: process.env.DB_USER || process.env.DATABASE_USER,
+        password: process.env.DB_PASSWORD || process.env.DATABASE_PASSWORD,
+        host: process.env.DB_HOST || process.env.DATABASE_HOST,
+        port: process.env.DB_PORT || process.env.DATABASE_PORT,
+        database: process.env.DB_NAME || process.env.DATABASE_NAME,
         maxConnections: process.env.DB_POOL_MAX || 10
       };
 
@@ -207,22 +207,8 @@ async function startServer() {
     /**
      * Start HTTP/HTTPS Server
      */
-    // Determine binding address
-    let bindAddress = '0.0.0.0'; // Try all interfaces
-    const os = require('os');
-    const interfaces = os.networkInterfaces();
-    
-    // Try to find actual network IP for binding on Windows
-    for (const name of Object.keys(interfaces)) {
-      for (const iface of interfaces[name]) {
-        if (iface.family === 'IPv4' && !iface.internal) {
-          // Bind to actual IP on Windows for better network access
-          bindAddress = iface.address;
-          break;
-        }
-      }
-      if (bindAddress !== '0.0.0.0') break;
-    }
+    // Bind to all interfaces so healthchecks and proxies can reach the server
+    const bindAddress = '0.0.0.0';
 
     server.listen(PORT, bindAddress, () => {
       const os = require('os');
