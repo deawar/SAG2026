@@ -8,7 +8,13 @@
  */
 
 const { Pool } = require('pg');
-const pool = new Pool();
+const pool = new Pool({
+  host: process.env.DB_HOST || process.env.DATABASE_HOST || 'localhost',
+  port: process.env.DB_PORT || process.env.DATABASE_PORT || 5432,
+  database: process.env.DB_NAME || process.env.DATABASE_NAME || 'silent_auction_gallery',
+  user: process.env.DB_USER || process.env.DATABASE_USER || 'postgres',
+  password: process.env.DB_PASSWORD || process.env.DATABASE_PASSWORD,
+});
 
 /**
  * AdminService - Handles all administrative operations

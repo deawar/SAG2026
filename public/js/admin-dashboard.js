@@ -352,7 +352,7 @@ class AdminDashboard {
             const row = document.createElement('tr');
             const isActive = user.is_active !== false && user.status !== 'inactive';
             row.innerHTML = `
-                <td>${this.escapeHtml(user.fullName || user.full_name || '')}</td>
+                <td>${this.escapeHtml(user.first_name && user.last_name ? user.first_name + ' ' + user.last_name : user.fullName || user.full_name || '')}</td>
                 <td>${this.escapeHtml(user.email || '')}</td>
                 <td>${user.role || 'user'}</td>
                 <td><span class="badge badge-${isActive ? 'success' : 'error'}">${isActive ? 'Active' : 'Inactive'}</span></td>
@@ -670,8 +670,12 @@ class AdminDashboard {
             content.innerHTML = `
                 <form id="create-user-form" class="admin-form">
                     <div class="form-group">
-                        <label for="new-user-name">Full Name</label>
-                        <input type="text" id="new-user-name" class="form-control" required placeholder="Enter full name">
+                        <label for="new-user-firstname">First Name</label>
+                        <input type="text" id="new-user-firstname" class="form-control" required placeholder="Enter first name">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-user-lastname">Last Name</label>
+                        <input type="text" id="new-user-lastname" class="form-control" required placeholder="Enter last name">
                     </div>
                     <div class="form-group">
                         <label for="new-user-email">Email</label>
@@ -681,16 +685,13 @@ class AdminDashboard {
                         <label for="new-user-role">Role</label>
                         <select id="new-user-role" class="form-control" required>
                             <option value="">Select role...</option>
-                            <option value="BIDDER">Bidder</option>
-                            <option value="STUDENT">Student</option>
-                            <option value="TEACHER">Teacher</option>
-                            <option value="SCHOOL_ADMIN">School Admin</option>
-                            <option value="SITE_ADMIN">Site Admin</option>
+                            <option value="student">Student</option>
+                            <option value="teacher">Teacher</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="new-user-password">Temporary Password</label>
-                        <input type="password" id="new-user-password" class="form-control" required placeholder="Enter temporary password">
+                        <label for="new-user-password">Password</label>
+                        <input type="password" id="new-user-password" class="form-control" required placeholder="12+ chars, upper, lower, number, special">
                     </div>
                     <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
                         <button type="button" class="btn btn-secondary" onclick="UIComponents.hideModal('user-detail-modal')">Cancel</button>
@@ -708,12 +709,13 @@ class AdminDashboard {
 
     async handleCreateUser(e) {
         e.preventDefault();
-        const name = document.getElementById('new-user-name').value.trim();
+        const firstName = document.getElementById('new-user-firstname').value.trim();
+        const lastName = document.getElementById('new-user-lastname').value.trim();
         const email = document.getElementById('new-user-email').value.trim();
-        const role = document.getElementById('new-user-role').value;
+        const accountType = document.getElementById('new-user-role').value;
         const password = document.getElementById('new-user-password').value;
 
-        if (!name || !email || !role || !password) {
+        if (!firstName || !lastName || !email || !accountType || !password) {
             UIComponents.showAlert('Please fill in all fields', 'error');
             return;
         }
@@ -726,10 +728,11 @@ class AdminDashboard {
                     'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
                 body: JSON.stringify({
-                    fullName: name,
+                    firstName: firstName,
+                    lastName: lastName,
                     email: email,
                     password: password,
-                    role: role,
+                    accountType: accountType,
                 }),
             });
 
