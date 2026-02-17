@@ -23,10 +23,11 @@ class AdminDashboard {
      * Check if user has admin access
      */
     checkAdminAccess() {
-        const token = localStorage.getItem('authToken');
-        const userRole = localStorage.getItem('userRole');
+        const token = localStorage.getItem('auth_token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const userRole = user.role;
 
-        if (!token || userRole !== 'admin') {
+        if (!token || !['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(userRole)) {
             window.location.href = '/user-dashboard.html';
         }
     }
@@ -35,23 +36,26 @@ class AdminDashboard {
      * Load dashboard data
      */
     async loadDashboardData() {
+        const headers = { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` };
         try {
-            const response = await fetch('/api/admin/dashboard', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-                },
-            });
+            const [statsRes, healthRes, activityRes] = await Promise.all([
+                fetch('/api/admin/dashboard/stats', { headers }),
+                fetch('/api/admin/dashboard/health', { headers }),
+                fetch('/api/admin/audit-logs?limit=10', { headers }),
+            ]);
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                UIComponents.showAlert(data.message || 'Failed to load dashboard', 'error');
-                return;
+            if (statsRes.ok) {
+                const statsData = await statsRes.json();
+                this.displayStatistics(statsData.stats);
             }
-
-            this.displayStatistics(data.statistics);
-            this.displayActivityLog(data.recentActivity);
-            this.displayHealthIndicators(data.health);
+            if (healthRes.ok) {
+                const healthData = await healthRes.json();
+                this.displayHealthIndicators(healthData.health);
+            }
+            if (activityRes.ok) {
+                const activityData = await activityRes.json();
+                this.displayActivityLog(activityData.logs);
+            }
         } catch (error) {
             console.error('Load dashboard error:', error);
         }
@@ -66,9 +70,9 @@ class AdminDashboard {
 
         const cards = [
             { label: 'Active Auctions', value: stats.activeAuctions || 0, icon: '🔴' },
-            { label: 'Total Bids', value: stats.totalBids || 0, icon: '🏆' },
-            { label: 'Revenue', value: `$${(stats.revenue || 0).toFixed(2)}`, icon: '💰' },
-            { label: 'Active Users', value: stats.activeUsers || 0, icon: '👥' },
+            { label: 'Pending Approvals', value: stats.pendingApprovals || 0, icon: '🏆' },
+            { label: 'Revenue', value: `$${(stats.dailyRevenue || 0).toFixed(2)}`, icon: '💰' },
+            { label: 'Active Users', value: stats.totalUsers || 0, icon: '👥' },
         ];
 
         cards.forEach(card => {
@@ -234,7 +238,7 @@ class AdminDashboard {
         try {
             const response = await fetch('/api/admin/auctions', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
@@ -290,7 +294,7 @@ class AdminDashboard {
         try {
             const response = await fetch('/api/admin/users', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
@@ -345,7 +349,7 @@ class AdminDashboard {
         try {
             const response = await fetch('/api/admin/payments', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
@@ -391,7 +395,7 @@ class AdminDashboard {
         try {
             const response = await fetch('/api/admin/reports', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
@@ -440,7 +444,7 @@ class AdminDashboard {
         try {
             const response = await fetch(`/api/admin/auctions/search?q=${encodeURIComponent(query)}`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
@@ -461,7 +465,7 @@ class AdminDashboard {
         try {
             const response = await fetch(`/api/admin/users/search?q=${encodeURIComponent(query)}`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
@@ -482,7 +486,7 @@ class AdminDashboard {
         try {
             const response = await fetch(`/api/admin/payments/search?q=${encodeURIComponent(query)}`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
@@ -503,7 +507,7 @@ class AdminDashboard {
         UIComponents.showModal('auction-edit-modal');
         // Load auction data and populate form
         fetch(`/api/admin/auctions/${auctionId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` },
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
         })
             .then(r => r.json())
             .then(data => {
@@ -528,7 +532,7 @@ class AdminDashboard {
             const response = await fetch(`/api/admin/auctions/${auctionId}`, {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
@@ -555,7 +559,7 @@ class AdminDashboard {
         UIComponents.showModal('user-edit-modal');
         // Load user data
         fetch(`/api/admin/users/${userId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` },
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
         })
             .then(r => r.json())
             .then(data => {
@@ -579,7 +583,7 @@ class AdminDashboard {
             const response = await fetch(`/api/admin/users/${userId}/ban`, {
                 method: 'PUT',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
@@ -613,7 +617,7 @@ class AdminDashboard {
         try {
             const response = await fetch(`/api/admin/reports/${reportType}/export`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
