@@ -1,8 +1,6 @@
 # Silent Auction Gallery - Docker Compose Development Environment
 # Use this for local development with automatic service startup
 
-# version: '3.8'
-
 services:
   # PostgreSQL Database Service
   postgres:
