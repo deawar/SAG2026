@@ -72,9 +72,9 @@ services:
       DATABASE_SSL: ${DB_SSL:-false}
       
       # JWT Configuration (from secrets/env)
-      JWT_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       JWT_EXPIRES_IN: ${JWT_ACCESS_EXPIRY:-900s}
-      REFRESH_TOKEN_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       
       # TOTP Configuration
       TOTP_ISSUER: ${TOTP_ISSUER:-SAG2026}
@@ -118,9 +118,9 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${PORT:-5000}/health"]
       interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     
     restart: unless-stopped
     
