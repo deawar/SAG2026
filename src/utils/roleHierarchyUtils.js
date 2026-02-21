@@ -65,8 +65,12 @@ function canViewAuction(user, auction) {
     return false;
   }
 
+  // Handle both camelCase (service responses) and snake_case (raw DB rows)
+  const auctionSchoolId = auction.school_id || auction.schoolId;
+  const auctionStatus = auction.status || auction.auction_status;
+
   // School isolation: enforce school_id matching
-  const sameSchool = user.schoolId === auction.school_id;
+  const sameSchool = user.schoolId === auctionSchoolId;
 
   switch (user.role) {
     case 'SITE_ADMIN':
@@ -78,16 +82,16 @@ function canViewAuction(user, auction) {
       return sameSchool;
 
     case 'TEACHER':
-      // Can see APPROVED auctions from own school
-      return sameSchool && auction.status === 'APPROVED';
+      // Can see APPROVED and LIVE auctions from own school
+      return sameSchool && ['APPROVED', 'LIVE'].includes(auctionStatus);
 
     case 'STUDENT':
-      // Can see APPROVED auctions from own school
-      return sameSchool && auction.status === 'APPROVED';
+      // Can see APPROVED and LIVE auctions from own school
+      return sameSchool && ['APPROVED', 'LIVE'].includes(auctionStatus);
 
     case 'BIDDER':
-      // Can see APPROVED auctions from own school (future role)
-      return sameSchool && auction.status === 'APPROVED';
+      // Can see APPROVED and LIVE auctions from own school
+      return sameSchool && ['APPROVED', 'LIVE'].includes(auctionStatus);
 
     default:
       return false;
