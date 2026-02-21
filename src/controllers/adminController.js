@@ -201,14 +201,14 @@ class AdminController {
   async updateUserProfile(req, res) {
     try {
       const { userId } = req.params;
-      const { firstName, lastName, email } = req.body;
+      const { firstName, lastName, email, phoneNumber, schoolId } = req.body;
       const adminId = req.user.id;
 
       if (!userId) {
         return res.status(400).json({ success: false, error: 'USER_ID_REQUIRED' });
       }
 
-      const result = await adminService.updateUserProfile(userId, { firstName, lastName, email }, adminId);
+      const result = await adminService.updateUserProfile(userId, { firstName, lastName, email, phoneNumber, schoolId }, adminId);
       return res.status(200).json({ success: true, result });
     } catch (error) {
       return this.handleError(error, res);
