@@ -309,13 +309,17 @@ class TeacherDashboard {
      * Load teacher data (submissions, auctions)
      */
     async loadTeacherData() {
+        // Run independently so one failure doesn't block the other
         try {
-            // Load submissions
             const submissionsResponse = await this.apiClient.request('GET','/api/teacher/submissions');
             if (submissionsResponse.success) {
                 this.displaySubmissions(submissionsResponse.data);
             }
+        } catch (error) {
+            console.error('Error loading submissions:', error);
+        }
 
+        try {
             // Load auctions
             const auctionsResponse = await this.apiClient.request('GET','/api/teacher/auctions');
             if (auctionsResponse.success) {
