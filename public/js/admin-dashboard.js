@@ -438,7 +438,7 @@ class AdminDashboard {
         tbody.innerHTML = '';
 
         if (auctions.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6">No auctions found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8">No auctions found.</td></tr>';
             return;
         }
 
@@ -456,8 +456,13 @@ class AdminDashboard {
             const canCancel  = ['APPROVED', 'LIVE'].includes(status);
             const canDelete  = ['DRAFT', 'CANCELLED', 'ENDED'].includes(status);
 
+            const schoolName  = this.escapeHtml(auction.school_name  || auction.school_id || '—');
+            const gatewayName = this.escapeHtml(auction.gateway_name || auction.gateway_type || '—');
+
             row.innerHTML = `
                 <td>${this.escapeHtml(auction.title || '')}</td>
+                <td>${schoolName}</td>
+                <td>${gatewayName}</td>
                 <td><span class="badge badge-${statusClass}">${status}</span></td>
                 <td>-</td>
                 <td>-</td>
