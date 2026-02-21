@@ -406,6 +406,7 @@ class AdminDashboard {
      * Load auctions
      */
     async loadAuctions(status = '') {
+        const tbody = document.getElementById('auctions-table-body');
         try {
             const url = status
                 ? `/api/admin/auctions?status=${encodeURIComponent(status)}`
@@ -416,15 +417,18 @@ class AdminDashboard {
                 },
             });
 
+            const data = await response.json();
+
             if (!response.ok) {
-                console.error('Load auctions failed:', response.status);
+                console.error('Load auctions failed:', response.status, data);
+                if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="loading-message" style="color:var(--color-error,red)">Failed to load auctions (${response.status}: ${data.message || data.error || 'unknown error'})</td></tr>`;
                 return;
             }
 
-            const data = await response.json();
             this.displayAuctionsTable(data.auctions || []);
         } catch (error) {
             console.error('Load auctions error:', error);
+            if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="loading-message" style="color:var(--color-error,red)">Error loading auctions: ${this.escapeHtml(error.message)}</td></tr>`;
         }
     }
 
@@ -503,6 +507,7 @@ class AdminDashboard {
      * Load users
      */
     async loadUsers() {
+        const tbody = document.getElementById('users-table-body');
         try {
             const response = await fetch('/api/admin/users', {
                 headers: {
@@ -510,15 +515,18 @@ class AdminDashboard {
                 },
             });
 
+            const data = await response.json();
+
             if (!response.ok) {
-                console.error('Load users failed:', response.status);
+                console.error('Load users failed:', response.status, data);
+                if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="loading-message" style="color:var(--color-error,red)">Failed to load users (${response.status}: ${data.message || data.error || 'unknown error'})</td></tr>`;
                 return;
             }
 
-            const data = await response.json();
             this.displayUsersTable(data.users || []);
         } catch (error) {
             console.error('Load users error:', error);
+            if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="loading-message" style="color:var(--color-error,red)">Error loading users: ${this.escapeHtml(error.message)}</td></tr>`;
         }
     }
 

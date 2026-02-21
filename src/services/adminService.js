@@ -69,19 +69,16 @@ class AdminService {
     const offset = (page - 1) * limit;
 
     let query = `SELECT u.id, u.email, u.first_name, u.last_name, u.phone_number, u.role,
-      u.account_status, u.school_id, s.name AS school_name, u.two_fa_enabled, u.created_at
+      u.account_status, u.school_id, s.name AS school_name, u.two_fa_enabled, u.created_at,
+      (SELECT COUNT(*) FROM bids b WHERE b.placed_by_user_id = u.id) AS total_bids
       FROM users u
       LEFT JOIN schools s ON u.school_id = s.id
       WHERE 1=1`;
     const params = [];
 
-    // Multi-tenant isolation
+    // Multi-tenant isolation: SCHOOL_ADMIN sees only their school; SITE_ADMIN sees all
     if (admin.role === 'SCHOOL_ADMIN') {
       query += ' AND u.school_id = $1';
-      params.push(admin.school_id);
-    } else if (admin.school_id) {
-      // SITE_ADMIN with school filter
-      query += ` AND u.school_id = $${params.length + 1}`;
       params.push(admin.school_id);
     }
 
