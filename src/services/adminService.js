@@ -477,7 +477,15 @@ class AdminService {
   async listAllAuctions(adminId) {
     const admin = await this.verifyAdminAccess(adminId);
 
-    let query = 'SELECT a.id, a.title, a.auction_status, a.school_id, a.created_by_user_id, a.starts_at, a.ends_at, a.created_at FROM auctions a WHERE 1=1';
+    let query = `
+      SELECT a.id, a.title, a.auction_status, a.school_id, a.starts_at, a.ends_at, a.created_at,
+             s.name  AS school_name,
+             pg.gateway_name AS gateway_name,
+             pg.gateway_type AS gateway_type
+      FROM auctions a
+      LEFT JOIN schools s         ON s.id  = a.school_id
+      LEFT JOIN payment_gateways pg ON pg.id = a.payment_gateway_id
+      WHERE a.deleted_at IS NULL`;
     const params = [];
 
     if (admin.role === 'SCHOOL_ADMIN') {
@@ -502,7 +510,15 @@ class AdminService {
       throw new Error('INVALID_STATUS');
     }
 
-    let query = 'SELECT a.id, a.title, a.auction_status, a.school_id, a.created_by_user_id, a.created_at FROM auctions a WHERE a.auction_status = $1';
+    let query = `
+      SELECT a.id, a.title, a.auction_status, a.school_id, a.starts_at, a.ends_at, a.created_at,
+             s.name  AS school_name,
+             pg.gateway_name AS gateway_name,
+             pg.gateway_type AS gateway_type
+      FROM auctions a
+      LEFT JOIN schools s         ON s.id  = a.school_id
+      LEFT JOIN payment_gateways pg ON pg.id = a.payment_gateway_id
+      WHERE a.auction_status = $1 AND a.deleted_at IS NULL`;
     const params = [status];
 
     // Multi-tenant isolation
