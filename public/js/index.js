@@ -139,7 +139,7 @@ async function handleLogin(event) {
             document.getElementById('login-form').reset();
 
             // Update UI
-            updateAuthUI();
+            UIComponents.updateAuthUI();
 
             // Connect WebSocket
             try {
@@ -398,7 +398,7 @@ async function handleVerify2FA(event) {
             const modal = document.getElementById('login-modal');
             if (modal) modal.style.display = 'none';
 
-            updateAuthUI();
+            UIComponents.updateAuthUI();
         } else {
             UIComponents.hideLoading(loader);
             UIComponents.showAlert(result.error || '2FA verification failed', 'error', 5000);
