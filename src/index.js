@@ -123,6 +123,18 @@ async function startServer() {
       } catch (routeErr) {
         console.error('❌ ERROR mounting admin routes:', routeErr);
       }
+
+      /**
+       * Mount Teacher Routes (requires TEACHER, SCHOOL_ADMIN, or SITE_ADMIN role)
+       */
+      console.log('Mounting teacher routes...');
+      try {
+        const teacherRoutes = require('./routes/teacherRoutes');
+        app.use('/api/teacher', teacherRoutes);
+        console.log('✅ Teacher routes mounted');
+      } catch (routeErr) {
+        console.error('❌ ERROR mounting teacher routes:', routeErr);
+      }
     } else {
       console.warn('⚠️  Skipping auth routes (database unavailable)');
     }
