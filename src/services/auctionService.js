@@ -805,10 +805,6 @@ class AuctionService {
       throw new Error('Valid auction title is required');
     }
 
-    if (!description || typeof description !== 'string' || description.trim().length === 0) {
-      throw new Error('Valid auction description is required');
-    }
-
     if (!schoolId || typeof schoolId !== 'string') {
       throw new Error('Valid school ID is required');
     }

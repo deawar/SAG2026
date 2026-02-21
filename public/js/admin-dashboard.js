@@ -1122,23 +1122,45 @@ class AdminDashboard {
         const titleEl = document.getElementById('auction-modal-title');
         if (titleEl) titleEl.textContent = 'Create New Auction';
 
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const isSiteAdmin = currentUser.role === 'SITE_ADMIN';
+        const userSchoolId   = currentUser.school_id   || currentUser.schoolId   || '';
+        const userSchoolName = currentUser.school_name || currentUser.schoolName || '';
+
+        // School field: SITE_ADMIN gets a search picker; SCHOOL_ADMIN sees their own school
+        const schoolField = isSiteAdmin ? `
+            <div class="form-group">
+                <label for="school-search-input">School <span aria-label="required">*</span></label>
+                <input type="text" id="school-search-input" class="form-control"
+                       placeholder="Type to search schools..." autocomplete="off">
+                <select id="school-select" class="form-control" style="margin-top:0.5rem;" required>
+                    <option value="">-- Select a school --</option>
+                </select>
+            </div>` : `
+            <div class="form-group">
+                <label>School</label>
+                <p class="form-static">${this.escapeHtml(userSchoolName || 'Your school')}</p>
+                <input type="hidden" id="school-select" value="${this.escapeHtml(userSchoolId)}">
+            </div>`;
+
         const form = document.getElementById('auction-form');
         if (form) {
             form.innerHTML = `
                 <div class="form-group">
-                    <label for="auction-title">Title</label>
+                    <label for="auction-title">Title <span aria-label="required">*</span></label>
                     <input type="text" id="auction-title" name="auction-title" class="form-control" required placeholder="Auction title">
                 </div>
                 <div class="form-group">
                     <label for="auction-description">Description</label>
-                    <textarea id="auction-description" name="auction-description" class="form-control" rows="3" placeholder="Auction description"></textarea>
+                    <textarea id="auction-description" name="auction-description" class="form-control" rows="3" placeholder="Auction description (optional)"></textarea>
                 </div>
+                ${schoolField}
                 <div class="form-group">
-                    <label for="auction-start">Start Date/Time</label>
+                    <label for="auction-start">Start Date &amp; Time <span aria-label="required">*</span></label>
                     <input type="datetime-local" id="auction-start" name="auction-start" class="form-control" required>
                 </div>
                 <div class="form-group">
-                    <label for="auction-end">End Date/Time</label>
+                    <label for="auction-end">End Date &amp; Time <span aria-label="required">*</span></label>
                     <input type="datetime-local" id="auction-end" name="auction-end" class="form-control" required>
                 </div>
                 <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
@@ -1151,6 +1173,11 @@ class AdminDashboard {
             const newForm = form.cloneNode(true);
             form.parentNode.replaceChild(newForm, form);
             newForm.addEventListener('submit', (e) => this.handleCreateAuction(e));
+
+            // Wire school picker for SITE_ADMIN
+            if (isSiteAdmin) {
+                this.initSchoolPicker(null, null);
+            }
         }
 
         UIComponents.showModal('auction-form-modal');
@@ -1158,13 +1185,19 @@ class AdminDashboard {
 
     async handleCreateAuction(e) {
         e.preventDefault();
-        const title = document.getElementById('auction-title').value.trim();
+        const title       = document.getElementById('auction-title').value.trim();
         const description = document.getElementById('auction-description').value.trim();
-        const startTime = document.getElementById('auction-start').value;
-        const endTime = document.getElementById('auction-end').value;
+        const startTime   = document.getElementById('auction-start').value;
+        const endTime     = document.getElementById('auction-end').value;
+        const schoolId    = document.getElementById('school-select')?.value || '';
 
         if (!title || !startTime || !endTime) {
             UIComponents.showAlert('Please fill in all required fields', 'error');
+            return;
+        }
+
+        if (!schoolId) {
+            UIComponents.showAlert('Please select a school for this auction', 'error');
             return;
         }
 
@@ -1182,7 +1215,8 @@ class AdminDashboard {
                 },
                 body: JSON.stringify({
                     title,
-                    description,
+                    description: description || undefined,
+                    schoolId,
                     startTime,
                     endTime,
                 }),
