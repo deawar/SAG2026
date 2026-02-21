@@ -311,13 +311,13 @@ class TeacherDashboard {
     async loadTeacherData() {
         try {
             // Load submissions
-            const submissionsResponse = await this.apiClient.get('/api/teacher/submissions');
+            const submissionsResponse = await this.apiClient.request('GET','/api/teacher/submissions');
             if (submissionsResponse.success) {
                 this.displaySubmissions(submissionsResponse.data);
             }
 
             // Load auctions
-            const auctionsResponse = await this.apiClient.get('/api/teacher/auctions');
+            const auctionsResponse = await this.apiClient.request('GET','/api/teacher/auctions');
             if (auctionsResponse.success) {
                 this.displayAuctions(auctionsResponse.data);
             }
@@ -517,7 +517,7 @@ class TeacherDashboard {
             this.hideAuctionModal();
             this.showMessage(auctionId ? 'Auction updated.' : 'Auction created.', 'success');
             // Reload auctions list
-            const auctionsRes = await this.apiClient.get('/api/teacher/auctions');
+            const auctionsRes = await this.apiClient.request('GET','/api/teacher/auctions');
             if (auctionsRes.success) this.displayAuctions(auctionsRes.data);
         } catch (err) {
             console.error('Auction save error:', err);
