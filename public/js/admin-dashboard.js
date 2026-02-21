@@ -619,39 +619,116 @@ class AdminDashboard {
     }
 
     /**
-     * Edit user
+     * Edit user — shows an editable form pre-filled with current user data
      */
     editUser(userId) {
-        UIComponents.showModal('user-detail-modal');
+        const titleEl = document.getElementById('user-modal-title');
+        if (titleEl) titleEl.textContent = 'Edit User';
+
         const content = document.getElementById('user-detail-content');
         if (content) content.innerHTML = '<p class="loading-message">Loading user details...</p>';
-        // Load user data
+
+        UIComponents.showModal('user-detail-modal');
+
         fetch(`/api/admin/users/${userId}`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
         })
             .then(r => r.json())
             .then(data => {
-                if (content && data.user) {
-                    content.innerHTML = `
+                const user = data.user;
+                if (!content || !user) return;
+
+                const fullName = this.escapeHtml(
+                    user.first_name && user.last_name
+                        ? `${user.first_name} ${user.last_name}`
+                        : user.fullName || user.full_name || ''
+                );
+                const currentRole = user.role || '';
+                const currentStatus = user.account_status || user.status || 'ACTIVE';
+
+                if (titleEl) titleEl.textContent = `Edit User: ${fullName}`;
+
+                content.innerHTML = `
+                    <form id="edit-user-form" class="admin-form">
                         <div class="form-group">
                             <label>Name</label>
-                            <p>${this.escapeHtml(data.user.fullName || data.user.full_name || '')}</p>
+                            <p class="form-static">${fullName}</p>
                         </div>
                         <div class="form-group">
                             <label>Email</label>
-                            <p>${this.escapeHtml(data.user.email || '')}</p>
+                            <p class="form-static">${this.escapeHtml(user.email || '')}</p>
                         </div>
                         <div class="form-group">
-                            <label>Role</label>
-                            <p>${this.escapeHtml(data.user.role || '')}</p>
+                            <label for="edit-user-role">Role</label>
+                            <select id="edit-user-role" class="form-control">
+                                <option value="STUDENT"    ${currentRole === 'STUDENT'     ? 'selected' : ''}>Student</option>
+                                <option value="TEACHER"    ${currentRole === 'TEACHER'     ? 'selected' : ''}>Teacher</option>
+                                <option value="SCHOOL_ADMIN" ${currentRole === 'SCHOOL_ADMIN' ? 'selected' : ''}>School Admin</option>
+                                <option value="SITE_ADMIN" ${currentRole === 'SITE_ADMIN'  ? 'selected' : ''}>Site Admin</option>
+                                <option value="BIDDER"     ${currentRole === 'BIDDER'      ? 'selected' : ''}>Bidder</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label>Status</label>
-                            <p>${data.user.is_active !== false ? 'Active' : 'Inactive'}</p>
+                            <p class="form-static">
+                                <span class="badge badge-${currentStatus === 'ACTIVE' ? 'success' : 'error'}">${currentStatus}</span>
+                            </p>
                         </div>
-                    `;
+                        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+                            <button type="button" class="btn btn-secondary" onclick="UIComponents.hideModal('user-detail-modal')">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                `;
+
+                const form = document.getElementById('edit-user-form');
+                if (form) {
+                    form.addEventListener('submit', (e) => this.handleEditUser(e, userId, currentRole));
                 }
+            })
+            .catch(err => {
+                if (content) content.innerHTML = '<p class="text-error">Failed to load user details.</p>';
+                console.error('editUser fetch error:', err);
             });
+    }
+
+    /**
+     * Handle edit user form submission
+     */
+    async handleEditUser(e, userId, originalRole) {
+        e.preventDefault();
+        const newRole = document.getElementById('edit-user-role')?.value;
+
+        if (!newRole) {
+            UIComponents.showAlert('Please select a role.', 'error');
+            return;
+        }
+
+        try {
+            if (newRole !== originalRole) {
+                const response = await fetch(`/api/admin/users/${userId}/role`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ newRole }),
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    UIComponents.showAlert(err.message || 'Failed to update role.', 'error');
+                    return;
+                }
+            }
+
+            UIComponents.hideModal('user-detail-modal');
+            UIComponents.createToast({ message: 'User updated successfully', type: 'success' });
+            this.loadUsers();
+        } catch (error) {
+            console.error('handleEditUser error:', error);
+            UIComponents.showAlert('An error occurred while saving.', 'error');
+        }
     }
 
     /**
