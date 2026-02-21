@@ -80,7 +80,8 @@ class AuthManager {
                     this.setUser({
                         id: response.data.userId,
                         email: response.data.email,
-                        role: response.data.role
+                        role: response.data.role,
+                        schoolId: response.data.schoolId || null
                     });
                 }
                 

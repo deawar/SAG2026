@@ -29,6 +29,14 @@ class AuctionController {
       const userSchoolId = req.user.schoolId || req.user.school_id;
       const resolvedSchoolId = req.user.role === 'TEACHER' ? userSchoolId : (schoolId || userSchoolId);
 
+      // TEACHER with no school assigned — tell them clearly
+      if (req.user.role === 'TEACHER' && !resolvedSchoolId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Your teacher account has no school assigned. Please ask a school administrator to link your account to a school, then log out and back in.'
+        });
+      }
+
       // If no paymentGatewayId provided, look up the primary gateway for the school
       let resolvedGatewayId = paymentGatewayId;
       if (!resolvedGatewayId && resolvedSchoolId) {
@@ -55,7 +63,9 @@ class AuctionController {
       if (!resolvedGatewayId) {
         return res.status(400).json({
           success: false,
-          message: 'No payment gateway configured for this school. Please set up a payment gateway first.'
+          message: resolvedSchoolId
+            ? 'No payment gateway is configured for this school. A school administrator must set up payment processing before auctions can be created.'
+            : 'No school selected and no default payment gateway found. Please select a school.'
         });
       }
 
