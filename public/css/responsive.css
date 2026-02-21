@@ -211,6 +211,21 @@
     }
 }
 
+/* ===== Responsive Table Column Visibility ===== */
+/* col-hide-sm: hidden on mobile/small tablet (≤768px) — use for secondary columns */
+/* col-hide-md: hidden below desktop (≤1024px) — use for supplemental columns */
+@media (max-width: 768px) {
+    .col-hide-sm {
+        display: none;
+    }
+}
+
+@media (max-width: 1024px) {
+    .col-hide-md {
+        display: none;
+    }
+}
+
 /* ===== Mobile Styles (Default - 0px to 640px) ===== */
 @media (max-width: 640px) {
     html {
