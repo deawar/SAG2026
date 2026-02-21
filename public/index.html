@@ -53,8 +53,9 @@
                     </button>
                     <!-- User Dropdown Menu -->
                     <div class="user-dropdown" id="user-dropdown" style="display:none;" role="menu">
-                        <a href="/user-dashboard.html" class="dropdown-item" role="menuitem">My Dashboard</a>
-                        <a href="/user-dashboard.html#my-bids" class="dropdown-item" role="menuitem">My Bids</a>
+                        <a href="/admin-dashboard.html" class="dropdown-item admin-only" role="menuitem" style="display:none;">Admin Dashboard</a>
+                        <a href="/user-dashboard.html" class="dropdown-item" role="menuitem" id="my-dashboard-link">My Dashboard</a>
+                        <a href="/user-dashboard.html#my-bids" class="dropdown-item" role="menuitem" id="my-bids-link">My Bids</a>
                         <button class="dropdown-item" id="logout-btn" role="menuitem" aria-label="Logout from your account">Logout</button>
                     </div>
                 </div>

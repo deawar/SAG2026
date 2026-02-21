@@ -497,7 +497,7 @@ class AdminService {
   async listAuctionsByStatus(status, adminId) {
     const admin = await this.verifyAdminAccess(adminId);
 
-    const validStatuses = ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'LIVE', 'CLOSED', 'CANCELLED'];
+    const validStatuses = ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'LIVE', 'ENDED', 'CLOSED', 'CANCELLED'];
     if (!validStatuses.includes(status)) {
       throw new Error('INVALID_STATUS');
     }
@@ -543,15 +543,16 @@ class AdminService {
       throw new Error('CROSS_SCHOOL_ACCESS_DENIED');
     }
 
-    // Check status
-    if (auction.auction_status !== 'PENDING_APPROVAL') {
+    // Allow approval from DRAFT or PENDING_APPROVAL
+    const approvableStatuses = ['DRAFT', 'PENDING_APPROVAL'];
+    if (!approvableStatuses.includes(auction.auction_status)) {
       throw new Error('INVALID_STATE_TRANSITION');
     }
 
     // Update status
     await pool.query(
-      'UPDATE auctions SET auction_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      ['APPROVED', auctionId]
+      'UPDATE auctions SET auction_status = $1, approved_by_user_id = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      ['APPROVED', auctionId, adminId]
     );
 
     // Audit log
@@ -560,7 +561,7 @@ class AdminService {
       'AUCTION_APPROVED',
       'AUCTION',
       auctionId,
-      { auction_status: 'PENDING_APPROVAL' },
+      { auction_status: auction.auction_status },
       { auction_status: 'APPROVED' },
       'Admin approved auction for listing'
     );
@@ -594,10 +595,10 @@ class AdminService {
       throw new Error('INVALID_STATE_TRANSITION');
     }
 
-    // Update status
+    // Update status (schema CHECK only allows CANCELLED, not REJECTED)
     await pool.query(
-      'UPDATE auctions SET auction_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      ['REJECTED', auctionId]
+      'UPDATE auctions SET auction_status = $1, approval_notes = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      ['CANCELLED', auctionId, reason || null]
     );
 
     // Audit log
@@ -606,12 +607,12 @@ class AdminService {
       'AUCTION_REJECTED',
       'AUCTION',
       auctionId,
-      { auction_status: 'PENDING_APPROVAL' },
-      { auction_status: 'REJECTED' },
+      { auction_status: auction.auction_status },
+      { auction_status: 'CANCELLED' },
       reason || 'Admin rejected auction'
     );
 
-    return { success: true, auctionId, newStatus: 'REJECTED', reason };
+    return { success: true, auctionId, newStatus: 'CANCELLED', reason };
   }
 
   /**
