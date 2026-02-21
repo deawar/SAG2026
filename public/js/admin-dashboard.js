@@ -28,7 +28,9 @@ class AdminDashboard {
         const userRole = user.role;
 
         if (!token || !['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(userRole)) {
-            window.location.href = '/user-dashboard.html';
+            window.location.href = userRole === 'TEACHER'
+                ? '/teacher-dashboard.html'
+                : '/user-dashboard.html';
         }
     }
 
