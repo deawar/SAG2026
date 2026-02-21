@@ -372,15 +372,35 @@ class AdminDashboard {
 
         tbody.innerHTML = '';
 
+        if (users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="loading-message">No users found.</td></tr>';
+            return;
+        }
+
         users.forEach(user => {
             const row = document.createElement('tr');
-            const isActive = user.is_active !== false && user.status !== 'inactive';
+            const accountStatus = user.account_status || 'ACTIVE';
+            const statusClass = { ACTIVE: 'success', SUSPENDED: 'warning', INACTIVE: 'error', LOCKED: 'error' }[accountStatus] || 'default';
+            const mfaEnabled = user.two_fa_enabled || false;
+            const name = this.escapeHtml(
+                user.first_name && user.last_name
+                    ? `${user.first_name} ${user.last_name}`
+                    : user.fullName || user.full_name || ''
+            );
+
             row.innerHTML = `
-                <td>${this.escapeHtml(user.first_name && user.last_name ? user.first_name + ' ' + user.last_name : user.fullName || user.full_name || '')}</td>
-                <td>${this.escapeHtml(user.email || '')}</td>
-                <td>${user.role || 'user'}</td>
-                <td><span class="badge badge-${isActive ? 'success' : 'error'}">${isActive ? 'Active' : 'Inactive'}</span></td>
-                <td>${user.totalBids || 0}</td>
+                <td>
+                    <div>${name}</div>
+                    <div class="text-muted text-sm">${this.escapeHtml(user.email || '')}</div>
+                </td>
+                <td class="col-hide-sm">${this.escapeHtml(user.role || '')}</td>
+                <td><span class="badge badge-${statusClass}">${accountStatus}</span></td>
+                <td class="col-hide-sm">
+                    <span class="badge badge-${mfaEnabled ? 'success' : 'default'}">${mfaEnabled ? 'On' : 'Off'}</span>
+                </td>
+                <td class="col-hide-md">${this.escapeHtml(user.phone_number || '—')}</td>
+                <td class="col-hide-md">${this.escapeHtml(user.school_name || '—')}</td>
+                <td class="col-hide-md">${user.total_bids || 0}</td>
                 <td>
                     <button class="btn btn-sm btn-primary" data-edit-user="${user.id}">Edit</button>
                     <button class="btn btn-sm btn-danger" data-ban-user="${user.id}">Ban</button>

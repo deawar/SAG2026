@@ -68,31 +68,35 @@ class AdminService {
     const { role, status, search, page = 1, limit = 20 } = filters;
     const offset = (page - 1) * limit;
 
-    let query = 'SELECT id, email, first_name, last_name, role, account_status, school_id, created_at FROM users WHERE 1=1';
+    let query = `SELECT u.id, u.email, u.first_name, u.last_name, u.phone_number, u.role,
+      u.account_status, u.school_id, s.name AS school_name, u.two_fa_enabled, u.created_at
+      FROM users u
+      LEFT JOIN schools s ON u.school_id = s.id
+      WHERE 1=1`;
     const params = [];
 
     // Multi-tenant isolation
     if (admin.role === 'SCHOOL_ADMIN') {
-      query += ' AND school_id = $1';
+      query += ' AND u.school_id = $1';
       params.push(admin.school_id);
     } else if (admin.school_id) {
       // SITE_ADMIN with school filter
-      query += ` AND school_id = $${params.length + 1}`;
+      query += ` AND u.school_id = $${params.length + 1}`;
       params.push(admin.school_id);
     }
 
     if (role) {
-      query += ` AND role = $${params.length + 1}`;
+      query += ` AND u.role = $${params.length + 1}`;
       params.push(role);
     }
 
     if (status) {
-      query += ` AND account_status = $${params.length + 1}`;
+      query += ` AND u.account_status = $${params.length + 1}`;
       params.push(status);
     }
 
     if (search) {
-      query += ` AND (email ILIKE $${params.length + 1} OR first_name ILIKE $${params.length + 1} OR last_name ILIKE $${params.length + 1})`;
+      query += ` AND (u.email ILIKE $${params.length + 1} OR u.first_name ILIKE $${params.length + 1} OR u.last_name ILIKE $${params.length + 1})`;
       params.push(`%${search}%`);
     }
 
