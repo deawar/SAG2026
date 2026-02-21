@@ -190,13 +190,15 @@ class TeacherController {
             const result = await pool.query(
                 `SELECT a.id, a.title, a.description, a.auction_status,
                         a.starts_at, a.ends_at, a.created_at,
-                        COUNT(b.id)          AS bid_count,
-                        MAX(b.bid_amount)    AS current_high_bid
+                        (SELECT COUNT(*) FROM bids b
+                         JOIN artwork aw ON b.artwork_id = aw.id
+                         WHERE aw.auction_id = a.id AND b.bid_status = 'ACTIVE') AS bid_count,
+                        (SELECT MAX(b.bid_amount) FROM bids b
+                         JOIN artwork aw ON b.artwork_id = aw.id
+                         WHERE aw.auction_id = a.id AND b.bid_status = 'ACTIVE') AS current_high_bid
                  FROM auctions a
-                 LEFT JOIN bids b ON b.auction_id = a.id AND b.bid_status = 'ACTIVE'
                  WHERE a.created_by_user_id = $1
                    AND a.deleted_at IS NULL
-                 GROUP BY a.id
                  ORDER BY a.created_at DESC`,
                 [userId]
             );
