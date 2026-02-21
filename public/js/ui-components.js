@@ -905,17 +905,31 @@ class UIComponents {
                 userName.textContent = user.first_name || user.firstName || user.email;
             }
 
-            // Update dashboard nav links to the role-appropriate page
-            let dashboardUrl = '/user-dashboard.html';
-            if (user.role === 'SITE_ADMIN' || user.role === 'SCHOOL_ADMIN') {
-                dashboardUrl = '/admin-dashboard.html';
-            } else if (user.role === 'TEACHER') {
-                dashboardUrl = '/teacher-dashboard.html';
+            // Show/hide admin-only link and update dashboard links by role
+            const isAdmin = user.role === 'SITE_ADMIN' || user.role === 'SCHOOL_ADMIN';
+            const isTeacher = user.role === 'TEACHER';
+
+            // Admin Dashboard link (hidden by default, shown for admins)
+            document.querySelectorAll('#user-dropdown .admin-only').forEach(el => {
+                el.style.display = isAdmin ? '' : 'none';
+            });
+
+            // My Dashboard link — hide for admins (they use the Admin Dashboard link)
+            const myDashLink = document.getElementById('my-dashboard-link');
+            if (myDashLink) {
+                if (isAdmin) {
+                    myDashLink.style.display = 'none';
+                } else {
+                    myDashLink.style.display = '';
+                    myDashLink.href = isTeacher ? '/teacher-dashboard.html' : '/user-dashboard.html';
+                }
             }
-            const dashboardNavLink = document.querySelector('#user-dropdown a[href*="dashboard"]');
-            if (dashboardNavLink) dashboardNavLink.href = dashboardUrl;
-            const bidsNavLink = document.querySelector('#user-dropdown a[href*="my-bids"]');
-            if (bidsNavLink) bidsNavLink.href = dashboardUrl + '#my-bids';
+
+            // My Bids link — hide for admins/teachers
+            const myBidsLink = document.getElementById('my-bids-link');
+            if (myBidsLink) {
+                myBidsLink.style.display = (isAdmin || isTeacher) ? 'none' : '';
+            }
         } else {
             if (loginBtn) loginBtn.style.display = 'block';
             if (registerBtn) registerBtn.style.display = 'block';
