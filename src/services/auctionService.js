@@ -24,13 +24,14 @@ class AuctionService {
         title,
         description,
         schoolId,
-        charityId,
+        charityBeneficiaryName,
         startTime,
         endTime,
-        platformFeePercentage = 3,
-        autoExtendEnabled = false,
-        autoExtendMinutes = 10,
-        artworkIds = []
+        platformFeePercentage = 3.5,
+        autoExtendMinutes = 0,
+        artworkIds = [],
+        createdByUserId,
+        paymentGatewayId
       } = auctionData;
 
       // Validate inputs
@@ -49,23 +50,25 @@ class AuctionService {
       // Create auction record
       const auctionResult = await client.query(
         `INSERT INTO auctions (
-          title, description, school_id, charity_id, 
-          start_time, end_time, status, 
-          platform_fee_percentage, auto_extend_enabled, auto_extend_minutes,
+          title, description, school_id, charity_beneficiary_name,
+          starts_at, ends_at, auction_status,
+          platform_fee_percentage, auto_extend_minutes,
+          created_by_user_id, payment_gateway_id,
           created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
          RETURNING *`,
         [
           title,
           description,
           schoolId,
-          charityId,
+          charityBeneficiaryName || null,
           startTime,
           endTime,
-          'draft',
+          'DRAFT',
           platformFeePercentage,
-          autoExtendEnabled,
-          autoExtendMinutes
+          autoExtendMinutes,
+          createdByUserId,
+          paymentGatewayId
         ]
       );
 
@@ -90,9 +93,9 @@ class AuctionService {
 
       // Log action
       await client.query(
-        `INSERT INTO audit_logs (action, resource_type, resource_id, details, timestamp)
-         VALUES ($1, $2, $3, $4, NOW())`,
-        ['auction_created', 'auction', auction.id, JSON.stringify({ title, school_id: schoolId })]
+        `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details)
+         VALUES ($1, $2, $3, $4, $5)`,
+        ['AUCTION', 'auction_created', 'auction', auction.id, JSON.stringify({ title, school_id: schoolId })]
       );
 
       await client.query('COMMIT');
@@ -102,12 +105,12 @@ class AuctionService {
         auctionId: auction.id,
         title: auction.title,
         description: auction.description,
-        status: auction.status,
+        status: auction.auction_status,
         schoolId: auction.school_id,
-        startTime: auction.start_time,
-        endTime: auction.end_time,
+        startTime: auction.starts_at,
+        endTime: auction.ends_at,
         platformFeePercentage: auction.platform_fee_percentage,
-        autoExtendEnabled: auction.auto_extend_enabled,
+        autoExtendMinutes: auction.auto_extend_minutes,
         qrCode: qrCodeUrl,
         artworkCount: artworkIds?.length || 0
       };
@@ -180,7 +183,7 @@ class AuctionService {
 
       // Get current auction
       const auctionResult = await client.query(
-        'SELECT status FROM auctions WHERE id = $1 FOR UPDATE',
+        'SELECT auction_status FROM auctions WHERE id = $1 FOR UPDATE',
         [auctionId]
       );
 
@@ -191,9 +194,9 @@ class AuctionService {
       const auction = auctionResult.rows[0];
 
       // Only allow updates to draft auctions
-      if (auction.status !== 'draft') {
+      if (auction.auction_status !== 'DRAFT') {
         throw new Error(
-          `Cannot update auction with status '${auction.status}'. Only draft auctions can be updated.`
+          `Cannot update auction with status '${auction.auction_status}'. Only draft auctions can be updated.`
         );
       }
 
@@ -201,10 +204,9 @@ class AuctionService {
       const allowedFields = [
         'title',
         'description',
-        'start_time',
-        'end_time',
+        'starts_at',
+        'ends_at',
         'platform_fee_percentage',
-        'auto_extend_enabled',
         'auto_extend_minutes'
       ];
 
@@ -212,8 +214,18 @@ class AuctionService {
       const values = [];
       let paramCount = 1;
 
+      // Map camelCase request keys to snake_case DB columns
+      const fieldMap = {
+        title: 'title',
+        description: 'description',
+        startTime: 'starts_at',
+        endTime: 'ends_at',
+        platformFeePercentage: 'platform_fee_percentage',
+        autoExtendMinutes: 'auto_extend_minutes'
+      };
+
       Object.keys(updates).forEach(key => {
-        const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+        const snakeKey = fieldMap[key] || key.replace(/([A-Z])/g, '_$1').toLowerCase();
         if (allowedFields.includes(snakeKey)) {
           updateFields.push(`${snakeKey} = $${paramCount}`);
           values.push(updates[key]);
@@ -238,9 +250,9 @@ class AuctionService {
 
       // Log update
       await client.query(
-        `INSERT INTO audit_logs (action, resource_type, resource_id, details, timestamp)
-         VALUES ($1, $2, $3, $4, NOW())`,
-        ['auction_updated', 'auction', auctionId, JSON.stringify(updates)]
+        `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details)
+         VALUES ($1, $2, $3, $4, $5)`,
+        ['AUCTION', 'auction_updated', 'auction', auctionId, JSON.stringify(updates)]
       );
 
       await client.query('COMMIT');
@@ -249,7 +261,7 @@ class AuctionService {
         success: true,
         auctionId: updated.id,
         title: updated.title,
-        status: updated.status,
+        status: updated.auction_status,
         message: 'Auction updated successfully'
       };
     } catch (error) {
@@ -283,9 +295,9 @@ class AuctionService {
 
       const auction = auctionResult.rows[0];
 
-      if (auction.status !== 'draft') {
+      if (auction.auction_status !== 'DRAFT') {
         throw new Error(
-          `Cannot start auction with status '${auction.status}'. Only draft auctions can be started.`
+          `Cannot start auction with status '${auction.auction_status}'. Only draft auctions can be started.`
         );
       }
 
@@ -299,17 +311,17 @@ class AuctionService {
         throw new Error('Cannot start auction without artwork');
       }
 
-      // Update auction status to active
+      // Update auction status to LIVE
       await client.query(
-        `UPDATE auctions SET status = $1, started_at = NOW() WHERE id = $2`,
-        ['active', auctionId]
+        `UPDATE auctions SET auction_status = $1, published_at = NOW() WHERE id = $2`,
+        ['LIVE', auctionId]
       );
 
       // Log action
       await client.query(
-        `INSERT INTO audit_logs (action, resource_type, resource_id, details, timestamp)
-         VALUES ($1, $2, $3, $4, NOW())`,
-        ['auction_started', 'auction', auctionId, JSON.stringify({ start_time: new Date() })]
+        `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details)
+         VALUES ($1, $2, $3, $4, $5)`,
+        ['AUCTION', 'auction_started', 'auction', auctionId, JSON.stringify({ start_time: new Date() })]
       );
 
       await client.query('COMMIT');
@@ -317,7 +329,7 @@ class AuctionService {
       return {
         success: true,
         auctionId: auctionId,
-        status: 'active',
+        status: 'LIVE',
         message: 'Auction started successfully'
       };
     } catch (error) {
@@ -421,10 +433,10 @@ class AuctionService {
       auctions: result.rows.map(auction => ({
         auctionId: auction.id,
         title: auction.title,
-        status: auction.status,
+        status: auction.auction_status,
         schoolId: auction.school_id,
-        startTime: auction.start_time,
-        endTime: auction.end_time,
+        startTime: auction.starts_at,
+        endTime: auction.ends_at,
         createdAt: auction.created_at
       })),
       pagination: {
@@ -464,9 +476,9 @@ class AuctionService {
         schoolId: auction.school_id,
         artworkCount: parseInt(auction.artwork_count),
         uniqueBidders: parseInt(auction.unique_bidders),
-        endTime: auction.end_time,
+        endTime: auction.ends_at,
         timeRemaining: Math.max(0, timeRemaining),
-        status: auction.status
+        status: auction.auction_status
       };
     });
   }
@@ -497,7 +509,7 @@ class AuctionService {
 
       const auction = auctionResult.rows[0];
 
-      if (auction.status === 'ended') {
+      if (auction.auction_status === 'ENDED') {
         return {
           success: false,
           message: 'Auction is already ended'
@@ -505,10 +517,10 @@ class AuctionService {
       }
 
       // Get all artwork in auction with highest bids
-      const artworkResult = await pool.query(
+      const artworkResult = await client.query(
         `SELECT a.id, a.title,
-                (SELECT bidder_id FROM bids WHERE artwork_id = a.id ORDER BY bid_amount DESC LIMIT 1) as winner_id,
-                (SELECT bid_amount FROM bids WHERE artwork_id = a.id ORDER BY bid_amount DESC LIMIT 1) as winning_bid
+                (SELECT placed_by_user_id FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE' ORDER BY bid_amount DESC LIMIT 1) as winner_id,
+                (SELECT bid_amount FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE' ORDER BY bid_amount DESC LIMIT 1) as winning_bid
          FROM artwork a
          WHERE a.auction_id = $1`,
         [auctionId]
@@ -521,16 +533,7 @@ class AuctionService {
       // Process each artwork
       for (const piece of artwork) {
         if (piece.winner_id && piece.winning_bid) {
-          totalRevenue += piece.winning_bid;
-
-          // Create transaction record
-          await client.query(
-            `INSERT INTO transactions (
-              auction_id, artwork_id, buyer_id, seller_id, amount, 
-              transaction_type, status, created_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
-            [auctionId, piece.id, piece.winner_id, null, piece.winning_bid, 'bid_settlement', 'pending']
-          );
+          totalRevenue += parseFloat(piece.winning_bid);
 
           winners.push({
             artworkId: piece.id,
@@ -538,28 +541,32 @@ class AuctionService {
             winnerId: piece.winner_id,
             winningBid: piece.winning_bid
           });
+
+          // Mark winning bid as ACCEPTED, others as CANCELLED
+          await client.query(
+            `UPDATE bids SET bid_status = 'ACCEPTED'
+             WHERE artwork_id = $1 AND placed_by_user_id = $2 AND bid_status = 'ACTIVE'
+             ORDER BY bid_amount DESC LIMIT 1`,
+            [piece.id, piece.winner_id]
+          );
         }
       }
 
       // Calculate platform fee
       const platformFee = this._calculatePlatformFee(totalRevenue, auction.platform_fee_percentage);
 
-      // Update auction status
+      // Update auction status to ENDED
       await client.query(
-        `UPDATE auctions SET 
-          status = $1, 
-          ended_at = NOW(),
-          total_revenue = $2,
-          platform_fee = $3
-         WHERE id = $4`,
-        ['ended', totalRevenue, platformFee, auctionId]
+        `UPDATE auctions SET auction_status = $1 WHERE id = $2`,
+        ['ENDED', auctionId]
       );
 
       // Log action
       await client.query(
-        `INSERT INTO audit_logs (action, resource_type, resource_id, details, timestamp)
-         VALUES ($1, $2, $3, $4, NOW())`,
+        `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details)
+         VALUES ($1, $2, $3, $4, $5)`,
         [
+          'AUCTION',
           'auction_ended',
           'auction',
           auctionId,
@@ -625,20 +632,21 @@ class AuctionService {
       }
 
       const extendMinutes = minutesToExtend || auction.auto_extend_minutes || 10;
-      const currentEndTime = new Date(auction.end_time);
+      const currentEndTime = new Date(auction.ends_at);
       const newEndTime = new Date(currentEndTime.getTime() + extendMinutes * 60000);
 
       // Update auction end time
       await client.query(
-        `UPDATE auctions SET end_time = $1, auto_extend_count = auto_extend_count + 1 WHERE id = $2`,
+        `UPDATE auctions SET ends_at = $1 WHERE id = $2`,
         [newEndTime, auctionId]
       );
 
       // Log action
       await client.query(
-        `INSERT INTO audit_logs (action, resource_type, resource_id, details, timestamp)
-         VALUES ($1, $2, $3, $4, NOW())`,
+        `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details)
+         VALUES ($1, $2, $3, $4, $5)`,
         [
+          'AUCTION',
           'auction_auto_extended',
           'auction',
           auctionId,
@@ -679,7 +687,7 @@ class AuctionService {
 
       // Get auction
       const auctionResult = await client.query(
-        'SELECT status FROM auctions WHERE id = $1 FOR UPDATE',
+        'SELECT auction_status FROM auctions WHERE id = $1 FOR UPDATE',
         [auctionId]
       );
 
@@ -690,9 +698,9 @@ class AuctionService {
       const auction = auctionResult.rows[0];
 
       // Only allow deletion of draft auctions
-      if (auction.status !== 'draft') {
+      if (auction.auction_status !== 'DRAFT') {
         throw new Error(
-          `Cannot delete auction with status '${auction.status}'. Only draft auctions can be deleted.`
+          `Cannot delete auction with status '${auction.auction_status}'. Only draft auctions can be deleted.`
         );
       }
 
@@ -704,9 +712,9 @@ class AuctionService {
 
       // Log action
       await client.query(
-        `INSERT INTO audit_logs (action, resource_type, resource_id, details, timestamp)
-         VALUES ($1, $2, $3, $4, NOW())`,
-        ['auction_deleted', 'auction', auctionId, JSON.stringify({ reason: 'user_delete' })]
+        `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details)
+         VALUES ($1, $2, $3, $4, $5)`,
+        ['AUCTION', 'auction_deleted', 'auction', auctionId, JSON.stringify({ reason: 'user_delete' })]
       );
 
       await client.query('COMMIT');
@@ -731,13 +739,13 @@ class AuctionService {
    */
   async getAuctionWinner(auctionId) {
     const result = await pool.query(
-      `SELECT 
+      `SELECT
         a.id as artwork_id, a.title,
-        (SELECT bidder_id FROM bids WHERE artwork_id = a.id AND status = 'active' ORDER BY bid_amount DESC LIMIT 1) as winner_id,
-        (SELECT bid_amount FROM bids WHERE artwork_id = a.id AND status = 'active' ORDER BY bid_amount DESC LIMIT 1) as winning_bid,
+        (SELECT placed_by_user_id FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE' ORDER BY bid_amount DESC LIMIT 1) as winner_id,
+        (SELECT bid_amount FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE' ORDER BY bid_amount DESC LIMIT 1) as winning_bid,
         u.first_name, u.last_name, u.email
        FROM artwork a
-       LEFT JOIN users u ON (SELECT bidder_id FROM bids WHERE artwork_id = a.id AND status = 'active' ORDER BY bid_amount DESC LIMIT 1) = u.id
+       LEFT JOIN users u ON (SELECT placed_by_user_id FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE' ORDER BY bid_amount DESC LIMIT 1) = u.id
        WHERE a.auction_id = $1
        ORDER BY a.created_at ASC`,
       [auctionId]
