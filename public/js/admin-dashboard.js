@@ -630,6 +630,9 @@ class AdminDashboard {
 
         UIComponents.showModal('user-detail-modal');
 
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const isSiteAdmin = currentUser.role === 'SITE_ADMIN';
+
         fetch(`/api/admin/users/${userId}`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
         })
@@ -643,37 +646,63 @@ class AdminDashboard {
                         ? `${user.first_name} ${user.last_name}`
                         : user.fullName || user.full_name || ''
                 );
-                const currentRole = user.role || '';
-                const currentStatus = user.account_status || user.status || 'ACTIVE';
+                const currentRole   = user.role || '';
+                const currentStatus = user.account_status || 'ACTIVE';
+                const mfaEnabled    = user.two_fa_enabled || false;
 
                 if (titleEl) titleEl.textContent = `Edit User: ${fullName}`;
+
+                // Role dropdown only shown to SITE_ADMIN (SCHOOL_ADMIN can't change roles)
+                const roleField = isSiteAdmin ? `
+                    <div class="form-group">
+                        <label for="edit-user-role">Role</label>
+                        <select id="edit-user-role" class="form-control">
+                            <option value="STUDENT"      ${currentRole === 'STUDENT'      ? 'selected' : ''}>Student</option>
+                            <option value="TEACHER"      ${currentRole === 'TEACHER'      ? 'selected' : ''}>Teacher</option>
+                            <option value="SCHOOL_ADMIN" ${currentRole === 'SCHOOL_ADMIN' ? 'selected' : ''}>School Admin</option>
+                            <option value="SITE_ADMIN"   ${currentRole === 'SITE_ADMIN'   ? 'selected' : ''}>Site Admin</option>
+                            <option value="BIDDER"       ${currentRole === 'BIDDER'       ? 'selected' : ''}>Bidder</option>
+                        </select>
+                    </div>` : `
+                    <div class="form-group">
+                        <label>Role</label>
+                        <p class="form-static">${this.escapeHtml(currentRole)}</p>
+                    </div>`;
+
+                // MFA reset button only shown to SITE_ADMIN and only if MFA is enabled
+                const mfaSection = isSiteAdmin ? `
+                    <div class="form-group">
+                        <label>Two-Factor Authentication</label>
+                        <p class="form-static" style="display:flex; align-items:center; gap:0.75rem;">
+                            <span class="badge badge-${mfaEnabled ? 'success' : 'default'}">${mfaEnabled ? 'Enabled' : 'Disabled'}</span>
+                            ${mfaEnabled ? `<button type="button" class="btn btn-sm btn-danger" id="reset-mfa-btn">Reset MFA</button>` : ''}
+                        </p>
+                    </div>` : '';
 
                 content.innerHTML = `
                     <form id="edit-user-form" class="admin-form">
                         <div class="form-group">
-                            <label>Name</label>
-                            <p class="form-static">${fullName}</p>
+                            <label for="edit-user-firstname">First Name</label>
+                            <input type="text" id="edit-user-firstname" class="form-control" value="${this.escapeHtml(user.first_name || '')}" required>
                         </div>
                         <div class="form-group">
-                            <label>Email</label>
-                            <p class="form-static">${this.escapeHtml(user.email || '')}</p>
+                            <label for="edit-user-lastname">Last Name</label>
+                            <input type="text" id="edit-user-lastname" class="form-control" value="${this.escapeHtml(user.last_name || '')}" required>
                         </div>
                         <div class="form-group">
-                            <label for="edit-user-role">Role</label>
-                            <select id="edit-user-role" class="form-control">
-                                <option value="STUDENT"    ${currentRole === 'STUDENT'     ? 'selected' : ''}>Student</option>
-                                <option value="TEACHER"    ${currentRole === 'TEACHER'     ? 'selected' : ''}>Teacher</option>
-                                <option value="SCHOOL_ADMIN" ${currentRole === 'SCHOOL_ADMIN' ? 'selected' : ''}>School Admin</option>
-                                <option value="SITE_ADMIN" ${currentRole === 'SITE_ADMIN'  ? 'selected' : ''}>Site Admin</option>
-                                <option value="BIDDER"     ${currentRole === 'BIDDER'      ? 'selected' : ''}>Bidder</option>
+                            <label for="edit-user-email">Email</label>
+                            <input type="email" id="edit-user-email" class="form-control" value="${this.escapeHtml(user.email || '')}" required>
+                        </div>
+                        ${roleField}
+                        <div class="form-group">
+                            <label for="edit-user-status">Account Status</label>
+                            <select id="edit-user-status" class="form-control">
+                                <option value="ACTIVE"    ${currentStatus === 'ACTIVE'    ? 'selected' : ''}>Active</option>
+                                <option value="SUSPENDED" ${currentStatus === 'SUSPENDED' ? 'selected' : ''}>Suspended</option>
+                                <option value="INACTIVE"  ${currentStatus === 'INACTIVE'  ? 'selected' : ''}>Inactive</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label>Status</label>
-                            <p class="form-static">
-                                <span class="badge badge-${currentStatus === 'ACTIVE' ? 'success' : 'error'}">${currentStatus}</span>
-                            </p>
-                        </div>
+                        ${mfaSection}
                         <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
                             <button type="button" class="btn btn-secondary" onclick="UIComponents.hideModal('user-detail-modal')">Cancel</button>
                             <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -683,7 +712,13 @@ class AdminDashboard {
 
                 const form = document.getElementById('edit-user-form');
                 if (form) {
-                    form.addEventListener('submit', (e) => this.handleEditUser(e, userId, currentRole));
+                    form.addEventListener('submit', (e) => this.handleEditUser(e, userId, user, isSiteAdmin));
+                }
+
+                // MFA reset fires immediately on button click (not part of form submit)
+                const mfaBtn = document.getElementById('reset-mfa-btn');
+                if (mfaBtn) {
+                    mfaBtn.addEventListener('click', () => this.handleResetMFA(userId));
                 }
             })
             .catch(err => {
@@ -693,41 +728,123 @@ class AdminDashboard {
     }
 
     /**
-     * Handle edit user form submission
+     * Handle edit user form submission — calls profile, role, and status endpoints as needed
      */
-    async handleEditUser(e, userId, originalRole) {
+    async handleEditUser(e, userId, originalUser, isSiteAdmin) {
         e.preventDefault();
-        const newRole = document.getElementById('edit-user-role')?.value;
 
-        if (!newRole) {
-            UIComponents.showAlert('Please select a role.', 'error');
+        const firstName = document.getElementById('edit-user-firstname')?.value.trim();
+        const lastName  = document.getElementById('edit-user-lastname')?.value.trim();
+        const email     = document.getElementById('edit-user-email')?.value.trim();
+        const newRole   = isSiteAdmin ? document.getElementById('edit-user-role')?.value : null;
+        const newStatus = document.getElementById('edit-user-status')?.value;
+
+        if (!firstName || !lastName || !email) {
+            UIComponents.showAlert('First name, last name, and email are required.', 'error');
             return;
         }
 
-        try {
-            if (newRole !== originalRole) {
-                const response = await fetch(`/api/admin/users/${userId}/role`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ newRole }),
-                });
+        const headers = {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+            'Content-Type': 'application/json',
+        };
 
-                if (!response.ok) {
-                    const err = await response.json().catch(() => ({}));
-                    UIComponents.showAlert(err.message || 'Failed to update role.', 'error');
-                    return;
-                }
+        try {
+            const calls = [];
+
+            // Profile update if name or email changed
+            const profileChanged =
+                firstName !== originalUser.first_name ||
+                lastName  !== originalUser.last_name  ||
+                email     !== originalUser.email;
+
+            if (profileChanged) {
+                calls.push(
+                    fetch(`/api/admin/users/${userId}/profile`, {
+                        method: 'PUT',
+                        headers,
+                        body: JSON.stringify({ firstName, lastName, email }),
+                    }).then(async r => {
+                        if (!r.ok) {
+                            const err = await r.json().catch(() => ({}));
+                            throw new Error(err.message || 'Failed to update profile.');
+                        }
+                    })
+                );
             }
+
+            // Role update (SITE_ADMIN only, if changed)
+            if (isSiteAdmin && newRole && newRole !== originalUser.role) {
+                calls.push(
+                    fetch(`/api/admin/users/${userId}/role`, {
+                        method: 'PUT',
+                        headers,
+                        body: JSON.stringify({ newRole }),
+                    }).then(async r => {
+                        if (!r.ok) {
+                            const err = await r.json().catch(() => ({}));
+                            throw new Error(err.message || 'Failed to update role.');
+                        }
+                    })
+                );
+            }
+
+            // Status update if changed
+            if (newStatus && newStatus !== (originalUser.account_status || 'ACTIVE')) {
+                calls.push(
+                    fetch(`/api/admin/users/${userId}/status`, {
+                        method: 'PUT',
+                        headers,
+                        body: JSON.stringify({ newStatus }),
+                    }).then(async r => {
+                        if (!r.ok) {
+                            const err = await r.json().catch(() => ({}));
+                            throw new Error(err.message || 'Failed to update status.');
+                        }
+                    })
+                );
+            }
+
+            await Promise.all(calls);
 
             UIComponents.hideModal('user-detail-modal');
             UIComponents.createToast({ message: 'User updated successfully', type: 'success' });
             this.loadUsers();
         } catch (error) {
             console.error('handleEditUser error:', error);
-            UIComponents.showAlert('An error occurred while saving.', 'error');
+            UIComponents.showAlert(error.message || 'An error occurred while saving.', 'error');
+        }
+    }
+
+    /**
+     * Handle MFA reset for a user (SITE_ADMIN only)
+     */
+    async handleResetMFA(userId) {
+        const confirmed = await UIComponents.showConfirmation(
+            'This will disable two-factor authentication for this user and clear their authenticator secret. They will need to re-enroll MFA on next login. Continue?',
+            'Reset MFA'
+        );
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch(`/api/admin/users/${userId}/reset-mfa`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                UIComponents.showAlert(err.message || 'Failed to reset MFA.', 'error');
+                return;
+            }
+
+            UIComponents.createToast({ message: 'MFA reset successfully. User will need to re-enroll.', type: 'success' });
+            // Refresh the edit form to show MFA as disabled
+            UIComponents.hideModal('user-detail-modal');
+            this.loadUsers();
+        } catch (error) {
+            console.error('handleResetMFA error:', error);
+            UIComponents.showAlert('An error occurred while resetting MFA.', 'error');
         }
     }
 

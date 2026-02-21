@@ -44,6 +44,44 @@ router.get(
 );
 
 /**
+ * PUT /api/admin/users/:userId/profile
+ * Update user name and/or email
+ * Body: { firstName?, lastName?, email? }
+ * RBAC: SITE_ADMIN (any user), SCHOOL_ADMIN (own school)
+ */
+router.put(
+  '/users/:userId/profile',
+  verifyToken,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  adminController.updateUserProfile
+);
+
+/**
+ * PUT /api/admin/users/:userId/status
+ * Change account status
+ * Body: { newStatus: 'ACTIVE' | 'SUSPENDED' | 'INACTIVE' }
+ * RBAC: SITE_ADMIN (any user), SCHOOL_ADMIN (own school)
+ */
+router.put(
+  '/users/:userId/status',
+  verifyToken,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  adminController.updateUserStatus
+);
+
+/**
+ * POST /api/admin/users/:userId/reset-mfa
+ * Reset user MFA (clears 2FA secret and backup codes)
+ * RBAC: SITE_ADMIN only
+ */
+router.post(
+  '/users/:userId/reset-mfa',
+  verifyToken,
+  verifyRole(['SITE_ADMIN']),
+  adminController.resetUserMFA
+);
+
+/**
  * PUT /api/admin/users/:userId/role
  * Change user role
  * Body: { newRole: 'SITE_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'BIDDER' }
