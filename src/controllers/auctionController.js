@@ -17,15 +17,17 @@ class AuctionController {
     try {
       const { title, description, schoolId, charityBeneficiaryName, startTime, endTime, platformFeePercentage, autoExtendMinutes, artworkIds, paymentGatewayId } = req.body;
 
-      // Validate user is admin or school admin
-      if (!['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(req.user?.role)) {
+      // Validate user role
+      if (!['SITE_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'].includes(req.user?.role)) {
         return res.status(403).json({
           success: false,
-          message: 'Only admins can create auctions'
+          message: 'You do not have permission to create auctions'
         });
       }
 
-      const resolvedSchoolId = schoolId || req.user.schoolId || req.user.school_id;
+      // Teachers can only create auctions for their own school
+      const userSchoolId = req.user.schoolId || req.user.school_id;
+      const resolvedSchoolId = req.user.role === 'TEACHER' ? userSchoolId : (schoolId || userSchoolId);
 
       // If no paymentGatewayId provided, look up the primary gateway for the school
       let resolvedGatewayId = paymentGatewayId;
@@ -121,12 +123,30 @@ class AuctionController {
     try {
       const { auctionId } = req.params;
 
-      // Validate user is admin or school admin
-      if (!['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(req.user?.role)) {
+      // Validate user role
+      if (!['SITE_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'].includes(req.user?.role)) {
         return res.status(403).json({
           success: false,
-          message: 'Only admins can update auctions'
+          message: 'You do not have permission to update auctions'
         });
+      }
+
+      // Teachers may only update their own DRAFT auctions
+      if (req.user.role === 'TEACHER') {
+        const ownerCheck = await pool.query(
+          'SELECT created_by_user_id, auction_status FROM auctions WHERE id = $1',
+          [auctionId]
+        );
+        if (ownerCheck.rows.length === 0) {
+          return res.status(404).json({ success: false, message: 'Auction not found' });
+        }
+        const row = ownerCheck.rows[0];
+        if (row.created_by_user_id !== req.user.id) {
+          return res.status(403).json({ success: false, message: 'You can only edit your own auctions' });
+        }
+        if (row.auction_status !== 'DRAFT') {
+          return res.status(403).json({ success: false, message: 'Only draft auctions can be edited' });
+        }
       }
 
       const result = await auctionService.updateAuction(auctionId, req.body);
