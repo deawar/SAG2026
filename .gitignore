@@ -9,6 +9,12 @@ coverage/
 Thumbs.db
 backups/
 uploads/
+# Claude Code AI memory (local tooling state, machine-specific)
+.claude/
+
+# Server-specific config files (belong on the VPS, not in repo)
+ssccbogart.conf
+
 # Sensitive/Private Documentation (Not for Public Repos)
 ACCOUNT_SETUP_GUIDE.md
 ACCOUNT_SETUP_QUICK_REFERENCE.md

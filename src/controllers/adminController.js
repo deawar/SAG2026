@@ -20,6 +20,9 @@ class AdminController {
     this.updateUserRole = this.updateUserRole.bind(this);
     this.deactivateUser = this.deactivateUser.bind(this);
     this.exportUserData = this.exportUserData.bind(this);
+    this.updateUserProfile = this.updateUserProfile.bind(this);
+    this.updateUserStatus = this.updateUserStatus.bind(this);
+    this.resetUserMFA = this.resetUserMFA.bind(this);
     this.getAuctionById = this.getAuctionById.bind(this);
     this.listAuctionsByStatus = this.listAuctionsByStatus.bind(this);
     this.approveAuction = this.approveAuction.bind(this);
@@ -186,6 +189,68 @@ class AdminController {
       res.setHeader('Content-Disposition', `attachment; filename="user-data-${userId}.json"`);
 
       return res.status(200).json(userData);
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * PUT /api/admin/users/:userId/profile
+   * Update user name and/or email
+   */
+  async updateUserProfile(req, res) {
+    try {
+      const { userId } = req.params;
+      const { firstName, lastName, email } = req.body;
+      const adminId = req.user.id;
+
+      if (!userId) {
+        return res.status(400).json({ success: false, error: 'USER_ID_REQUIRED' });
+      }
+
+      const result = await adminService.updateUserProfile(userId, { firstName, lastName, email }, adminId);
+      return res.status(200).json({ success: true, result });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * PUT /api/admin/users/:userId/status
+   * Change user account status (ACTIVE / SUSPENDED / INACTIVE)
+   */
+  async updateUserStatus(req, res) {
+    try {
+      const { userId } = req.params;
+      const { newStatus } = req.body;
+      const adminId = req.user.id;
+
+      if (!userId || !newStatus) {
+        return res.status(400).json({ success: false, error: 'USERID_AND_NEWSTATUS_REQUIRED' });
+      }
+
+      const result = await adminService.updateUserStatus(userId, newStatus, adminId);
+      return res.status(200).json({ success: true, result });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * POST /api/admin/users/:userId/reset-mfa
+   * Reset user MFA (SITE_ADMIN only)
+   */
+  async resetUserMFA(req, res) {
+    try {
+      const { userId } = req.params;
+      const adminId = req.user.id;
+
+      if (!userId) {
+        return res.status(400).json({ success: false, error: 'USER_ID_REQUIRED' });
+      }
+
+      const result = await adminService.resetUserMFA(userId, adminId);
+      return res.status(200).json({ success: true, result });
     } catch (error) {
       return this.handleError(error, res);
     }
@@ -735,7 +800,9 @@ class AdminController {
       'INVALID_EXTENSION_HOURS': { status: 400, message: 'Extension hours must be between 1 and 720' },
       'REFUND_EXCEEDS_PAYMENT': { status: 400, message: 'Refund amount exceeds payment' },
       'AUCTION_ALREADY_CLOSED': { status: 400, message: 'Auction is already closed' },
-      'ADMIN_NOT_FOUND': { status: 401, message: 'Admin credentials invalid' }
+      'ADMIN_NOT_FOUND': { status: 401, message: 'Admin credentials invalid' },
+      'EMAIL_ALREADY_IN_USE': { status: 409, message: 'Email address is already in use by another account' },
+      'NO_FIELDS_TO_UPDATE': { status: 400, message: 'No fields provided to update' }
     };
 
     const errorType = error.message;
