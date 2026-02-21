@@ -226,6 +226,150 @@ class AdminService {
   }
 
   /**
+   * Update user profile (name and email)
+   * RBAC: SITE_ADMIN (any user), SCHOOL_ADMIN (own school only)
+   */
+  async updateUserProfile(userId, { firstName, lastName, email }, adminId) {
+    const admin = await this.verifyAdminAccess(adminId);
+
+    // Get current user for RBAC check and audit trail
+    const userResult = await pool.query(
+      'SELECT id, first_name, last_name, email, school_id FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      throw new Error('USER_NOT_FOUND');
+    }
+
+    const user = userResult.rows[0];
+
+    if (admin.role === 'SCHOOL_ADMIN' && user.school_id !== admin.school_id) {
+      throw new Error('CROSS_SCHOOL_ACCESS_DENIED');
+    }
+
+    // Validate at least one field to update
+    if (!firstName && !lastName && !email) {
+      throw new Error('NO_FIELDS_TO_UPDATE');
+    }
+
+    // Check email uniqueness if changing
+    if (email && email !== user.email) {
+      const emailCheck = await pool.query(
+        'SELECT id FROM users WHERE email = $1 AND id != $2',
+        [email, userId]
+      );
+      if (emailCheck.rows.length > 0) {
+        throw new Error('EMAIL_ALREADY_IN_USE');
+      }
+    }
+
+    const newFirstName = firstName || user.first_name;
+    const newLastName  = lastName  || user.last_name;
+    const newEmail     = email     || user.email;
+
+    await pool.query(
+      'UPDATE users SET first_name = $1, last_name = $2, email = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4',
+      [newFirstName, newLastName, newEmail, userId]
+    );
+
+    await this.logAdminAction(
+      adminId,
+      'USER_PROFILE_UPDATED',
+      'USER',
+      userId,
+      { first_name: user.first_name, last_name: user.last_name, email: user.email },
+      { first_name: newFirstName, last_name: newLastName, email: newEmail },
+      'Admin updated user profile'
+    );
+
+    return { success: true, userId };
+  }
+
+  /**
+   * Update user account status
+   * RBAC: SITE_ADMIN (any user), SCHOOL_ADMIN (own school only)
+   */
+  async updateUserStatus(userId, newStatus, adminId) {
+    const admin = await this.verifyAdminAccess(adminId);
+
+    const validStatuses = ['ACTIVE', 'SUSPENDED', 'INACTIVE'];
+    if (!validStatuses.includes(newStatus)) {
+      throw new Error('INVALID_STATUS');
+    }
+
+    const userResult = await pool.query(
+      'SELECT id, account_status, school_id FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      throw new Error('USER_NOT_FOUND');
+    }
+
+    const user = userResult.rows[0];
+
+    if (admin.role === 'SCHOOL_ADMIN' && user.school_id !== admin.school_id) {
+      throw new Error('CROSS_SCHOOL_ACCESS_DENIED');
+    }
+
+    await pool.query(
+      'UPDATE users SET account_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [newStatus, userId]
+    );
+
+    await this.logAdminAction(
+      adminId,
+      'USER_STATUS_CHANGED',
+      'USER',
+      userId,
+      { account_status: user.account_status },
+      { account_status: newStatus },
+      `Admin changed user status from ${user.account_status} to ${newStatus}`
+    );
+
+    return { success: true, userId, oldStatus: user.account_status, newStatus };
+  }
+
+  /**
+   * Reset user MFA (clears 2FA secret and backup codes)
+   * RBAC: SITE_ADMIN only (sensitive security operation)
+   */
+  async resetUserMFA(userId, adminId) {
+    const admin = await this.verifyAdminAccess(adminId);
+
+    if (admin.role !== 'SITE_ADMIN') {
+      throw new Error('INSUFFICIENT_PERMISSIONS');
+    }
+
+    const userResult = await pool.query(
+      'SELECT id, two_fa_enabled FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      throw new Error('USER_NOT_FOUND');
+    }
+
+    await pool.query(
+      'UPDATE users SET two_fa_enabled = FALSE, two_fa_secret = NULL, backup_codes = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+      [userId]
+    );
+
+    await this.logAdminAction(
+      adminId,
+      'USER_MFA_RESET',
+      'USER',
+      userId,
+      { two_fa_enabled: userResult.rows[0].two_fa_enabled },
+      { two_fa_enabled: false },
+      'Admin reset user MFA'
+    );
+
+    return { success: true, userId };
+  }
+
+  /**
    * Export user data in GDPR format
    * RBAC: SITE_ADMIN only (sensitive data)
    */
