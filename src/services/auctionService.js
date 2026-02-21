@@ -356,7 +356,7 @@ class AuctionService {
       sort = null  // Alternative sort parameter name
     } = options;
 
-    let query = 'SELECT * FROM auctions WHERE 1=1';
+    let query = 'SELECT * FROM auctions WHERE deleted_at IS NULL';
     const params = [];
     let paramCount = 1;
 
@@ -407,7 +407,7 @@ class AuctionService {
     const result = await pool.query(query, params);
 
     // Get total count
-    let countQuery = 'SELECT COUNT(*) as count FROM auctions WHERE 1=1';
+    let countQuery = 'SELECT COUNT(*) as count FROM auctions WHERE deleted_at IS NULL';
     const countParams = [];
     if (status) {
       let dbStatus = status.toUpperCase();
