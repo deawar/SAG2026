@@ -904,6 +904,18 @@ class UIComponents {
             if (userMenuBtn && userName) {
                 userName.textContent = user.first_name || user.firstName || user.email;
             }
+
+            // Update dashboard nav links to the role-appropriate page
+            let dashboardUrl = '/user-dashboard.html';
+            if (user.role === 'SITE_ADMIN' || user.role === 'SCHOOL_ADMIN') {
+                dashboardUrl = '/admin-dashboard.html';
+            } else if (user.role === 'TEACHER') {
+                dashboardUrl = '/teacher-dashboard.html';
+            }
+            const dashboardNavLink = document.querySelector('#user-dropdown a[href*="dashboard"]');
+            if (dashboardNavLink) dashboardNavLink.href = dashboardUrl;
+            const bidsNavLink = document.querySelector('#user-dropdown a[href*="my-bids"]');
+            if (bidsNavLink) bidsNavLink.href = dashboardUrl + '#my-bids';
         } else {
             if (loginBtn) loginBtn.style.display = 'block';
             if (registerBtn) registerBtn.style.display = 'block';
