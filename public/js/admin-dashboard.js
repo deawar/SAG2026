@@ -218,6 +218,138 @@ class AdminDashboard {
                 this.searchPayments(paymentSearch.value);
             }, 500));
         }
+
+        // Payment gateway section
+        this.initGatewaySection();
+    }
+
+    /**
+     * Initialise the payment gateway section in the Payments tab.
+     * SCHOOL_ADMIN sees their own school pre-selected; SITE_ADMIN gets a search picker.
+     */
+    initGatewaySection() {
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const isSiteAdmin = currentUser.role === 'SITE_ADMIN';
+        const schoolSearch = document.getElementById('gateway-school-search');
+        const schoolSelect = document.getElementById('gateway-school-select');
+
+        if (!schoolSearch || !schoolSelect) return;
+
+        if (!isSiteAdmin) {
+            // SCHOOL_ADMIN: hide the picker and use their school directly
+            schoolSearch.style.display = 'none';
+            schoolSelect.style.display = 'none';
+            const schoolId   = currentUser.school_id   || currentUser.schoolId   || '';
+            const schoolName = currentUser.school_name || currentUser.schoolName || 'Your school';
+            if (schoolId) {
+                const opt = document.createElement('option');
+                opt.value = schoolId;
+                opt.textContent = schoolName;
+                opt.selected = true;
+                schoolSelect.appendChild(opt);
+            }
+            // Show a static label instead
+            const label = document.createElement('p');
+            label.className = 'form-static';
+            label.textContent = schoolName;
+            schoolSearch.parentNode.insertBefore(label, schoolSearch);
+        } else {
+            // SITE_ADMIN: wire up live school search
+            let searchTimeout;
+            schoolSearch.addEventListener('input', () => {
+                clearTimeout(searchTimeout);
+                const q = schoolSearch.value.trim();
+                if (q.length < 2) {
+                    schoolSelect.innerHTML = '<option value="">— Select a school —</option>';
+                    return;
+                }
+                searchTimeout = setTimeout(async () => {
+                    try {
+                        const res = await fetch(`/api/schools?search=${encodeURIComponent(q)}`, {
+                            headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
+                        });
+                        const data = await res.json();
+                        const schools = data.data || [];
+                        schoolSelect.innerHTML = '<option value="">— Select a school —</option>' +
+                            schools.map(s =>
+                                `<option value="${this.escapeHtml(String(s.id))}">${this.escapeHtml(s.name)}</option>`
+                            ).join('');
+                    } catch (err) {
+                        console.error('School search error:', err);
+                    }
+                }, 300);
+            });
+        }
+
+        const setupBtn = document.getElementById('setup-test-gateway-btn');
+        if (setupBtn) setupBtn.addEventListener('click', () => this.setupTestGateway());
+
+        const checkBtn = document.getElementById('check-gateway-btn');
+        if (checkBtn) checkBtn.addEventListener('click', () => this.checkGatewayStatus());
+    }
+
+    /**
+     * Set up a dummy test payment gateway for the selected school.
+     */
+    async setupTestGateway() {
+        const schoolId = document.getElementById('gateway-school-select')?.value;
+        const statusEl = document.getElementById('gateway-status');
+        if (!schoolId) {
+            if (statusEl) statusEl.innerHTML = '<p style="color:var(--color-error)">Please select a school first.</p>';
+            return;
+        }
+        try {
+            const res = await fetch(`/api/admin/schools/${encodeURIComponent(schoolId)}/test-gateway`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                },
+            });
+            const data = await res.json();
+            if (statusEl) {
+                const color = data.success ? 'var(--color-success, green)' : 'var(--color-error, red)';
+                statusEl.innerHTML = `<p style="color:${color}">${this.escapeHtml(data.message)}</p>`;
+            }
+            if (data.success) {
+                UIComponents.createToast({ message: data.message, type: data.alreadyExisted ? 'info' : 'success' });
+            }
+        } catch (err) {
+            if (statusEl) statusEl.innerHTML = '<p style="color:var(--color-error)">Request failed. Please try again.</p>';
+        }
+    }
+
+    /**
+     * Check whether the selected school already has a payment gateway configured.
+     */
+    async checkGatewayStatus() {
+        const schoolId = document.getElementById('gateway-school-select')?.value;
+        const statusEl = document.getElementById('gateway-status');
+        if (!schoolId) {
+            if (statusEl) statusEl.innerHTML = '<p style="color:var(--color-error)">Please select a school first.</p>';
+            return;
+        }
+        try {
+            const res = await fetch(`/api/admin/schools/${encodeURIComponent(schoolId)}/gateways`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
+            });
+            const data = await res.json();
+            if (!statusEl) return;
+            if (!data.success) {
+                statusEl.innerHTML = `<p style="color:var(--color-error)">${this.escapeHtml(data.message)}</p>`;
+                return;
+            }
+            if (data.gateways.length === 0) {
+                statusEl.innerHTML = '<p style="color:var(--color-warning, orange)">⚠ No payment gateway configured. Click "Setup Test Gateway" to add one.</p>';
+            } else {
+                const names = data.gateways.map(g =>
+                    `<strong>${this.escapeHtml(g.gateway_name || g.gateway_type)}</strong>${g.is_primary ? ' (primary)' : ''}`
+                ).join(', ');
+                statusEl.innerHTML = `<p style="color:var(--color-success, green)">✓ Gateway configured: ${names}</p>`;
+            }
+        } catch (err) {
+            if (statusEl) statusEl.innerHTML = '<p style="color:var(--color-error)">Request failed. Please try again.</p>';
+        }
     }
 
     /**
