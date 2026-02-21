@@ -354,6 +354,108 @@ router.get(
 );
 
 // ============================================================================
+// Payment Gateway Management
+// ============================================================================
+
+/**
+ * POST /api/admin/schools/:schoolId/test-gateway
+ * Set up a dummy test payment gateway for a school so auctions can be created
+ * during development/testing without a real payment processor.
+ * RBAC: SITE_ADMIN only (or SCHOOL_ADMIN for their own school)
+ */
+router.post(
+  '/schools/:schoolId/test-gateway',
+  verifyToken,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  async (req, res) => {
+    try {
+      const { pool } = require('../models/index');
+      const { schoolId } = req.params;
+
+      // SCHOOL_ADMIN may only set up a gateway for their own school
+      if (req.user.role === 'SCHOOL_ADMIN') {
+        const userSchoolId = req.user.schoolId || req.user.school_id;
+        if (userSchoolId !== schoolId) {
+          return res.status(403).json({ success: false, message: 'You can only manage gateways for your own school.' });
+        }
+      }
+
+      // Verify school exists
+      const schoolResult = await pool.query('SELECT id, name FROM schools WHERE id = $1', [schoolId]);
+      if (schoolResult.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'School not found.' });
+      }
+
+      // Return existing if already configured
+      const existing = await pool.query(
+        'SELECT id FROM payment_gateways WHERE school_id = $1 AND is_active = TRUE LIMIT 1',
+        [schoolId]
+      );
+      if (existing.rows.length > 0) {
+        return res.json({
+          success: true,
+          message: 'A payment gateway is already configured for this school.',
+          gatewayId: existing.rows[0].id,
+          alreadyExisted: true
+        });
+      }
+
+      // Insert dummy test gateway
+      const result = await pool.query(
+        `INSERT INTO payment_gateways (
+           school_id, gateway_type, gateway_name,
+           api_key_encrypted, api_secret_encrypted,
+           is_active, is_primary, currency_code,
+           created_by_user_id
+         ) VALUES ($1, $2, $3, $4, $5, TRUE, TRUE, 'USD', $6)
+         RETURNING id`,
+        [
+          schoolId,
+          'STRIPE',
+          'Test Gateway — NOT for real payments',
+          'test_dummy_key_not_for_production',
+          'test_dummy_secret_not_for_production',
+          req.user.id
+        ]
+      );
+
+      return res.status(201).json({
+        success: true,
+        message: 'Test payment gateway created. Auctions can now be created for this school.',
+        gatewayId: result.rows[0].id
+      });
+    } catch (error) {
+      console.error('Error setting up test gateway:', error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+);
+
+/**
+ * GET /api/admin/schools/:schoolId/gateways
+ * List payment gateways configured for a school
+ */
+router.get(
+  '/schools/:schoolId/gateways',
+  verifyToken,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  async (req, res) => {
+    try {
+      const { pool } = require('../models/index');
+      const { schoolId } = req.params;
+      const result = await pool.query(
+        `SELECT id, gateway_type, gateway_name, is_active, is_primary, currency_code, created_at
+         FROM payment_gateways WHERE school_id = $1 ORDER BY is_primary DESC, created_at DESC`,
+        [schoolId]
+      );
+      return res.json({ success: true, gateways: result.rows });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+);
+
+// ============================================================================
 // Route Summary (15 routes)
 // ============================================================================
 
