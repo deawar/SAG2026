@@ -101,6 +101,47 @@ class AuthMiddleware {
   }
 
   /**
+   * Optional JWT verification — populates req.user if a valid token is present,
+   * but does NOT reject unauthenticated requests (used for public routes).
+   */
+  optionalVerifyToken(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return next();
+    }
+
+    const token = authHeader.substring(7);
+    if (!token) {
+      return next();
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET, {
+        algorithms: ['HS256']
+      });
+
+      if (decoded.type !== 'refresh') {
+        const userId = decoded.sub || decoded.userId;
+        if (userId && decoded.role) {
+          req.user = {
+            id: userId,
+            userId: userId,
+            sub: userId,
+            role: decoded.role,
+            schoolId: decoded.schoolId,
+            email: decoded.email,
+            jti: decoded.jti
+          };
+        }
+      }
+    } catch (e) {
+      // Invalid/expired token — proceed without user (public access)
+    }
+
+    next();
+  }
+
+  /**
    * Verify user role
    */
   verifyRole(...allowedRoles) {
