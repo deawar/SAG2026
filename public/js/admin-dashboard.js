@@ -451,8 +451,9 @@ class AdminDashboard {
                 'PENDING_APPROVAL': 'warning', 'ENDED': 'error', 'CANCELLED': 'error'
             }[status] || 'default';
 
-            const canApprove = status === 'PENDING_APPROVAL';
-            const canReject  = status === 'PENDING_APPROVAL';
+            const canApprove = ['DRAFT', 'PENDING_APPROVAL'].includes(status);
+            const canReject  = ['DRAFT', 'PENDING_APPROVAL'].includes(status);
+            const canCancel  = ['APPROVED', 'LIVE'].includes(status);
             const canDelete  = ['DRAFT', 'CANCELLED', 'ENDED'].includes(status);
 
             row.innerHTML = `
@@ -463,9 +464,10 @@ class AdminDashboard {
                 <td>${endsAt}</td>
                 <td style="white-space:nowrap;">
                     ${canApprove ? `<button class="btn btn-sm btn-success" data-approve-auction="${auction.id}">Approve</button>` : ''}
-                    ${canReject  ? `<button class="btn btn-sm btn-warning" data-reject-auction="${auction.id}">Reject</button>`  : ''}
+                    ${canReject  ? `<button class="btn btn-sm btn-warning" data-reject-auction="${auction.id}">Reject</button>`   : ''}
+                    ${canCancel  ? `<button class="btn btn-sm btn-warning" data-cancel-auction="${auction.id}">Cancel</button>`   : ''}
                     <button class="btn btn-sm btn-primary" data-edit-auction="${auction.id}">Edit</button>
-                    ${canDelete  ? `<button class="btn btn-sm btn-danger"  data-delete-auction="${auction.id}">Delete</button>`  : ''}
+                    ${canDelete  ? `<button class="btn btn-sm btn-danger"  data-delete-auction="${auction.id}">Delete</button>`   : ''}
                 </td>
             `;
             tbody.appendChild(row);
@@ -476,6 +478,10 @@ class AdminDashboard {
 
             row.querySelector(`[data-reject-auction]`)?.addEventListener('click', () => {
                 this.rejectAuction(auction.id);
+            });
+
+            row.querySelector(`[data-cancel-auction]`)?.addEventListener('click', () => {
+                this.cancelAuction(auction.id);
             });
 
             row.querySelector(`[data-edit-auction]`)?.addEventListener('click', () => {
@@ -797,6 +803,34 @@ class AdminDashboard {
             this.loadAuctions();
         } catch (error) {
             console.error('Reject auction error:', error);
+        }
+    }
+
+    /**
+     * Force-cancel an APPROVED or LIVE auction
+     */
+    async cancelAuction(auctionId) {
+        const reason = prompt('Reason for cancellation (required):');
+        if (!reason || !reason.trim()) return;
+
+        try {
+            const response = await fetch(`/api/admin/auctions/${auctionId}/close`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                },
+                body: JSON.stringify({ reason: reason.trim() }),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                UIComponents.showAlert(data.message || 'Failed to cancel auction', 'error');
+                return;
+            }
+            UIComponents.createToast({ message: 'Auction cancelled', type: 'info' });
+            this.loadAuctions();
+        } catch (error) {
+            console.error('Cancel auction error:', error);
         }
     }
 
