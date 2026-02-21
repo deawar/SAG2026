@@ -30,6 +30,7 @@ class AdminController {
     this.setAuctionFee = this.setAuctionFee.bind(this);
     this.extendAuction = this.extendAuction.bind(this);
     this.closeForcibly = this.closeForcibly.bind(this);
+    this.deleteAuction = this.deleteAuction.bind(this);
     this.getPaymentById = this.getPaymentById.bind(this);
     this.listPayments = this.listPayments.bind(this);
     this.processRefund = this.processRefund.bind(this);
@@ -458,6 +459,23 @@ class AdminController {
   }
 
   /**
+   * DELETE /api/admin/auctions/:auctionId
+   * Soft-delete a DRAFT, CANCELLED, or ENDED auction
+   */
+  async deleteAuction(req, res) {
+    try {
+      const { auctionId } = req.params;
+      const adminId = req.user.id;
+
+      const result = await adminService.deleteAuction(auctionId, adminId);
+
+      return res.status(200).json({ success: true, result });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
    * ========== PAYMENT MANAGEMENT ENDPOINTS (4 methods) ==========
    */
 
@@ -800,6 +818,7 @@ class AdminController {
       'INVALID_EXTENSION_HOURS': { status: 400, message: 'Extension hours must be between 1 and 720' },
       'REFUND_EXCEEDS_PAYMENT': { status: 400, message: 'Refund amount exceeds payment' },
       'AUCTION_ALREADY_CLOSED': { status: 400, message: 'Auction is already closed' },
+      'AUCTION_NOT_DELETABLE': { status: 400, message: 'Only DRAFT, CANCELLED, or ENDED auctions can be deleted' },
       'ADMIN_NOT_FOUND': { status: 401, message: 'Admin credentials invalid' },
       'EMAIL_ALREADY_IN_USE': { status: 409, message: 'Email address is already in use by another account' },
       'NO_FIELDS_TO_UPDATE': { status: 400, message: 'No fields provided to update' }

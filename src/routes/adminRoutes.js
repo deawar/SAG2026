@@ -146,6 +146,17 @@ router.get(
 );
 
 /**
+ * DELETE /api/admin/auctions/:auctionId
+ * Soft-delete a DRAFT, CANCELLED, or ENDED auction
+ */
+router.delete(
+  '/auctions/:auctionId',
+  verifyToken,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  adminController.deleteAuction
+);
+
+/**
  * POST /api/admin/auctions/:auctionId/approve
  * Approve auction (PENDING_APPROVAL -> APPROVED)
  */

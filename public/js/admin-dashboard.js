@@ -451,18 +451,32 @@ class AdminDashboard {
                 'PENDING_APPROVAL': 'warning', 'ENDED': 'error', 'CANCELLED': 'error'
             }[status] || 'default';
 
+            const canApprove = status === 'PENDING_APPROVAL';
+            const canReject  = status === 'PENDING_APPROVAL';
+            const canDelete  = ['DRAFT', 'CANCELLED', 'ENDED'].includes(status);
+
             row.innerHTML = `
                 <td>${this.escapeHtml(auction.title || '')}</td>
                 <td><span class="badge badge-${statusClass}">${status}</span></td>
                 <td>-</td>
                 <td>-</td>
                 <td>${endsAt}</td>
-                <td>
+                <td style="white-space:nowrap;">
+                    ${canApprove ? `<button class="btn btn-sm btn-success" data-approve-auction="${auction.id}">Approve</button>` : ''}
+                    ${canReject  ? `<button class="btn btn-sm btn-warning" data-reject-auction="${auction.id}">Reject</button>`  : ''}
                     <button class="btn btn-sm btn-primary" data-edit-auction="${auction.id}">Edit</button>
-                    <button class="btn btn-sm btn-danger" data-delete-auction="${auction.id}">Delete</button>
+                    ${canDelete  ? `<button class="btn btn-sm btn-danger"  data-delete-auction="${auction.id}">Delete</button>`  : ''}
                 </td>
             `;
             tbody.appendChild(row);
+
+            row.querySelector(`[data-approve-auction]`)?.addEventListener('click', () => {
+                this.approveAuction(auction.id);
+            });
+
+            row.querySelector(`[data-reject-auction]`)?.addEventListener('click', () => {
+                this.rejectAuction(auction.id);
+            });
 
             row.querySelector(`[data-edit-auction]`)?.addEventListener('click', () => {
                 this.editAuction(auction.id);
@@ -735,6 +749,55 @@ class AdminDashboard {
                     if (titleInput) titleInput.value = data.auction.title;
                 }
             });
+    }
+
+    /**
+     * Approve a PENDING_APPROVAL auction
+     */
+    async approveAuction(auctionId) {
+        try {
+            const response = await fetch(`/api/admin/auctions/${auctionId}/approve`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                UIComponents.showAlert(data.message || 'Failed to approve auction', 'error');
+                return;
+            }
+            UIComponents.createToast({ message: 'Auction approved', type: 'success' });
+            this.loadAuctions();
+        } catch (error) {
+            console.error('Approve auction error:', error);
+        }
+    }
+
+    /**
+     * Reject a PENDING_APPROVAL auction
+     */
+    async rejectAuction(auctionId) {
+        const reason = prompt('Reason for rejection (required):');
+        if (!reason || !reason.trim()) return;
+
+        try {
+            const response = await fetch(`/api/admin/auctions/${auctionId}/reject`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                },
+                body: JSON.stringify({ reason: reason.trim() }),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                UIComponents.showAlert(data.message || 'Failed to reject auction', 'error');
+                return;
+            }
+            UIComponents.createToast({ message: 'Auction rejected', type: 'info' });
+            this.loadAuctions();
+        } catch (error) {
+            console.error('Reject auction error:', error);
+        }
     }
 
     /**

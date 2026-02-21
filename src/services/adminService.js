@@ -758,6 +758,47 @@ class AdminService {
   }
 
   /**
+   * Soft-delete an auction (sets deleted_at).
+   * Only DRAFT, CANCELLED, or ENDED auctions may be deleted.
+   */
+  async deleteAuction(auctionId, adminId) {
+    const admin = await this.verifyAdminAccess(adminId);
+
+    const auctionResult = await pool.query(
+      'SELECT id, school_id, auction_status FROM auctions WHERE id = $1 AND deleted_at IS NULL',
+      [auctionId]
+    );
+
+    if (auctionResult.rows.length === 0) {
+      throw new Error('AUCTION_NOT_FOUND');
+    }
+
+    const auction = auctionResult.rows[0];
+
+    if (admin.role === 'SCHOOL_ADMIN' && auction.school_id !== admin.school_id) {
+      throw new Error('CROSS_SCHOOL_ACCESS_DENIED');
+    }
+
+    const deletableStatuses = ['DRAFT', 'CANCELLED', 'ENDED'];
+    if (!deletableStatuses.includes(auction.auction_status)) {
+      throw new Error('AUCTION_NOT_DELETABLE');
+    }
+
+    await pool.query(
+      'UPDATE auctions SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1',
+      [auctionId]
+    );
+
+    await this.logAdminAction(
+      adminId, 'AUCTION_DELETED', 'AUCTION', auctionId,
+      { auction_status: auction.auction_status }, { deleted_at: new Date() },
+      'Admin soft-deleted auction'
+    );
+
+    return { success: true, auctionId };
+  }
+
+  /**
    * ========== PAYMENT MANAGEMENT (4 methods) ==========
    */
 
