@@ -213,6 +213,7 @@ class UserController {
           userId: user.id,
           email: user.email,
           role: user.role,
+          schoolId: user.school_id || null,
           accessToken: accessTokenResult.token,
           refreshToken: refreshTokenResult.token,
           expiresIn: accessTokenResult.expiresIn

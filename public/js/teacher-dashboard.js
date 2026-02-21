@@ -422,22 +422,21 @@ class TeacherDashboard {
     async showAuctionModal(auctionId = null) {
         const modal     = document.getElementById('auction-form-modal');
         const titleEl   = document.getElementById('auction-modal-title');
-        const submitBtn = document.getElementById('auction-submit-btn');
         const form      = document.getElementById('auction-form');
         if (!modal || !form) return;
 
-        // Reset form
+        // Reset form fields
         form.reset();
-        document.getElementById('auction-title').value       = '';
-        document.getElementById('auction-description').value = '';
-        document.getElementById('auction-start').value       = '';
-        document.getElementById('auction-end').value         = '';
+
+        // Replace any previous submit handler (onsubmit ensures only one handler exists)
+        form.onsubmit = (e) => this.handleAuctionSubmit(e, auctionId);
 
         if (auctionId) {
-            titleEl.textContent   = 'Edit Auction';
-            submitBtn.textContent = 'Save Changes';
+            titleEl.textContent = 'Edit Auction';
+            const submitBtn = document.getElementById('auction-submit-btn');
+            if (submitBtn) submitBtn.textContent = 'Save Changes';
 
-            // Pre-fill with existing data
+            // Pre-fill with existing data — set values AFTER onsubmit is wired
             try {
                 const token = localStorage.getItem('auth_token');
                 const res   = await fetch(`/api/auctions/${auctionId}`, {
@@ -456,14 +455,10 @@ class TeacherDashboard {
                 console.error('Failed to load auction for editing:', err);
             }
         } else {
-            titleEl.textContent   = 'Create New Auction';
-            submitBtn.textContent = 'Create Auction';
+            titleEl.textContent = 'Create New Auction';
+            const submitBtn = document.getElementById('auction-submit-btn');
+            if (submitBtn) submitBtn.textContent = 'Create Auction';
         }
-
-        // Remove any previous submit listener then attach a fresh one
-        const newForm = form.cloneNode(true);
-        form.parentNode.replaceChild(newForm, form);
-        newForm.addEventListener('submit', (e) => this.handleAuctionSubmit(e, auctionId));
 
         modal.style.display = 'flex';
         modal.removeAttribute('aria-hidden');
