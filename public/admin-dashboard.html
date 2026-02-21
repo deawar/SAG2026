@@ -270,6 +270,29 @@
                 <section role="tabpanel" id="payments-tab" aria-labelledby="tab-payments" class="tab-content" style="display:none;">
                     <h2>Payment Management</h2>
 
+                    <!-- Payment Gateways -->
+                    <div class="section-box" id="gateway-setup-section">
+                        <h3>Payment Gateways</h3>
+                        <p class="section-help">Each school needs a payment gateway before auctions can be created. Use the test gateway for development and testing.</p>
+                        <div style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap; margin-top:1rem;">
+                            <div class="form-group" style="flex:1; min-width:200px; margin-bottom:0;">
+                                <label for="gateway-school-search">School</label>
+                                <input type="text" id="gateway-school-search" class="form-control"
+                                       placeholder="Type to search schools..." autocomplete="off">
+                                <select id="gateway-school-select" class="form-control" style="margin-top:0.5rem;">
+                                    <option value="">— Select a school —</option>
+                                </select>
+                            </div>
+                            <div style="display:flex; gap:0.5rem; flex-shrink:0;">
+                                <button class="btn btn-secondary" id="check-gateway-btn" type="button">Check Status</button>
+                                <button class="btn btn-primary" id="setup-test-gateway-btn" type="button">Setup Test Gateway</button>
+                            </div>
+                        </div>
+                        <div id="gateway-status" role="status" aria-live="polite" style="margin-top:0.75rem;"></div>
+                    </div>
+
+                    <!-- Transactions -->
+                    <h3 style="margin-top:2rem;">Transactions</h3>
                     <div class="admin-actions">
                         <select id="payment-status-filter" class="form-control" aria-label="Filter payments by status">
                             <option value="">All Statuses</option>
