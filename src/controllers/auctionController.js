@@ -15,7 +15,7 @@ class AuctionController {
    */
   async createAuction(req, res) {
     try {
-      const { title, description, schoolId, charityId, startTime, endTime, platformFeePercentage, autoExtendEnabled, autoExtendMinutes, artworkIds } = req.body;
+      const { title, description, schoolId, charityBeneficiaryName, startTime, endTime, platformFeePercentage, autoExtendMinutes, artworkIds, paymentGatewayId } = req.body;
 
       // Validate user is admin or school admin
       if (!['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(req.user?.role)) {
@@ -25,17 +25,50 @@ class AuctionController {
         });
       }
 
+      const resolvedSchoolId = schoolId || req.user.schoolId || req.user.school_id;
+
+      // If no paymentGatewayId provided, look up the primary gateway for the school
+      let resolvedGatewayId = paymentGatewayId;
+      if (!resolvedGatewayId && resolvedSchoolId) {
+        const gwResult = await pool.query(
+          'SELECT id FROM payment_gateways WHERE school_id = $1 AND is_primary = TRUE AND is_active = TRUE LIMIT 1',
+          [resolvedSchoolId]
+        );
+        if (gwResult.rows.length > 0) {
+          resolvedGatewayId = gwResult.rows[0].id;
+        }
+      }
+
+      // If still no gateway, try any active gateway for the school
+      if (!resolvedGatewayId && resolvedSchoolId) {
+        const gwResult = await pool.query(
+          'SELECT id FROM payment_gateways WHERE school_id = $1 AND is_active = TRUE LIMIT 1',
+          [resolvedSchoolId]
+        );
+        if (gwResult.rows.length > 0) {
+          resolvedGatewayId = gwResult.rows[0].id;
+        }
+      }
+
+      if (!resolvedGatewayId) {
+        return res.status(400).json({
+          success: false,
+          message: 'No payment gateway configured for this school. Please set up a payment gateway first.'
+        });
+      }
+
       const result = await auctionService.createAuction({
         title,
         description,
-        schoolId: schoolId || req.user.schoolId,
-        charityId,
+        schoolId: resolvedSchoolId,
+        charityBeneficiaryName,
         startTime,
         endTime,
         platformFeePercentage,
-        autoExtendEnabled,
         autoExtendMinutes,
-        artworkIds
+        artworkIds,
+        createdByUserId: req.user.id,
+        paymentGatewayId: resolvedGatewayId
       });
 
       return res.status(201).json(result);
@@ -319,9 +352,9 @@ class AuctionController {
       const { auctionId } = req.params;
 
       const result = await pool.query(
-        `SELECT a.*, 
-                (SELECT MAX(bid_amount) FROM bids WHERE artwork_id = a.id AND status = 'active') as current_bid,
-                (SELECT COUNT(*) FROM bids WHERE artwork_id = a.id AND status = 'active') as bid_count
+        `SELECT a.*,
+                (SELECT MAX(bid_amount) FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE') as current_bid,
+                (SELECT COUNT(*) FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE') as bid_count
          FROM artwork a
          WHERE a.auction_id = $1
          ORDER BY a.created_at ASC`,
@@ -355,10 +388,11 @@ class AuctionController {
           title: piece.title,
           description: piece.description,
           imageUrl: piece.image_url,
-          startingPrice: piece.starting_price,
+          startingPrice: piece.starting_bid_amount,
           currentBid: piece.current_bid,
           bidCount: parseInt(piece.bid_count),
-          artistId: piece.artist_id
+          artistName: piece.artist_name,
+          createdByUserId: piece.created_by_user_id
         }))
       });
     } catch (error) {

@@ -16,127 +16,108 @@ class BiddingService {
    */
   async placeBid(artworkId, userId, bidAmount) {
     const client = await pool.connect();
-    
+
     try {
       await client.query('BEGIN');
-      
+
       // Validate inputs
       this._validateBidInputs(artworkId, userId, bidAmount);
-      
-      // Get artwork and current bid info
+
+      // Get artwork and auction info
       const artworkResult = await client.query(
-        'SELECT a.*, au.current_bid, au.current_bidder_id, au.status, au.end_time FROM artwork a JOIN auctions au ON a.auction_id = au.id WHERE a.id = $1 FOR UPDATE',
+        `SELECT a.*, au.auction_status, au.ends_at, au.id as auction_id,
+                (SELECT MAX(bid_amount) FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE') as current_bid
+         FROM artwork a
+         JOIN auctions au ON a.auction_id = au.id
+         WHERE a.id = $1 FOR UPDATE`,
         [artworkId]
       );
-      
+
       if (artworkResult.rows.length === 0) {
         throw new Error('Artwork not found');
       }
-      
+
       const artwork = artworkResult.rows[0];
-      
+
       // Validate auction is active
-      if (artwork.status !== 'active') {
-        throw new Error(`Auction is not active. Current status: ${artwork.status}`);
+      if (artwork.auction_status !== 'LIVE') {
+        throw new Error(`Auction is not active. Current status: ${artwork.auction_status}`);
       }
-      
+
       // Validate auction hasn't ended
       const now = new Date();
-      if (new Date(artwork.end_time) <= now) {
+      if (new Date(artwork.ends_at) <= now) {
         throw new Error('Auction has ended');
       }
-      
+
       // Validate user is not the artist
-      if (artwork.artist_id === userId) {
+      if (artwork.created_by_user_id === userId) {
         throw new Error('Artist cannot bid on their own artwork');
       }
-      
-      // Get minimum bid increment
-      const schoolResult = await client.query(
-        'SELECT minimum_bid_increment FROM schools WHERE id = (SELECT school_id FROM auctions WHERE id = $1)',
-        [artwork.auction_id]
-      );
-      
-      const minIncrement = schoolResult.rows[0]?.minimum_bid_increment || 100; // $1.00 default
-      
-      // Validate bid amount
-      const minimumBid = (artwork.current_bid || artwork.starting_price || 0) + minIncrement;
+
+      // Validate bid amount against current highest + minimum increment
+      const currentBid = artwork.current_bid ? parseFloat(artwork.current_bid) : 0;
+      const startingBid = artwork.starting_bid_amount ? parseFloat(artwork.starting_bid_amount) : 0;
+      const minimumBid = currentBid > 0 ? currentBid + 100 : startingBid; // $1.00 default increment
+
       if (bidAmount < minimumBid) {
         throw new Error(`Bid amount $${(bidAmount / 100).toFixed(2)} is below minimum required $${(minimumBid / 100).toFixed(2)}`);
       }
-      
+
       // Check for reserve price (if exists)
-      if (artwork.reserve_price && bidAmount < artwork.reserve_price) {
-        throw new Error(`Bid does not meet reserve price of $${(artwork.reserve_price / 100).toFixed(2)}`);
+      if (artwork.reserve_bid_amount && bidAmount < parseFloat(artwork.reserve_bid_amount)) {
+        throw new Error(`Bid does not meet reserve price of $${(parseFloat(artwork.reserve_bid_amount) / 100).toFixed(2)}`);
       }
-      
-      // Check user's account status and payment methods
+
+      // Check user's account status
       const userResult = await client.query(
         'SELECT id, account_status FROM users WHERE id = $1',
         [userId]
       );
-      
+
       if (userResult.rows.length === 0) {
         throw new Error('User not found');
       }
-      
-      if (userResult.rows[0].account_status !== 'active') {
+
+      if (userResult.rows[0].account_status !== 'ACTIVE') {
         throw new Error('User account is not active');
       }
-      
-      // Verify user has valid payment method on file
-      const paymentMethodResult = await client.query(
-        'SELECT id FROM payment_methods WHERE user_id = $1 AND is_default = true AND is_valid = true LIMIT 1',
-        [userId]
+
+      // Mark previous highest bid as OUTBID
+      await client.query(
+        `UPDATE bids SET bid_status = 'OUTBID'
+         WHERE artwork_id = $1 AND bid_status = 'ACTIVE'`,
+        [artworkId]
       );
-      
-      if (paymentMethodResult.rows.length === 0) {
-        throw new Error('User must have a valid payment method on file to bid');
-      }
-      
+
       // Create bid record
       const bidResult = await client.query(
-        `INSERT INTO bids (artwork_id, bidder_id, bid_amount, bid_timestamp, ip_address, user_agent)
-         VALUES ($1, $2, $3, NOW(), $4, $5)
-         RETURNING id, bid_amount, bid_timestamp`,
-        [artworkId, userId, bidAmount, '0.0.0.0', 'unknown']
+        `INSERT INTO bids (auction_id, artwork_id, placed_by_user_id, bid_amount, bid_status, placed_at, ip_address, user_agent)
+         VALUES ($1, $2, $3, $4, 'ACTIVE', NOW(), $5, $6)
+         RETURNING id, bid_amount, placed_at`,
+        [artwork.auction_id, artworkId, userId, bidAmount, '0.0.0.0', 'unknown']
       );
-      
+
       const bid = bidResult.rows[0];
-      
-      // Update auction with new highest bid
-      await client.query(
-        `UPDATE auctions SET current_bid = $1, current_bidder_id = $2, last_bid_time = NOW()
-         WHERE id = $3`,
-        [bidAmount, userId, artwork.auction_id]
-      );
-      
-      // Check if bid reaches reserve and update reserve_met flag
-      if (artwork.reserve_price && bidAmount >= artwork.reserve_price) {
-        await client.query(
-          'UPDATE artwork SET reserve_met = true WHERE id = $1',
-          [artworkId]
-        );
-      }
-      
+
       // Log bid activity for compliance
       await client.query(
-        `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, details, timestamp)
-         VALUES ($1, $2, $3, $4, $5, NOW())`,
-        [userId, 'bid_placed', 'artwork', artworkId, JSON.stringify({ bid_id: bid.id, amount: bidAmount })]
+        `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details, user_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        ['BID', 'bid_placed', 'artwork', artworkId, JSON.stringify({ bid_id: bid.id, amount: bidAmount }), userId]
       );
-      
+
       await client.query('COMMIT');
-      
+
       return {
         success: true,
         bidId: bid.id,
         artworkId: artworkId,
         bidAmount: bidAmount,
-        timestamp: bid.bid_timestamp,
+        timestamp: bid.placed_at,
         message: `Bid placed successfully for $${(bidAmount / 100).toFixed(2)}`
       };
-      
+
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -153,10 +134,10 @@ class BiddingService {
    */
   async withdrawBid(bidId, userId) {
     const client = await pool.connect();
-    
+
     try {
       await client.query('BEGIN');
-      
+
       // Get bid information
       const bidResult = await client.query(
         `SELECT b.*, a.auction_id FROM bids b
@@ -164,77 +145,70 @@ class BiddingService {
          WHERE b.id = $1 FOR UPDATE`,
         [bidId]
       );
-      
+
       if (bidResult.rows.length === 0) {
         throw new Error('Bid not found');
       }
-      
+
       const bid = bidResult.rows[0];
-      
+
       // Verify user owns this bid
-      if (bid.bidder_id !== userId) {
+      if (bid.placed_by_user_id !== userId) {
         throw new Error('Unauthorized: Cannot withdraw another user\'s bid');
       }
-      
-      // Check if withdrawal is allowed (e.g., not the current highest bid if auction is close to ending)
+
+      // Check if withdrawal is allowed
       const auctionResult = await client.query(
-        'SELECT end_time, status, current_bid FROM auctions WHERE id = $1',
+        'SELECT ends_at, auction_status FROM auctions WHERE id = $1',
         [bid.auction_id]
       );
-      
+
       const auction = auctionResult.rows[0];
-      const timeUntilEnd = new Date(auction.end_time) - new Date();
-      
-      // Don't allow withdrawal if bid is the highest and auction ends in less than 5 minutes
-      if (bid.bid_amount === auction.current_bid && timeUntilEnd < 5 * 60 * 1000) {
+      const timeUntilEnd = new Date(auction.ends_at) - new Date();
+
+      // Don't allow withdrawal if bid is highest and auction ends in less than 5 minutes
+      if (bid.bid_status === 'ACTIVE' && timeUntilEnd < 5 * 60 * 1000) {
         throw new Error('Cannot withdraw the highest bid when auction is ending soon');
       }
-      
-      // Mark bid as withdrawn
+
+      // Mark bid as cancelled
       await client.query(
-        'UPDATE bids SET status = $1, withdrawn_at = NOW() WHERE id = $2',
-        ['withdrawn', bidId]
+        'UPDATE bids SET bid_status = $1 WHERE id = $2',
+        ['CANCELLED', bidId]
       );
-      
-      // If this was the highest bid, find and update to previous highest
-      if (bid.bid_amount === auction.current_bid) {
+
+      // If this was the active (highest) bid, restore previous highest to ACTIVE
+      if (bid.bid_status === 'ACTIVE') {
         const previousBidResult = await client.query(
-          `SELECT bidder_id, bid_amount FROM bids
-           WHERE artwork_id = $1 AND status = 'active' AND id != $2
+          `SELECT id FROM bids
+           WHERE artwork_id = $1 AND bid_status = 'OUTBID' AND id != $2
            ORDER BY bid_amount DESC LIMIT 1`,
           [bid.artwork_id, bidId]
         );
-        
+
         if (previousBidResult.rows.length > 0) {
-          const prevBid = previousBidResult.rows[0];
           await client.query(
-            'UPDATE auctions SET current_bid = $1, current_bidder_id = $2 WHERE id = $3',
-            [prevBid.bid_amount, prevBid.bidder_id, bid.auction_id]
-          );
-        } else {
-          // No other bids, reset to starting price
-          await client.query(
-            'UPDATE auctions SET current_bid = NULL, current_bidder_id = NULL WHERE id = $1',
-            [bid.auction_id]
+            'UPDATE bids SET bid_status = $1 WHERE id = $2',
+            ['ACTIVE', previousBidResult.rows[0].id]
           );
         }
       }
-      
+
       // Log withdrawal for compliance
       await client.query(
-        `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, details, timestamp)
-         VALUES ($1, $2, $3, $4, $5, NOW())`,
-        [userId, 'bid_withdrawn', 'bid', bidId, JSON.stringify({ amount: bid.bid_amount })]
+        `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details, user_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        ['BID', 'bid_withdrawn', 'bid', bidId, JSON.stringify({ amount: bid.bid_amount }), userId]
       );
-      
+
       await client.query('COMMIT');
-      
+
       return {
         success: true,
         bidId: bidId,
         message: 'Bid withdrawn successfully'
       };
-      
+
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -250,25 +224,24 @@ class BiddingService {
    */
   async getBidHistory(artworkId) {
     const result = await pool.query(
-      `SELECT b.id, b.bidder_id, b.bid_amount, b.bid_timestamp, b.status,
-              u.first_name, u.last_name, u.username
+      `SELECT b.id, b.placed_by_user_id, b.bid_amount, b.placed_at, b.bid_status,
+              u.first_name, u.last_name
        FROM bids b
-       LEFT JOIN users u ON b.bidder_id = u.id
-       WHERE b.artwork_id = $1 AND b.status IN ('active', 'withdrawn')
-       ORDER BY b.bid_timestamp DESC`,
+       LEFT JOIN users u ON b.placed_by_user_id = u.id
+       WHERE b.artwork_id = $1 AND b.bid_status IN ('ACTIVE', 'OUTBID', 'CANCELLED')
+       ORDER BY b.placed_at DESC`,
       [artworkId]
     );
-    
+
     return result.rows.map(row => ({
       bidId: row.id,
       bidder: {
-        id: row.bidder_id,
-        username: row.username,
+        id: row.placed_by_user_id,
         displayName: `${row.first_name} ${row.last_name}`
       },
       amount: row.bid_amount,
-      timestamp: row.bid_timestamp,
-      status: row.status
+      timestamp: row.placed_at,
+      status: row.bid_status
     }));
   }
 
@@ -279,40 +252,39 @@ class BiddingService {
    */
   async getBiddingState(artworkId) {
     const result = await pool.query(
-      `SELECT a.id, a.title, a.starting_price, a.reserve_price, a.reserve_met,
-              au.id as auction_id, au.current_bid, au.current_bidder_id, au.status,
-              au.end_time, au.last_bid_time,
-              (SELECT COUNT(*) FROM bids WHERE artwork_id = a.id AND status = 'active') as total_bids
+      `SELECT a.id, a.title, a.starting_bid_amount, a.reserve_bid_amount,
+              au.id as auction_id, au.auction_status, au.ends_at,
+              (SELECT MAX(bid_amount) FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE') as current_bid,
+              (SELECT placed_by_user_id FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE' ORDER BY bid_amount DESC LIMIT 1) as current_bidder_id,
+              (SELECT COUNT(*) FROM bids WHERE artwork_id = a.id AND bid_status IN ('ACTIVE', 'OUTBID')) as total_bids
        FROM artwork a
        JOIN auctions au ON a.auction_id = au.id
        WHERE a.id = $1`,
       [artworkId]
     );
-    
+
     if (result.rows.length === 0) {
       throw new Error('Artwork not found');
     }
-    
+
     const state = result.rows[0];
     const now = new Date();
-    const endTime = new Date(state.end_time);
+    const endTime = new Date(state.ends_at);
     const timeRemaining = Math.max(0, endTime - now);
-    
+
     return {
       artworkId: state.id,
       title: state.title,
       auctionId: state.auction_id,
-      startingPrice: state.starting_price,
-      reservePrice: state.reserve_price,
-      reserveMet: state.reserve_met,
+      startingPrice: state.starting_bid_amount,
+      reservePrice: state.reserve_bid_amount,
       currentBid: state.current_bid,
       currentBidderId: state.current_bidder_id,
       totalBids: parseInt(state.total_bids),
-      auctionStatus: state.status,
-      endTime: state.end_time,
-      lastBidTime: state.last_bid_time,
+      auctionStatus: state.auction_status,
+      endTime: state.ends_at,
       timeRemaining: timeRemaining,
-      auctionActive: state.status === 'active' && endTime > now
+      auctionActive: state.auction_status === 'LIVE' && endTime > now
     };
   }
 
@@ -323,18 +295,18 @@ class BiddingService {
    */
   async getUserBidHistory(userId) {
     const result = await pool.query(
-      `SELECT b.id, b.artwork_id, b.bid_amount, b.bid_timestamp, b.status,
+      `SELECT b.id, b.artwork_id, b.bid_amount, b.placed_at, b.bid_status,
               a.title, a.image_url,
-              au.status as auction_status, au.end_time,
-              (SELECT MAX(bid_amount) FROM bids WHERE artwork_id = a.id AND status = 'active') as highest_bid
+              au.auction_status, au.ends_at,
+              (SELECT MAX(bid_amount) FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE') as highest_bid
        FROM bids b
        JOIN artwork a ON b.artwork_id = a.id
        JOIN auctions au ON a.auction_id = au.id
-       WHERE b.bidder_id = $1
-       ORDER BY b.bid_timestamp DESC`,
+       WHERE b.placed_by_user_id = $1
+       ORDER BY b.placed_at DESC`,
       [userId]
     );
-    
+
     return result.rows.map(row => ({
       bidId: row.id,
       artworkId: row.artwork_id,
@@ -342,11 +314,11 @@ class BiddingService {
       imageUrl: row.image_url,
       bidAmount: row.bid_amount,
       highestBid: row.highest_bid,
-      isWinning: row.bid_amount === row.highest_bid && row.auction_status === 'closed',
-      timestamp: row.bid_timestamp,
-      status: row.status,
+      isWinning: row.bid_status === 'ACTIVE',
+      timestamp: row.placed_at,
+      status: row.bid_status,
       auctionStatus: row.auction_status,
-      auctionEndTime: row.end_time
+      auctionEndTime: row.ends_at
     }));
   }
 
@@ -357,77 +329,76 @@ class BiddingService {
    */
   async closeAuction(auctionId) {
     const client = await pool.connect();
-    
+
     try {
       await client.query('BEGIN');
-      
+
       // Get auction info
       const auctionResult = await client.query(
-        'SELECT id, current_bid, current_bidder_id, school_id FROM auctions WHERE id = $1 FOR UPDATE',
+        'SELECT id, school_id, auction_status FROM auctions WHERE id = $1 FOR UPDATE',
         [auctionId]
       );
-      
+
       if (auctionResult.rows.length === 0) {
         throw new Error('Auction not found');
       }
-      
+
       const auction = auctionResult.rows[0];
-      
-      // Update auction status
+
+      // Update auction status to ENDED
       await client.query(
-        'UPDATE auctions SET status = $1, closed_at = NOW() WHERE id = $2',
-        ['closed', auctionId]
+        'UPDATE auctions SET auction_status = $1 WHERE id = $2',
+        ['ENDED', auctionId]
       );
-      
+
+      // Find the highest active bid across all artwork in this auction
+      const winnerResult = await client.query(
+        `SELECT b.placed_by_user_id, b.bid_amount, b.artwork_id,
+                u.first_name, u.last_name, u.email
+         FROM bids b
+         JOIN artwork a ON b.artwork_id = a.id
+         JOIN users u ON b.placed_by_user_id = u.id
+         WHERE a.auction_id = $1 AND b.bid_status = 'ACTIVE'
+         ORDER BY b.bid_amount DESC LIMIT 1`,
+        [auctionId]
+      );
+
       let winner = null;
-      
-      // If there are bids, create transaction for the winning bid
-      if (auction.current_bid && auction.current_bidder_id) {
-        // Create transaction record
-        const transactionResult = await client.query(
-          `INSERT INTO transactions (auction_id, buyer_id, seller_id, amount, transaction_type, status, created_at)
-           VALUES ($1, $2, (SELECT artist_id FROM artwork WHERE auction_id = $1 LIMIT 1), $3, $4, $5, NOW())
-           RETURNING id`,
-          [auctionId, auction.current_bidder_id, auction.current_bid, 'bid_settlement', 'pending']
-        );
-        
-        // Get winner details
-        const winnerResult = await client.query(
-          'SELECT id, first_name, last_name, email FROM users WHERE id = $1',
-          [auction.current_bidder_id]
-        );
-        
+
+      if (winnerResult.rows.length > 0) {
+        const row = winnerResult.rows[0];
         winner = {
-          id: auction.current_bidder_id,
-          name: `${winnerResult.rows[0].first_name} ${winnerResult.rows[0].last_name}`,
-          email: winnerResult.rows[0].email,
-          bidAmount: auction.current_bid
+          id: row.placed_by_user_id,
+          name: `${row.first_name} ${row.last_name}`,
+          email: row.email,
+          bidAmount: row.bid_amount
         };
-        
-        // Log auction closure
+
+        // Mark winning bid as ACCEPTED
         await client.query(
-          `INSERT INTO audit_logs (action, resource_type, resource_id, details, timestamp)
-           VALUES ($1, $2, $3, $4, NOW())`,
-          ['auction_closed', 'auction', auctionId, JSON.stringify({ winner_id: auction.current_bidder_id, final_bid: auction.current_bid })]
-        );
-      } else {
-        // No bids - auction failed
-        await client.query(
-          `INSERT INTO audit_logs (action, resource_type, resource_id, details, timestamp)
-           VALUES ($1, $2, $3, $4, NOW())`,
-          ['auction_closed', 'auction', auctionId, JSON.stringify({ winner_id: null, reason: 'no_bids' })]
+          `UPDATE bids SET bid_status = 'ACCEPTED'
+           WHERE artwork_id = $1 AND placed_by_user_id = $2 AND bid_status = 'ACTIVE'`,
+          [row.artwork_id, row.placed_by_user_id]
         );
       }
-      
+
+      // Log auction closure
+      await client.query(
+        `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details)
+         VALUES ($1, $2, $3, $4, $5)`,
+        ['AUCTION', 'auction_closed', 'auction', auctionId,
+         JSON.stringify({ winner_id: winner?.id || null, final_bid: winner?.bidAmount || null })]
+      );
+
       await client.query('COMMIT');
-      
+
       return {
         success: true,
         auctionId: auctionId,
         winner: winner,
         message: winner ? `Auction closed. Winner: ${winner.name}` : 'Auction closed with no winner'
       };
-      
+
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -443,40 +414,37 @@ class BiddingService {
    */
   async getAuctionWinner(auctionId) {
     const result = await pool.query(
-      `SELECT au.current_bidder_id, au.current_bid,
+      `SELECT b.placed_by_user_id, b.bid_amount, b.artwork_id,
               u.id, u.first_name, u.last_name, u.email,
-              a.id as artwork_id, a.title
-       FROM auctions au
-       LEFT JOIN users u ON au.current_bidder_id = u.id
-       LEFT JOIN artwork a ON a.auction_id = au.id
-       WHERE au.id = $1`,
+              a.title as artwork_title
+       FROM bids b
+       JOIN artwork a ON b.artwork_id = a.id
+       JOIN users u ON b.placed_by_user_id = u.id
+       WHERE a.auction_id = $1 AND b.bid_status IN ('ACTIVE', 'ACCEPTED')
+       ORDER BY b.bid_amount DESC LIMIT 1`,
       [auctionId]
     );
-    
+
     if (result.rows.length === 0) {
-      throw new Error('Auction not found');
-    }
-    
-    const row = result.rows[0];
-    
-    if (!row.current_bidder_id) {
       return {
         hasWinner: false,
         message: 'No winner - auction received no bids'
       };
     }
-    
+
+    const row = result.rows[0];
+
     return {
       hasWinner: true,
       winner: {
-        id: row.id,
+        id: row.placed_by_user_id,
         name: `${row.first_name} ${row.last_name}`,
         email: row.email,
-        bidAmount: row.current_bid
+        bidAmount: row.bid_amount
       },
       artwork: {
         id: row.artwork_id,
-        title: row.title
+        title: row.artwork_title
       }
     };
   }
@@ -488,28 +456,28 @@ class BiddingService {
    */
   async getUserActiveAuctions(userId) {
     const result = await pool.query(
-      `SELECT DISTINCT a.id, a.title, a.image_url, a.starting_price,
-              au.status, au.current_bid, au.end_time,
-              (SELECT bid_amount FROM bids WHERE artwork_id = a.id AND bidder_id = $1 ORDER BY bid_amount DESC LIMIT 1) as user_highest_bid,
-              (SELECT MAX(bid_amount) FROM bids WHERE artwork_id = a.id) as auction_highest_bid
+      `SELECT DISTINCT a.id, a.title, a.image_url, a.starting_bid_amount,
+              au.auction_status, au.ends_at,
+              (SELECT bid_amount FROM bids WHERE artwork_id = a.id AND placed_by_user_id = $1 ORDER BY bid_amount DESC LIMIT 1) as user_highest_bid,
+              (SELECT MAX(bid_amount) FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE') as auction_highest_bid
        FROM artwork a
        JOIN auctions au ON a.auction_id = au.id
        JOIN bids b ON a.id = b.artwork_id
-       WHERE b.bidder_id = $1 AND au.status IN ('active', 'ending_soon')
-       ORDER BY au.end_time ASC`,
+       WHERE b.placed_by_user_id = $1 AND au.auction_status = 'LIVE'
+       ORDER BY au.ends_at ASC`,
       [userId]
     );
-    
+
     return result.rows.map(row => ({
       auctionId: row.id,
       title: row.title,
       imageUrl: row.image_url,
-      startingPrice: row.starting_price,
+      startingPrice: row.starting_bid_amount,
       currentBid: row.auction_highest_bid,
       userHighestBid: row.user_highest_bid,
       isWinning: row.user_highest_bid === row.auction_highest_bid,
-      status: row.status,
-      endTime: row.end_time
+      status: row.auction_status,
+      endTime: row.ends_at
     }));
   }
 
@@ -521,15 +489,15 @@ class BiddingService {
     if (!artworkId || typeof artworkId !== 'string') {
       throw new Error('Invalid artwork ID');
     }
-    
+
     if (!userId || typeof userId !== 'string') {
       throw new Error('Invalid user ID');
     }
-    
+
     if (!bidAmount || typeof bidAmount !== 'number' || bidAmount <= 0) {
       throw new Error('Invalid bid amount');
     }
-    
+
     if (bidAmount > 999999999) { // Max $9,999,999.99
       throw new Error('Bid amount exceeds maximum allowed');
     }
