@@ -204,10 +204,10 @@ class BidController {
       const { bidId } = req.params;
 
       const result = await pool.query(
-        `SELECT b.*, u.first_name, u.last_name, u.username,
+        `SELECT b.*, u.first_name, u.last_name, u.email,
                 a.title as artwork_title
          FROM bids b
-         LEFT JOIN users u ON b.bidder_id = u.id
+         LEFT JOIN users u ON b.placed_by_user_id = u.id
          LEFT JOIN artwork a ON b.artwork_id = a.id
          WHERE b.id = $1`,
         [bidId]
@@ -228,12 +228,12 @@ class BidController {
           bidId: bid.id,
           artworkId: bid.artwork_id,
           artworkTitle: bid.artwork_title,
-          bidderId: bid.bidder_id,
+          bidderId: bid.placed_by_user_id,
           bidderName: `${bid.first_name} ${bid.last_name}`,
-          bidderUsername: bid.username,
+          bidderEmail: bid.email,
           amount: bid.bid_amount,
-          timestamp: bid.bid_timestamp,
-          status: bid.status
+          timestamp: bid.placed_at,
+          status: bid.bid_status
         }
       });
     } catch (error) {
@@ -263,7 +263,8 @@ class BidController {
 
       // Get artwork and current bid info
       const result = await pool.query(
-        `SELECT a.starting_price, au.current_bid, au.status, au.end_time
+        `SELECT a.starting_bid_amount, au.auction_status, au.ends_at,
+                (SELECT MAX(bid_amount) FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE') as current_bid
          FROM artwork a
          JOIN auctions au ON a.auction_id = au.id
          WHERE a.id = $1`,
@@ -280,10 +281,10 @@ class BidController {
 
       const artwork = result.rows[0];
       const now = new Date();
-      const endTime = new Date(artwork.end_time);
+      const endTime = new Date(artwork.ends_at);
 
       // Check if auction is active
-      if (artwork.status !== 'active' || endTime <= now) {
+      if (artwork.auction_status !== 'LIVE' || endTime <= now) {
         return res.status(200).json({
           success: false,
           valid: false,
@@ -291,16 +292,10 @@ class BidController {
         });
       }
 
-      // Get minimum bid increment from school
-      const schoolResult = await pool.query(
-        `SELECT minimum_bid_increment FROM schools 
-         WHERE id = (SELECT school_id FROM auctions WHERE id = 
-           (SELECT auction_id FROM artwork WHERE id = $1))`,
-        [artworkId]
-      );
-
-      const minIncrement = schoolResult.rows[0]?.minimum_bid_increment || 100;
-      const minimumBid = (artwork.current_bid || artwork.starting_price || 0) + minIncrement;
+      const minIncrement = 100; // $1.00 default increment
+      const currentBid = artwork.current_bid ? parseFloat(artwork.current_bid) : 0;
+      const startingBid = artwork.starting_bid_amount ? parseFloat(artwork.starting_bid_amount) : 0;
+      const minimumBid = currentBid > 0 ? currentBid + minIncrement : startingBid;
       const bidAmountCents = typeof bidAmount === 'number' ? Math.round(bidAmount * 100) : bidAmount;
 
       if (bidAmountCents < minimumBid) {
@@ -309,7 +304,7 @@ class BidController {
           valid: false,
           message: `Bid must be at least $${(minimumBid / 100).toFixed(2)}`,
           minimumBid: minimumBid / 100,
-          currentBid: (artwork.current_bid || artwork.starting_price) / 100
+          currentBid: (currentBid || startingBid) / 100
         });
       }
 
@@ -318,7 +313,7 @@ class BidController {
         valid: true,
         message: 'Bid amount is valid',
         minimumBid: minimumBid / 100,
-        currentBid: (artwork.current_bid || artwork.starting_price) / 100
+        currentBid: (currentBid || startingBid) / 100
       });
     } catch (error) {
       console.error('Error validating bid:', error);
