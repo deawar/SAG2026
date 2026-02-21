@@ -103,7 +103,9 @@ class AuctionsPage {
                 resultsInfo.setAttribute('aria-live', 'polite');
             }
 
-            const response = await fetch('/api/auctions?limit=100');
+            const token = localStorage.getItem('auth_token');
+            const fetchOptions = token ? { headers: { 'Authorization': `Bearer ${token}` } } : {};
+            const response = await fetch('/api/auctions?limit=100', fetchOptions);
             const data = await response.json();
 
             if (response.ok) {
