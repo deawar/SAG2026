@@ -619,6 +619,47 @@ class AdminDashboard {
     }
 
     /**
+     * Initialise a school search picker inside an already-rendered form.
+     * Expects: #school-search-input, #school-select already in the DOM.
+     * currentSchoolId / currentSchoolName pre-populate the select when provided.
+     */
+    initSchoolPicker(currentSchoolId, currentSchoolName) {
+        const input  = document.getElementById('school-search-input');
+        const select = document.getElementById('school-select');
+        if (!input || !select) return;
+
+        // Pre-populate with current school
+        if (currentSchoolId && currentSchoolName) {
+            input.value = currentSchoolName;
+            const opt = document.createElement('option');
+            opt.value    = currentSchoolId;
+            opt.selected = true;
+            opt.textContent = currentSchoolName;
+            select.appendChild(opt);
+        }
+
+        const doSearch = UIComponents.debounce(async () => {
+            const q = input.value.trim();
+            // Clear selection when user types something new
+            select.value = '';
+            if (q.length < 2) return;
+            try {
+                const res  = await fetch(`/api/schools?search=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                const schools = data.data || [];
+                select.innerHTML = '<option value="">-- No school / not affiliated --</option>' +
+                    schools.map(s =>
+                        `<option value="${this.escapeHtml(s.id)}">${this.escapeHtml(s.name)} — ${this.escapeHtml(s.city)}, ${this.escapeHtml(s.state_province)}</option>`
+                    ).join('');
+            } catch (err) {
+                console.error('School search error:', err);
+            }
+        }, 400);
+
+        input.addEventListener('input', doSearch);
+    }
+
+    /**
      * Edit user — shows an editable form pre-filled with current user data
      */
     editUser(userId) {
@@ -646,11 +687,30 @@ class AdminDashboard {
                         ? `${user.first_name} ${user.last_name}`
                         : user.fullName || user.full_name || ''
                 );
-                const currentRole   = user.role || '';
-                const currentStatus = user.account_status || 'ACTIVE';
-                const mfaEnabled    = user.two_fa_enabled || false;
+                const currentRole       = user.role || '';
+                const currentStatus    = user.account_status || 'ACTIVE';
+                const mfaEnabled       = user.two_fa_enabled || false;
+                const currentSchoolId  = user.school_id  || '';
+                const currentSchoolName = user.school_name || '';
 
                 if (titleEl) titleEl.textContent = `Edit User: ${fullName}`;
+
+                // School picker — SITE_ADMIN can reassign any school; SCHOOL_ADMIN sees read-only
+                const schoolField = isSiteAdmin ? `
+                    <div class="form-group">
+                        <label for="school-search-input">School Affiliation</label>
+                        <input type="text" id="school-search-input" class="form-control"
+                               placeholder="Type to search schools..." autocomplete="off"
+                               value="${this.escapeHtml(currentSchoolName)}">
+                        <select id="school-select" class="form-control" style="margin-top:0.5rem;">
+                            <option value="">-- No school / not affiliated --</option>
+                        </select>
+                        <small class="form-hint">Search then choose from the list, or leave blank to remove affiliation.</small>
+                    </div>` : `
+                    <div class="form-group">
+                        <label>School Affiliation</label>
+                        <p class="form-static">${this.escapeHtml(currentSchoolName || 'None')}</p>
+                    </div>`;
 
                 // Role dropdown only shown to SITE_ADMIN (SCHOOL_ADMIN can't change roles)
                 const roleField = isSiteAdmin ? `
@@ -693,6 +753,11 @@ class AdminDashboard {
                             <label for="edit-user-email">Email</label>
                             <input type="email" id="edit-user-email" class="form-control" value="${this.escapeHtml(user.email || '')}" required>
                         </div>
+                        <div class="form-group">
+                            <label for="edit-user-phone">Mobile Number</label>
+                            <input type="tel" id="edit-user-phone" class="form-control" value="${this.escapeHtml(user.phone_number || '')}" placeholder="+1 555 000 0000">
+                        </div>
+                        ${schoolField}
                         ${roleField}
                         <div class="form-group">
                             <label for="edit-user-status">Account Status</label>
@@ -715,6 +780,11 @@ class AdminDashboard {
                     form.addEventListener('submit', (e) => this.handleEditUser(e, userId, user, isSiteAdmin));
                 }
 
+                // Wire up school search picker (SITE_ADMIN only)
+                if (isSiteAdmin) {
+                    this.initSchoolPicker(currentSchoolId, currentSchoolName);
+                }
+
                 // MFA reset fires immediately on button click (not part of form submit)
                 const mfaBtn = document.getElementById('reset-mfa-btn');
                 if (mfaBtn) {
@@ -733,11 +803,15 @@ class AdminDashboard {
     async handleEditUser(e, userId, originalUser, isSiteAdmin) {
         e.preventDefault();
 
-        const firstName = document.getElementById('edit-user-firstname')?.value.trim();
-        const lastName  = document.getElementById('edit-user-lastname')?.value.trim();
-        const email     = document.getElementById('edit-user-email')?.value.trim();
-        const newRole   = isSiteAdmin ? document.getElementById('edit-user-role')?.value : null;
-        const newStatus = document.getElementById('edit-user-status')?.value;
+        const firstName   = document.getElementById('edit-user-firstname')?.value.trim();
+        const lastName    = document.getElementById('edit-user-lastname')?.value.trim();
+        const email       = document.getElementById('edit-user-email')?.value.trim();
+        const phoneNumber = document.getElementById('edit-user-phone')?.value.trim() || null;
+        const newRole     = isSiteAdmin ? document.getElementById('edit-user-role')?.value : null;
+        const newStatus   = document.getElementById('edit-user-status')?.value;
+        // School: get value from the select (empty string = remove affiliation, null = no change)
+        const schoolSelect = isSiteAdmin ? document.getElementById('school-select') : null;
+        const schoolId     = schoolSelect ? (schoolSelect.value || null) : undefined;
 
         if (!firstName || !lastName || !email) {
             UIComponents.showAlert('First name, last name, and email are required.', 'error');
@@ -752,18 +826,22 @@ class AdminDashboard {
         try {
             const calls = [];
 
-            // Profile update if name or email changed
+            // Profile update if any profile field changed
             const profileChanged =
-                firstName !== originalUser.first_name ||
-                lastName  !== originalUser.last_name  ||
-                email     !== originalUser.email;
+                firstName   !== originalUser.first_name  ||
+                lastName    !== originalUser.last_name   ||
+                email       !== originalUser.email       ||
+                phoneNumber !== (originalUser.phone_number || null) ||
+                (schoolId !== undefined && schoolId !== (originalUser.school_id || null));
 
             if (profileChanged) {
+                const profileBody = { firstName, lastName, email, phoneNumber };
+                if (isSiteAdmin) profileBody.schoolId = schoolId;
                 calls.push(
                     fetch(`/api/admin/users/${userId}/profile`, {
                         method: 'PUT',
                         headers,
-                        body: JSON.stringify({ firstName, lastName, email }),
+                        body: JSON.stringify(profileBody),
                     }).then(async r => {
                         if (!r.ok) {
                             const err = await r.json().catch(() => ({}));
@@ -906,6 +984,19 @@ class AdminDashboard {
                         <input type="email" id="new-user-email" class="form-control" required placeholder="Enter email address">
                     </div>
                     <div class="form-group">
+                        <label for="new-user-phone">Mobile Number</label>
+                        <input type="tel" id="new-user-phone" class="form-control" placeholder="+1 555 000 0000">
+                    </div>
+                    <div class="form-group">
+                        <label for="school-search-input">School Affiliation</label>
+                        <input type="text" id="school-search-input" class="form-control"
+                               placeholder="Type to search schools..." autocomplete="off">
+                        <select id="school-select" class="form-control" style="margin-top:0.5rem;">
+                            <option value="">-- No school / not affiliated --</option>
+                        </select>
+                        <small class="form-hint">Search then choose from the list, or leave blank if not affiliated with a school.</small>
+                    </div>
+                    <div class="form-group">
                         <label for="new-user-role">Role</label>
                         <select id="new-user-role" class="form-control" required>
                             <option value="">Select role...</option>
@@ -930,20 +1021,24 @@ class AdminDashboard {
             if (form) {
                 form.addEventListener('submit', (e) => this.handleCreateUser(e));
             }
+            // Wire school picker (no current school since creating new user)
+            this.initSchoolPicker(null, null);
         }
         UIComponents.showModal('user-detail-modal');
     }
 
     async handleCreateUser(e) {
         e.preventDefault();
-        const firstName = document.getElementById('new-user-firstname').value.trim();
-        const lastName = document.getElementById('new-user-lastname').value.trim();
-        const email = document.getElementById('new-user-email').value.trim();
+        const firstName    = document.getElementById('new-user-firstname').value.trim();
+        const lastName     = document.getElementById('new-user-lastname').value.trim();
+        const email        = document.getElementById('new-user-email').value.trim();
+        const phone        = document.getElementById('new-user-phone')?.value.trim() || null;
+        const schoolId     = document.getElementById('school-select')?.value || null;
         const selectedRole = document.getElementById('new-user-role').value;
-        const password = document.getElementById('new-user-password').value;
+        const password     = document.getElementById('new-user-password').value;
 
         if (!firstName || !lastName || !email || !selectedRole || !password) {
-            UIComponents.showAlert('Please fill in all fields', 'error');
+            UIComponents.showAlert('Please fill in all required fields', 'error');
             return;
         }
 
@@ -967,6 +1062,8 @@ class AdminDashboard {
                     lastName,
                     email,
                     password,
+                    phone,
+                    schoolId: schoolId || undefined,
                     accountType: registerAccountType,
                 }),
             });

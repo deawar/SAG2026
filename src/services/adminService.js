@@ -32,9 +32,13 @@ class AdminService {
   async getUserById(userId, adminId) {
     const admin = await this.verifyAdminAccess(adminId);
 
-    // Get user
+    // Get user (JOIN school name for display)
     const result = await pool.query(
-      'SELECT id, email, first_name, last_name, phone_number, role, school_id, account_status, created_at FROM users WHERE id = $1',
+      `SELECT u.id, u.email, u.first_name, u.last_name, u.phone_number, u.role,
+              u.school_id, s.name AS school_name, u.account_status, u.two_fa_enabled, u.created_at
+       FROM users u
+       LEFT JOIN schools s ON u.school_id = s.id
+       WHERE u.id = $1`,
       [userId]
     );
 
@@ -226,15 +230,15 @@ class AdminService {
   }
 
   /**
-   * Update user profile (name and email)
-   * RBAC: SITE_ADMIN (any user), SCHOOL_ADMIN (own school only)
+   * Update user profile (name, email, phone, school)
+   * RBAC: SITE_ADMIN (any user + can change school), SCHOOL_ADMIN (own school only, cannot change school)
    */
-  async updateUserProfile(userId, { firstName, lastName, email }, adminId) {
+  async updateUserProfile(userId, { firstName, lastName, email, phoneNumber, schoolId }, adminId) {
     const admin = await this.verifyAdminAccess(adminId);
 
     // Get current user for RBAC check and audit trail
     const userResult = await pool.query(
-      'SELECT id, first_name, last_name, email, school_id FROM users WHERE id = $1',
+      'SELECT id, first_name, last_name, email, phone_number, school_id FROM users WHERE id = $1',
       [userId]
     );
 
@@ -248,8 +252,14 @@ class AdminService {
       throw new Error('CROSS_SCHOOL_ACCESS_DENIED');
     }
 
+    // SCHOOL_ADMIN cannot reassign users to a different school
+    if (admin.role === 'SCHOOL_ADMIN' && schoolId !== undefined && schoolId !== user.school_id) {
+      throw new Error('INSUFFICIENT_PERMISSIONS');
+    }
+
     // Validate at least one field to update
-    if (!firstName && !lastName && !email) {
+    if (firstName === undefined && lastName === undefined && email === undefined &&
+        phoneNumber === undefined && schoolId === undefined) {
       throw new Error('NO_FIELDS_TO_UPDATE');
     }
 
@@ -264,13 +274,18 @@ class AdminService {
       }
     }
 
-    const newFirstName = firstName || user.first_name;
-    const newLastName  = lastName  || user.last_name;
-    const newEmail     = email     || user.email;
+    const newFirstName   = firstName   !== undefined ? firstName   : user.first_name;
+    const newLastName    = lastName    !== undefined ? lastName    : user.last_name;
+    const newEmail       = email       !== undefined ? email       : user.email;
+    const newPhoneNumber = phoneNumber !== undefined ? (phoneNumber || null) : user.phone_number;
+    // schoolId: null means "remove affiliation", undefined means "don't change"
+    const newSchoolId    = schoolId    !== undefined ? (schoolId || null)    : user.school_id;
 
     await pool.query(
-      'UPDATE users SET first_name = $1, last_name = $2, email = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4',
-      [newFirstName, newLastName, newEmail, userId]
+      `UPDATE users
+       SET first_name = $1, last_name = $2, email = $3, phone_number = $4, school_id = $5, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $6`,
+      [newFirstName, newLastName, newEmail, newPhoneNumber, newSchoolId, userId]
     );
 
     await this.logAdminAction(
@@ -278,8 +293,8 @@ class AdminService {
       'USER_PROFILE_UPDATED',
       'USER',
       userId,
-      { first_name: user.first_name, last_name: user.last_name, email: user.email },
-      { first_name: newFirstName, last_name: newLastName, email: newEmail },
+      { first_name: user.first_name, last_name: user.last_name, email: user.email, phone_number: user.phone_number, school_id: user.school_id },
+      { first_name: newFirstName, last_name: newLastName, email: newEmail, phone_number: newPhoneNumber, school_id: newSchoolId },
       'Admin updated user profile'
     );
 
