@@ -739,22 +739,107 @@ class AdminDashboard {
     /**
      * Edit auction
      */
-    editAuction(auctionId) {
+    async editAuction(auctionId) {
         const titleEl = document.getElementById('auction-modal-title');
         if (titleEl) titleEl.textContent = 'Edit Auction';
+
+        const form = document.getElementById('auction-form');
+        if (form) form.innerHTML = '<p class="loading-message">Loading auction data…</p>';
         UIComponents.showModal('auction-form-modal');
-        // Load auction data and populate form
-        fetch(`/api/admin/auctions/${auctionId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
-        })
-            .then(r => r.json())
-            .then(data => {
-                const form = document.getElementById('auction-form');
-                if (form && data.auction) {
-                    const titleInput = form.querySelector('input[name="auction-title"]');
-                    if (titleInput) titleInput.value = data.auction.title;
-                }
+
+        try {
+            const res  = await fetch(`/api/admin/auctions/${auctionId}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
             });
+            const data = await res.json();
+            const a    = data.auction;
+            if (!a || !form) return;
+
+            // Convert DB timestamps to datetime-local value (YYYY-MM-DDTHH:MM)
+            const toLocal = (iso) => iso ? iso.slice(0, 16) : '';
+
+            const isDraft = a.auction_status === 'DRAFT';
+            const readonlyAttr = isDraft ? '' : 'readonly';
+            const readonlyNote = isDraft ? '' : '<p class="form-help" style="color:var(--color-warning,orange);">Only DRAFT auctions can have their dates/details changed.</p>';
+
+            form.innerHTML = `
+                ${readonlyNote}
+                <div class="form-group">
+                    <label for="auction-title">Title <span aria-label="required">*</span></label>
+                    <input type="text" id="auction-title" name="auction-title" class="form-control"
+                           value="${this.escapeHtml(a.title || '')}" required ${readonlyAttr}>
+                </div>
+                <div class="form-group">
+                    <label for="auction-description">Description</label>
+                    <textarea id="auction-description" name="auction-description" class="form-control" rows="3"
+                              ${readonlyAttr}>${this.escapeHtml(a.description || '')}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>School</label>
+                    <p class="form-static">${this.escapeHtml(a.school_name || a.school_id || '—')}</p>
+                </div>
+                <div class="form-group">
+                    <label for="auction-start">Start Date &amp; Time <span aria-label="required">*</span></label>
+                    <input type="datetime-local" id="auction-start" name="auction-start" class="form-control"
+                           value="${toLocal(a.starts_at)}" required ${readonlyAttr}>
+                </div>
+                <div class="form-group">
+                    <label for="auction-end">End Date &amp; Time <span aria-label="required">*</span></label>
+                    <input type="datetime-local" id="auction-end" name="auction-end" class="form-control"
+                           value="${toLocal(a.ends_at)}" required ${readonlyAttr}>
+                </div>
+                <div style="display:flex; gap:1rem; justify-content:flex-end; margin-top:1rem;">
+                    <button type="button" class="btn btn-secondary" onclick="UIComponents.hideModal('auction-form-modal')">Cancel</button>
+                    ${isDraft ? `<button type="submit" class="btn btn-primary">Save Changes</button>` : ''}
+                </div>
+            `;
+
+            if (isDraft) {
+                form.onsubmit = (e) => this.handleUpdateAuction(e, auctionId);
+            }
+        } catch (err) {
+            console.error('Edit auction load error:', err);
+            if (form) form.innerHTML = '<p style="color:var(--color-error,red)">Failed to load auction data.</p>';
+        }
+    }
+
+    async handleUpdateAuction(e, auctionId) {
+        e.preventDefault();
+        const title       = document.getElementById('auction-title')?.value.trim();
+        const description = document.getElementById('auction-description')?.value.trim();
+        const startTime   = document.getElementById('auction-start')?.value;
+        const endTime     = document.getElementById('auction-end')?.value;
+
+        if (!title || !startTime || !endTime) {
+            UIComponents.showAlert('Please fill in all required fields', 'error');
+            return;
+        }
+        if (new Date(endTime) <= new Date(startTime)) {
+            UIComponents.showAlert('End time must be after start time', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/auctions/${auctionId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                },
+                body: JSON.stringify({ title, description: description || undefined, startTime, endTime }),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                UIComponents.showAlert(data.message || 'Failed to update auction', 'error');
+                return;
+            }
+            UIComponents.hideModal('auction-form-modal');
+            UIComponents.createToast({ message: 'Auction updated', type: 'success' });
+            this.loadAuctions();
+        } catch (err) {
+            console.error('Update auction error:', err);
+            UIComponents.showAlert('An error occurred. Please try again.', 'error');
+        }
     }
 
     /**
