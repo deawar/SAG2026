@@ -11,12 +11,12 @@ const authMiddleware = require('../middleware/authMiddleware');
 /**
  * POST /api/auctions
  * Create a new auction
- * Access: site_admin, school_admin only
+ * Access: site_admin, school_admin, teacher
  */
 router.post(
   '/',
   authMiddleware.verifyToken,
-  authMiddleware.verifyRole('SITE_ADMIN', 'SCHOOL_ADMIN'),
+  authMiddleware.verifyRole('SITE_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'),
   (req, res) => auctionController.createAuction(req, res)
 );
 
@@ -81,12 +81,12 @@ router.get(
 /**
  * PUT /api/auctions/:auctionId
  * Update auction details (draft auctions only)
- * Access: site_admin, school_admin only
+ * Access: site_admin, school_admin, teacher (own auctions only)
  */
 router.put(
   '/:auctionId',
   authMiddleware.verifyToken,
-  authMiddleware.verifyRole('SITE_ADMIN', 'SCHOOL_ADMIN'),
+  authMiddleware.verifyRole('SITE_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'),
   (req, res) => auctionController.updateAuction(req, res)
 );
 

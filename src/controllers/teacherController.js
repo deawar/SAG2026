@@ -7,6 +7,7 @@
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../utils/logger');
 const ValidationUtils = require('../utils/validationUtils');
+const { pool } = require('../models/index');
 
 class TeacherController {
     /**
@@ -185,16 +186,24 @@ class TeacherController {
     static async getAuctions(req, res) {
         try {
             const userId = req.user.id;
-            const schoolId = req.user.schoolId;
 
-            // In production, fetch from database
-            // const auctions = await AuctionModel.getBySchoolAndCreator(schoolId, userId);
-
-            const auctions = [];
+            const result = await pool.query(
+                `SELECT a.id, a.title, a.description, a.auction_status,
+                        a.starts_at, a.ends_at, a.created_at,
+                        COUNT(b.id)          AS bid_count,
+                        MAX(b.bid_amount)    AS current_high_bid
+                 FROM auctions a
+                 LEFT JOIN bids b ON b.auction_id = a.id AND b.bid_status = 'ACTIVE'
+                 WHERE a.created_by_user_id = $1
+                   AND a.deleted_at IS NULL
+                 GROUP BY a.id
+                 ORDER BY a.created_at DESC`,
+                [userId]
+            );
 
             return res.json({
                 success: true,
-                data: auctions
+                data: result.rows
             });
 
         } catch (error) {
