@@ -307,10 +307,18 @@ class AuctionController {
       });
 
       // ===== CRITICAL: Apply role-based visibility filtering =====
-      const filteredAuctions = roleHierarchyUtils.filterAuctionsByRole(
-        req.user,
-        result.auctions || []
-      );
+      let filteredAuctions;
+      if (req.user) {
+        filteredAuctions = roleHierarchyUtils.filterAuctionsByRole(
+          req.user,
+          result.auctions || []
+        );
+      } else {
+        // Unauthenticated public access: show only APPROVED/LIVE auctions
+        filteredAuctions = (result.auctions || []).filter(a =>
+          ['APPROVED', 'LIVE'].includes(a.auction_status || a.status)
+        );
+      }
 
       return res.status(200).json({
         success: true,

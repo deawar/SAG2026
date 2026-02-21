@@ -24,11 +24,11 @@ router.post(
  * GET /api/auctions
  * List auctions with filtering and pagination
  * Query params: status, schoolId, limit, offset, sortBy, sortOrder
- * Access: Authenticated users only
+ * Access: Public (optional auth — authenticated users get role-filtered results)
  */
 router.get(
   '/',
-  authMiddleware.verifyToken,
+  authMiddleware.optionalVerifyToken,
   async (req, res) => {
     await auctionController.listAuctions(req, res);
   }
