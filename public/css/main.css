@@ -936,8 +936,9 @@ textarea.form-control {
     bottom: 0;
     background-color: rgba(0, 0, 0, 0.5);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
+    overflow-y: auto;
     z-index: var(--z-modal-backdrop);
     padding: var(--spacing-lg);
 }
@@ -946,12 +947,12 @@ textarea.form-control {
     background-color: white;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-xl);
-    max-height: 90vh;
-    overflow-y: auto;
+    overflow: visible;
     padding: var(--spacing-2xl);
     position: relative;
     width: 100%;
     max-width: 500px;
+    margin: auto 0;
 }
 
 .modal-medium {
