@@ -1169,10 +1169,8 @@ class AdminDashboard {
                 </div>
             `;
 
-            // Remove old listener and add new one
-            const newForm = form.cloneNode(true);
-            form.parentNode.replaceChild(newForm, form);
-            newForm.addEventListener('submit', (e) => this.handleCreateAuction(e));
+            // Replace any previous submit handler (avoids duplicate-listener buildup)
+            form.onsubmit = (e) => this.handleCreateAuction(e);
 
             // Wire school picker for SITE_ADMIN
             if (isSiteAdmin) {
