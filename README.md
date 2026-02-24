@@ -1,15 +1,16 @@
 # Silent Auction Gallery
 
-A web application for managing and conducting silent auctions with an interactive gallery interface.
+A web application that empowers school art programs to raise funds through silent auctions. Teachers create auctions showcasing student artwork, and the proceeds benefit whatever cause the teacher deems most valuable — whether that's the school's own art program, classroom supplies, a field trip, or a charity chosen by the teacher and the students contributing their work.
 
 ## Project Overview
 
 This application provides a platform for:
-- User authentication and management
-- Auction creation and management
-- Bidding on auction items
-- Real-time auction updates
-- Auction history and analytics
+- School art programs to host silent auctions of student artwork
+- Teachers to create and manage auctions, directing proceeds to the school or a chosen charity
+- Students to contribute artwork and participate in the fundraising process
+- Bidders (parents, community members, supporters) to browse and bid on student artwork
+- Real-time bidding with live auction updates
+- Multi-school support with role-based access for site administrators, school administrators, teachers, students, and bidders
 
 ## Getting Started
 
