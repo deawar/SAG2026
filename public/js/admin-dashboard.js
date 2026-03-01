@@ -1119,11 +1119,15 @@ class AdminDashboard {
                         </div>
                         ${mfaSection}
                         <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
-                            <button type="button" class="btn btn-secondary" onclick="UIComponents.hideModal('user-detail-modal')">Cancel</button>
+                            <button type="button" class="btn btn-secondary" id="cancel-edit-user-btn">Cancel</button>
                             <button type="submit" class="btn btn-primary">Save Changes</button>
                         </div>
                     </form>
                 `;
+
+                document.getElementById('cancel-edit-user-btn')?.addEventListener('click', () => {
+                    UIComponents.hideModal('user-detail-modal');
+                });
 
                 const form = document.getElementById('edit-user-form');
                 if (form) {
@@ -1362,11 +1366,14 @@ class AdminDashboard {
                         <input type="password" id="new-user-password" class="form-control" required placeholder="12+ chars, upper, lower, number, special">
                     </div>
                     <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
-                        <button type="button" class="btn btn-secondary" onclick="UIComponents.hideModal('user-detail-modal')">Cancel</button>
+                        <button type="button" class="btn btn-secondary" id="cancel-create-user-btn">Cancel</button>
                         <button type="submit" class="btn btn-primary">Create User</button>
                     </div>
                 </form>
             `;
+            document.getElementById('cancel-create-user-btn')?.addEventListener('click', () => {
+                UIComponents.hideModal('user-detail-modal');
+            });
             const form = document.getElementById('create-user-form');
             if (form) {
                 form.addEventListener('submit', (e) => this.handleCreateUser(e));
