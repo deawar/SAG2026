@@ -1306,7 +1306,7 @@ class AdminDashboard {
      */
     async resetUserPassword(userId) {
         const confirmed = await UIComponents.showConfirmation(
-            'Generate a password reset link for this user? The link will be shown to you so you can share it with them.',
+            'Send a password reset email to this user?',
             'Reset User Password'
         );
         if (!confirmed) return;
@@ -1320,24 +1320,28 @@ class AdminDashboard {
             const data = await response.json().catch(() => ({}));
 
             if (!response.ok) {
-                UIComponents.showAlert(data.message || 'Failed to generate reset link.', 'error');
+                UIComponents.showAlert(data.message || 'Failed to send password reset.', 'error');
                 return;
             }
 
-            // Show the reset URL in a modal so the admin can copy it
-            const alertContainer = document.getElementById('alert-container');
-            if (alertContainer) {
-                alertContainer.innerHTML = `
-                    <div class="alert alert-info" role="alert" style="word-break:break-all;">
-                        <strong>Password reset link for ${this.escapeHtml(data.userEmail)}:</strong><br>
-                        <code style="user-select:all;">${this.escapeHtml(data.resetUrl)}</code><br>
-                        <small>Expires in 24 hours. Share this link with the user.</small>
-                        <button type="button" class="btn btn-sm btn-primary" style="margin-top:0.5rem;"
-                            onclick="navigator.clipboard.writeText('${data.resetUrl.replace(/'/g, "\\'")}').then(() => this.textContent='Copied!')">
-                            Copy Link
-                        </button>
-                    </div>`;
-                alertContainer.scrollIntoView({ behavior: 'smooth' });
+            if (data.emailSent) {
+                UIComponents.createToast({ message: `Password reset email sent to ${data.userEmail}.`, type: 'success' });
+            } else {
+                // Email failed — show fallback URL so admin can share it manually
+                const alertContainer = document.getElementById('alert-container');
+                if (alertContainer) {
+                    alertContainer.innerHTML = `
+                        <div class="alert alert-warning" role="alert" style="word-break:break-all;">
+                            <strong>Email delivery failed for ${this.escapeHtml(data.userEmail)}.</strong><br>
+                            Share this link with the user manually — it expires in 24 hours:<br>
+                            <code style="user-select:all;">${this.escapeHtml(data.resetUrl)}</code>
+                            <button type="button" class="btn btn-sm btn-primary" style="margin-top:0.5rem;"
+                                onclick="navigator.clipboard.writeText('${(data.resetUrl || '').replace(/'/g, "\\'")}').then(() => this.textContent='Copied!')">
+                                Copy Link
+                            </button>
+                        </div>`;
+                    alertContainer.scrollIntoView({ behavior: 'smooth' });
+                }
             }
         } catch (error) {
             console.error('resetUserPassword error:', error);
