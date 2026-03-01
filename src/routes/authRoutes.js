@@ -37,7 +37,7 @@ module.exports = (db) => {
     jwtService
   });
   const rbacService = new RBACService();
-  const sessionService = new SessionService(db);
+  const sessionService = new SessionService({ db });
   
   // Create auth service object to pass to controller
   const authService = {
