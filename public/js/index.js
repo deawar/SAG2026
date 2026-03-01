@@ -248,7 +248,7 @@ function createAuctionCard(auction) {
     const status = getAuctionStatus(auction);
 
     card.innerHTML = `
-        <img src="${auction.artwork?.image_url || '/images/placeholder.jpg'}" 
+        <img src="${auction.artwork?.image_url || '/images/placeholder.svg'}" 
              alt="${auction.artwork?.title || 'Artwork'}"
              class="auction-image">
         <div class="auction-body">
