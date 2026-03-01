@@ -689,27 +689,33 @@ class AuthPages {
             this.showStep(form, 3);
             this.updateProgressIndicator();
 
-            // Show a contextual message above the step
-            const step3 = form.querySelector('[data-step="3"]');
-            if (step3) {
+            // Disable hidden inputs in steps 1 & 2 so the browser skips them during validation
+            form.querySelectorAll('#step-1-fieldset input, #step-2-fieldset input').forEach(input => {
+                input.disabled = true;
+            });
+
+            // Show a contextual message above step 3
+            const step3Fieldset = document.getElementById('step-3-fieldset');
+            if (step3Fieldset) {
                 const msg = document.createElement('p');
                 msg.className = 'help-text';
                 msg.textContent = 'Your reset link is valid. Enter your new password below.';
-                step3.prepend(msg);
+                step3Fieldset.prepend(msg);
             }
 
-            // Wire the Next button on step 3 to submit via token
-            const nextBtn = form.querySelector('.btn-next');
-            nextBtn?.addEventListener('click', () => {
-                const newPass = form.querySelector('input[name="new-password"]');
-                const confirmPass = form.querySelector('input[name="confirm-password"]');
+            // Wire the Reset Password button — prevent native form submission, use JS instead
+            const resetBtn = document.getElementById('reset-password-btn');
+            resetBtn?.addEventListener('click', (e) => {
+                e.preventDefault();
+                const newPass = form.querySelector('input[name="new_password"]');
+                const confirmPass = form.querySelector('input[name="confirm_new_password"]');
                 const errors = {};
-                if (!newPass?.value) errors.newpassword = 'Password is required';
+                if (!newPass?.value) errors.new_password = 'Password is required';
                 else {
                     const strength = UIComponents.validatePassword(newPass.value);
-                    if (strength.score < 2) errors.newpassword = 'Password too weak';
+                    if (strength.score < 2) errors.new_password = 'Password too weak';
                 }
-                if (confirmPass?.value !== newPass?.value) errors.confirmpass = 'Passwords do not match';
+                if (confirmPass?.value !== newPass?.value) errors.confirm_new_password = 'Passwords do not match';
                 if (Object.keys(errors).length === 0) {
                     this.submitPasswordResetWithToken(resetToken, newPass.value);
                 } else {
@@ -718,7 +724,7 @@ class AuthPages {
             });
 
             // Password strength meter
-            const passwordInput = form.querySelector('input[name="new-password"]');
+            const passwordInput = form.querySelector('input[name="new_password"]');
             if (passwordInput) {
                 passwordInput.addEventListener('input', () => {
                     const meter = document.querySelector('.password-strength-meter');
