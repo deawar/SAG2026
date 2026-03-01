@@ -521,6 +521,24 @@ a:focus {
     color: var(--color-primary-dark);
 }
 
+/* Small Button */
+.btn-sm {
+    padding: 0.25rem 0.6rem;
+    font-size: var(--font-size-sm);
+    border-radius: var(--radius-sm);
+}
+
+/* Warning Button */
+.btn-warning {
+    background-color: var(--color-warning);
+    color: white;
+}
+
+.btn-warning:hover {
+    background-color: #e65100;
+    box-shadow: var(--shadow-md);
+}
+
 /* ===== Forms ===== */
 .form-group {
     margin-bottom: var(--spacing-lg);
@@ -1019,11 +1037,31 @@ tbody tr:hover {
     background-color: var(--color-lightest-gray);
 }
 
-.admin-table {
+/* ===== Table Wrapper — enables horizontal scroll when table is wider than viewport ===== */
+.table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     margin-top: var(--spacing-lg);
     border-radius: var(--radius-lg);
-    overflow: hidden;
     box-shadow: var(--shadow-sm);
+}
+
+.admin-table {
+    min-width: 900px; /* prevents column squishing; wrapper scrolls instead */
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+/* Tighter cell padding so 8-column tables fit comfortably */
+.admin-table th,
+.admin-table td {
+    padding: var(--spacing-sm) var(--spacing-md);
+}
+
+/* Prevent action buttons from wrapping to multiple lines */
+.admin-table th:last-child,
+.admin-table td:last-child {
+    white-space: nowrap;
 }
 
 /* ===== Footer ===== */
