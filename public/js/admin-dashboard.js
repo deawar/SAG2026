@@ -39,6 +39,7 @@ class AdminDashboard {
      */
     async loadDashboardData() {
         const headers = { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` };
+        this.load2FAStatus();
         try {
             const [statsRes, healthRes, activityRes] = await Promise.all([
                 fetch('/api/admin/dashboard/stats', { headers }),
@@ -1625,6 +1626,73 @@ class AdminDashboard {
             "'": '&#039;',
         };
         return text.replace(/[&<>"']/g, (char) => map[char]);
+    }
+
+    /**
+     * Load and display current 2FA status for the logged-in admin
+     */
+    async load2FAStatus() {
+        const statusText = document.getElementById('admin-2fa-status-text');
+        const enableBtn = document.getElementById('admin-enable-2fa-btn');
+        const disableBtn = document.getElementById('admin-disable-2fa-btn');
+
+        try {
+            const response = await fetch('/api/user/profile', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
+            });
+            if (!response.ok) return;
+            const data = await response.json();
+            const is2FAEnabled = data.data?.twoFactorEnabled || data.data?.two_fa_enabled;
+
+            if (statusText) {
+                statusText.textContent = is2FAEnabled
+                    ? '2FA is currently enabled. Your account is protected.'
+                    : '2FA is currently disabled. Enable it to add an extra layer of security.';
+            }
+            if (enableBtn) enableBtn.style.display = is2FAEnabled ? 'none' : 'inline-block';
+            if (disableBtn) disableBtn.style.display = is2FAEnabled ? 'inline-block' : 'none';
+
+            // Wire up buttons (only once)
+            if (enableBtn && !enableBtn.dataset.listenerAttached) {
+                enableBtn.dataset.listenerAttached = 'true';
+                enableBtn.addEventListener('click', () => {
+                    window.location.href = '/2fa-setup.html';
+                });
+            }
+            if (disableBtn && !disableBtn.dataset.listenerAttached) {
+                disableBtn.dataset.listenerAttached = 'true';
+                disableBtn.addEventListener('click', () => this.disable2FA());
+            }
+        } catch (error) {
+            if (statusText) statusText.textContent = 'Could not load 2FA status.';
+        }
+    }
+
+    /**
+     * Disable 2FA for the logged-in admin
+     */
+    async disable2FA() {
+        const confirmed = window.confirm('Are you sure you want to disable 2FA on your account?');
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch('/api/auth/2fa/disable', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                },
+            });
+            if (response.ok) {
+                UIComponents.showAlert && UIComponents.showAlert('2FA disabled successfully.', 'success', 3000);
+                this.load2FAStatus();
+            } else {
+                const data = await response.json();
+                alert(data.message || 'Failed to disable 2FA.');
+            }
+        } catch (error) {
+            alert('Connection error while disabling 2FA.');
+        }
     }
 }
 

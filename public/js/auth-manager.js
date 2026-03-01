@@ -67,6 +67,7 @@ class AuthManager {
                 this.require2FA = true;
                 localStorage.setItem('2fa_required', 'true');
                 localStorage.setItem('2fa_token', response.data?.tempToken || response.temp_token);
+                localStorage.setItem('2fa_user_id', response.data?.userId || '');
                 return { success: false, requires2FA: true };
             }
 

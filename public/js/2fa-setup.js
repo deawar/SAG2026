@@ -14,25 +14,29 @@ class TwoFactorAuthSetup {
      * Initialize 2FA setup page
      */
     async init() {
-        console.log('Initializing 2FA setup...');
-        this.setupEventListeners();
-        
         // Redirect if not authenticated
         if (!authManager.getToken()) {
             window.location.href = '/';
             return;
         }
+        this.setupEventListeners();
+        // Auto-generate QR code on page load so it's visible in step 1
+        await this.startSetup();
     }
 
     /**
      * Setup event listeners
      */
     setupEventListeners() {
-        // Next button (Step 1 to Step 2)
+        // Next button (Step 1 to Step 2) - QR is already shown, just navigate
         const nextBtn = document.getElementById('next-2fa-btn');
         if (nextBtn) {
-            nextBtn.addEventListener('click', async () => {
-                await this.startSetup();
+            nextBtn.addEventListener('click', () => {
+                if (!this.currentSecret) {
+                    UIComponents.showAlert('QR code is still loading, please wait...', 'info', 3000);
+                    return;
+                }
+                this.goToStep2();
             });
         }
 
@@ -60,11 +64,17 @@ class TwoFactorAuthSetup {
             });
         }
 
-        // Complete button (after backup codes)
+        // Complete button (after backup codes) - redirect to the right dashboard
         const completeBtn = document.getElementById('complete-2fa-btn');
         if (completeBtn) {
             completeBtn.addEventListener('click', () => {
-                window.location.href = '/user-dashboard.html';
+                const user = authManager.getUser();
+                const adminRoles = ['SUPER_ADMIN', 'SITE_ADMIN', 'SCHOOL_ADMIN'];
+                if (user && adminRoles.includes(user.role)) {
+                    window.location.href = '/admin-dashboard.html';
+                } else {
+                    window.location.href = '/user-dashboard.html';
+                }
             });
         }
 
@@ -231,17 +241,14 @@ class TwoFactorAuthSetup {
     }
 
     /**
-     * Go to step 3 (backup codes)
+     * Go to step 3 (success / backup codes already shown in step 2)
      */
     goToStep3() {
-        const step2 = document.getElementById('step-2-fieldset');
-        const step3 = document.getElementById('step-3-fieldset');
+        const form = document.getElementById('2fa-form');
+        const successSection = document.getElementById('success-section');
 
-        if (step2) step2.style.display = 'none';
-        if (step3) step3.style.display = 'block';
-
-        // Display backup codes
-        this.displayBackupCodes();
+        if (form) form.style.display = 'none';
+        if (successSection) successSection.style.display = 'block';
     }
 
     /**

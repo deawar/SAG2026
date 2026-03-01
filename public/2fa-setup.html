@@ -103,10 +103,10 @@
 
                         <!-- Verification Code Input -->
                         <div class="form-group">
-                            <label for="verification-code">Verification Code <span aria-label="required">*</span></label>
-                            <input 
-                                type="text" 
-                                id="verification-code" 
+                            <label for="2fa-code-input">Verification Code <span aria-label="required">*</span></label>
+                            <input
+                                type="text"
+                                id="2fa-code-input"
                                 name="verification_code"
                                 class="form-control verification-input" 
                                 placeholder="000000"
@@ -158,7 +158,7 @@
 
                         <div class="form-actions">
                             <button type="button" class="btn btn-secondary" id="back-2fa-btn">Back</button>
-                            <button type="submit" class="btn btn-primary btn-large btn-block" id="enable-2fa-btn">
+                            <button type="button" class="btn btn-primary btn-large btn-block" id="verify-2fa-btn">
                                 Enable 2FA
                             </button>
                         </div>
@@ -173,7 +173,7 @@
                         <p>Your account is now more secure. You'll need to enter a code from your authenticator app when you log in.</p>
                         
                         <div class="success-actions">
-                            <a href="/user-dashboard.html" class="btn btn-primary btn-large btn-block">Go to Dashboard</a>
+                            <button type="button" id="complete-2fa-btn" class="btn btn-primary btn-large btn-block">Go to Dashboard</button>
                         </div>
                     </div>
                 </div>
