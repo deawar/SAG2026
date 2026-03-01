@@ -307,7 +307,7 @@ class AdminController {
 
       const result = await adminService.adminResetUserPassword(userId, adminId);
 
-      const baseUrl = process.env.SITE_URL || `${req.protocol}://${req.get('host')}`;
+      const baseUrl = process.env.FRONTEND_URL || process.env.SITE_URL || `${req.protocol}://${req.get('host')}`;
       const resetUrl = `${baseUrl}/password-reset.html?token=${result.resetToken}`;
 
       let emailSent = false;
