@@ -79,4 +79,42 @@ router.delete('/tokens/:tokenId', async (req, res, next) => {
     }
 });
 
+/**
+ * GET /api/teacher/teacher-info
+ * Get teacher's display name and school name for email attribution
+ */
+router.get('/teacher-info', async (req, res, next) => {
+    try {
+        return await TeacherController.getTeacherInfo(req, res);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * PUT /api/teacher/tokens/:tokenId
+ * Update student name/email on an unused token
+ * Body: { studentName, studentEmail }
+ */
+router.put('/tokens/:tokenId', async (req, res, next) => {
+    try {
+        return await TeacherController.updateToken(req, res);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * POST /api/teacher/send-invites
+ * Send registration invite emails to selected students
+ * Body: { tokenIds: [...] }
+ */
+router.post('/send-invites', async (req, res, next) => {
+    try {
+        return await TeacherController.sendInvites(req, res);
+    } catch (error) {
+        next(error);
+    }
+});
+
 module.exports = router;

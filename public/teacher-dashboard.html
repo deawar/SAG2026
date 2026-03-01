@@ -110,17 +110,24 @@
                         <!-- Student Registration Links -->
                         <div class="card" id="student-links-card" style="display:none;">
                             <h3>Student Registration Links</h3>
-                            <p>Share these links with your students. Each link is unique to that student.</p>
-                            
+                            <p>Edit names or emails if needed, save changes, then send invites directly from here.</p>
+
+                            <div id="student-actions" style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;">
+                                <button id="save-changes-btn" class="btn btn-secondary" type="button">Save Changes</button>
+                                <button id="send-selected-btn" class="btn btn-primary" type="button">Send Selected Invites</button>
+                                <button id="send-all-btn" class="btn btn-primary" type="button">Send All Invites</button>
+                            </div>
+
                             <div class="table-wrapper">
                                 <table class="data-table" role="table" aria-label="Student registration links">
                                     <thead>
                                         <tr>
+                                            <th scope="col"><input type="checkbox" id="select-all-students" aria-label="Select all students"></th>
                                             <th scope="col">Student Name</th>
                                             <th scope="col">Email</th>
                                             <th scope="col">Registration Link</th>
                                             <th scope="col">Status</th>
-                                            <th scope="col">Actions</th>
+                                            <th scope="col">Copy</th>
                                         </tr>
                                     </thead>
                                     <tbody id="student-links-tbody">
