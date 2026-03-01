@@ -283,7 +283,7 @@ class EmailProvider {
       this.transporter = nodemailer.createTransport({
         host: this.config.host,
         port: this.config.port,
-        secure: this.config.secure !== false,
+        secure: this.config.secure === true,  // true only for port 465 (SSL); false = STARTTLS (port 587)
         auth: {
           user: this.config.user,
           pass: this.config.password
