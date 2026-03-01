@@ -10,11 +10,12 @@ const AdminService = require('../services/adminService');
 const adminService = new AdminService();
 const { EmailProvider, EmailTemplateService } = require('../services/notificationService');
 
+const _smtpPort = parseInt(process.env.SMTP_PORT) || 587;
 const emailProvider = new EmailProvider({
   provider: 'smtp',
   host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT) || 587,
-  secure: process.env.SMTP_SECURE === 'true',
+  port: _smtpPort,
+  secure: _smtpPort === 465,  // true only for port 465 (SSL); port 587 uses STARTTLS
   user: process.env.SMTP_USER,
   password: process.env.SMTP_PASSWORD,
   fromEmail: process.env.MAIL_FROM || process.env.SMTP_USER
