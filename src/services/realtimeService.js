@@ -4,6 +4,7 @@
  */
 
 const WebSocket = require('ws');
+const jwt = require('jsonwebtoken');
 
 class RealtimeService {
   constructor() {
@@ -84,15 +85,36 @@ class RealtimeService {
 
   /**
    * Handle authentication message
+   * Accepts { type: 'authenticate', payload: { token } } from websocket-client.js
    * @private
    */
   _handleAuthenticate(ws, data) {
-    const userId = data.userId;
+    const token = data.payload?.token || data.token;
+
+    if (!token) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: 'Authentication token required'
+      }));
+      return;
+    }
+
+    let userId;
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET, { algorithms: ['HS256'] });
+      userId = decoded.sub;
+    } catch (err) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: 'Invalid or expired authentication token'
+      }));
+      return;
+    }
 
     if (!userId) {
       ws.send(JSON.stringify({
         type: 'error',
-        message: 'User ID required for authentication'
+        message: 'User ID not found in token'
       }));
       return;
     }
@@ -135,8 +157,10 @@ class RealtimeService {
       return;
     }
 
-    const { auctionId, artworkId } = data;
-    const resourceId = auctionId || artworkId;
+    // Accept both direct format ({ auctionId }) and payload format ({ payload: { resource_id } })
+    const auctionId = data.auctionId || (data.payload?.resource_type === 'auction' ? data.payload?.resource_id : undefined);
+    const artworkId = data.artworkId || (data.payload?.resource_type === 'artwork' ? data.payload?.resource_id : undefined);
+    const resourceId = auctionId || artworkId || data.payload?.resource_id;
 
     if (!resourceId) {
       ws.send(JSON.stringify({
@@ -176,8 +200,9 @@ class RealtimeService {
       return;
     }
 
-    const { auctionId, artworkId } = data;
-    const resourceId = auctionId || artworkId;
+    const auctionId = data.auctionId || (data.payload?.resource_type === 'auction' ? data.payload?.resource_id : undefined);
+    const artworkId = data.artworkId || (data.payload?.resource_type === 'artwork' ? data.payload?.resource_id : undefined);
+    const resourceId = auctionId || artworkId || data.payload?.resource_id;
 
     if (!resourceId) {
       ws.send(JSON.stringify({
