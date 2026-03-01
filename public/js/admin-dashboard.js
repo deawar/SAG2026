@@ -569,9 +569,11 @@ class AdminDashboard {
                 <td class="col-hide-md">${this.escapeHtml(user.phone_number || '—')}</td>
                 <td class="col-hide-md">${this.escapeHtml(user.school_name || '—')}</td>
                 <td class="col-hide-md">${user.total_bids || 0}</td>
-                <td>
+                <td style="white-space:nowrap;">
                     <button class="btn btn-sm btn-primary" data-edit-user="${user.id}">Edit</button>
-                    <button class="btn btn-sm btn-danger" data-ban-user="${user.id}">Ban</button>
+                    <button class="btn btn-sm btn-warning" data-reset-pw-user="${user.id}" title="Generate password reset link">Reset PW</button>
+                    <button class="btn btn-sm btn-danger" data-ban-user="${user.id}" title="Suspend account">Suspend</button>
+                    ${currentUser && currentUser.role === 'SITE_ADMIN' ? `<button class="btn btn-sm btn-danger" data-delete-user="${user.id}" title="Permanently delete account">Delete</button>` : ''}
                 </td>
             `;
             tbody.appendChild(row);
@@ -580,8 +582,16 @@ class AdminDashboard {
                 this.editUser(user.id);
             });
 
+            row.querySelector(`[data-reset-pw-user]`)?.addEventListener('click', () => {
+                this.resetUserPassword(user.id);
+            });
+
             row.querySelector(`[data-ban-user]`)?.addEventListener('click', () => {
                 this.banUser(user.id);
+            });
+
+            row.querySelector(`[data-delete-user]`)?.addEventListener('click', () => {
+                this.deleteUser(user.id);
             });
         });
     }
@@ -1085,7 +1095,10 @@ class AdminDashboard {
                         <label>Two-Factor Authentication</label>
                         <p class="form-static" style="display:flex; align-items:center; gap:0.75rem;">
                             <span class="badge badge-${mfaEnabled ? 'success' : 'default'}">${mfaEnabled ? 'Enabled' : 'Disabled'}</span>
-                            ${mfaEnabled ? `<button type="button" class="btn btn-sm btn-danger" id="reset-mfa-btn">Reset MFA</button>` : ''}
+                            <button type="button" class="btn btn-sm btn-danger" id="reset-mfa-btn"
+                                ${!mfaEnabled ? 'disabled title="2FA is already disabled"' : 'title="Disable 2FA for this user"'}>
+                                Disable 2FA
+                            </button>
                         </p>
                     </div>` : '';
 
@@ -1118,8 +1131,9 @@ class AdminDashboard {
                             </select>
                         </div>
                         ${mfaSection}
-                        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+                        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem; flex-wrap: wrap;">
                             <button type="button" class="btn btn-secondary" id="cancel-edit-user-btn">Cancel</button>
+                            <button type="button" class="btn btn-warning" id="modal-reset-pw-btn">Send Password Reset</button>
                             <button type="submit" class="btn btn-primary">Save Changes</button>
                         </div>
                     </form>
@@ -1127,6 +1141,11 @@ class AdminDashboard {
 
                 document.getElementById('cancel-edit-user-btn')?.addEventListener('click', () => {
                     UIComponents.hideModal('user-detail-modal');
+                });
+
+                document.getElementById('modal-reset-pw-btn')?.addEventListener('click', () => {
+                    UIComponents.hideModal('user-detail-modal');
+                    this.resetUserPassword(userId);
                 });
 
                 const form = document.getElementById('edit-user-form');
@@ -1277,6 +1296,85 @@ class AdminDashboard {
         } catch (error) {
             console.error('handleResetMFA error:', error);
             UIComponents.showAlert('An error occurred while resetting MFA.', 'error');
+        }
+    }
+
+    /**
+     * Admin-triggered password reset — generates a reset link and shows it to the admin
+     */
+    async resetUserPassword(userId) {
+        const confirmed = await UIComponents.showConfirmation(
+            'Generate a password reset link for this user? The link will be shown to you so you can share it with them.',
+            'Reset User Password'
+        );
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch(`/api/admin/users/${userId}/reset-password`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                UIComponents.showAlert(data.message || 'Failed to generate reset link.', 'error');
+                return;
+            }
+
+            // Show the reset URL in a modal so the admin can copy it
+            const alertContainer = document.getElementById('alert-container');
+            if (alertContainer) {
+                alertContainer.innerHTML = `
+                    <div class="alert alert-info" role="alert" style="word-break:break-all;">
+                        <strong>Password reset link for ${this.escapeHtml(data.userEmail)}:</strong><br>
+                        <code style="user-select:all;">${this.escapeHtml(data.resetUrl)}</code><br>
+                        <small>Expires in 24 hours. Share this link with the user.</small>
+                        <button type="button" class="btn btn-sm btn-primary" style="margin-top:0.5rem;"
+                            onclick="navigator.clipboard.writeText('${data.resetUrl.replace(/'/g, "\\'")}').then(() => this.textContent='Copied!')">
+                            Copy Link
+                        </button>
+                    </div>`;
+                alertContainer.scrollIntoView({ behavior: 'smooth' });
+            }
+        } catch (error) {
+            console.error('resetUserPassword error:', error);
+            UIComponents.showAlert('An error occurred.', 'error');
+        }
+    }
+
+    /**
+     * Permanently delete a user account (SITE_ADMIN only)
+     */
+    async deleteUser(userId) {
+        const confirmed = await UIComponents.showConfirmation(
+            'PERMANENTLY delete this user account? This cannot be undone.',
+            'Delete User Account'
+        );
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch(`/api/admin/users/${userId}/permanent`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ reason: 'Admin permanent delete' }),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                UIComponents.showAlert(data.message || 'Failed to delete user.', 'error');
+                return;
+            }
+
+            UIComponents.createToast({ message: 'User account permanently deleted.', type: 'success' });
+            this.loadUsers();
+        } catch (error) {
+            console.error('deleteUser error:', error);
+            UIComponents.showAlert('An error occurred.', 'error');
         }
     }
 

@@ -23,6 +23,8 @@ class AdminController {
     this.updateUserProfile = this.updateUserProfile.bind(this);
     this.updateUserStatus = this.updateUserStatus.bind(this);
     this.resetUserMFA = this.resetUserMFA.bind(this);
+    this.deleteUser = this.deleteUser.bind(this);
+    this.resetUserPassword = this.resetUserPassword.bind(this);
     this.getAuctionById = this.getAuctionById.bind(this);
     this.listAuctionsByStatus = this.listAuctionsByStatus.bind(this);
     this.approveAuction = this.approveAuction.bind(this);
@@ -252,6 +254,56 @@ class AdminController {
 
       const result = await adminService.resetUserMFA(userId, adminId);
       return res.status(200).json({ success: true, result });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * DELETE /api/admin/users/:userId/permanent
+   * Permanently delete a user account (SITE_ADMIN only)
+   */
+  async deleteUser(req, res) {
+    try {
+      const { userId } = req.params;
+      const { reason } = req.body;
+      const adminId = req.user.id;
+
+      if (!userId) {
+        return res.status(400).json({ success: false, error: 'USER_ID_REQUIRED' });
+      }
+
+      const result = await adminService.adminDeleteUser(userId, reason, adminId);
+      return res.status(200).json({ success: true, result });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * POST /api/admin/users/:userId/reset-password
+   * Admin-triggered password reset — returns a reset URL the admin can relay to the user
+   */
+  async resetUserPassword(req, res) {
+    try {
+      const { userId } = req.params;
+      const adminId = req.user.id;
+
+      if (!userId) {
+        return res.status(400).json({ success: false, error: 'USER_ID_REQUIRED' });
+      }
+
+      const result = await adminService.adminResetUserPassword(userId, adminId);
+
+      // Build the reset URL using the request host so it works on any environment
+      const resetUrl = `${req.protocol}://${req.get('host')}/password-reset.html?token=${result.resetToken}`;
+
+      return res.status(200).json({
+        success: true,
+        userEmail: result.userEmail,
+        resetUrl,
+        message: `Password reset link generated for ${result.userEmail}. Share this link with the user — it expires in 24 hours.`
+      });
     } catch (error) {
       return this.handleError(error, res);
     }
@@ -821,7 +873,9 @@ class AdminController {
       'AUCTION_NOT_DELETABLE': { status: 400, message: 'Only DRAFT, CANCELLED, or ENDED auctions can be deleted' },
       'ADMIN_NOT_FOUND': { status: 401, message: 'Admin credentials invalid' },
       'EMAIL_ALREADY_IN_USE': { status: 409, message: 'Email address is already in use by another account' },
-      'NO_FIELDS_TO_UPDATE': { status: 400, message: 'No fields provided to update' }
+      'NO_FIELDS_TO_UPDATE': { status: 400, message: 'No fields provided to update' },
+      'CANNOT_DELETE_SELF': { status: 400, message: 'You cannot delete your own account' },
+      'CANNOT_DELETE_SITE_ADMIN': { status: 403, message: 'Site admin accounts cannot be deleted' }
     };
 
     const errorType = error.message;
