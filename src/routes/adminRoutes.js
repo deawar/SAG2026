@@ -95,6 +95,30 @@ router.put(
 );
 
 /**
+ * POST /api/admin/users/:userId/reset-password
+ * Admin-triggered password reset — returns reset URL for the admin to relay
+ * RBAC: SITE_ADMIN or SCHOOL_ADMIN (own school)
+ */
+router.post(
+  '/users/:userId/reset-password',
+  verifyToken,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  adminController.resetUserPassword
+);
+
+/**
+ * DELETE /api/admin/users/:userId/permanent
+ * Permanently delete a user account (sets deleted_at, cannot be undone)
+ * RBAC: SITE_ADMIN only
+ */
+router.delete(
+  '/users/:userId/permanent',
+  verifyToken,
+  verifyRole(['SITE_ADMIN']),
+  adminController.deleteUser
+);
+
+/**
  * DELETE /api/admin/users/:userId
  * Deactivate user (soft delete)
  * Body: { reason: 'string' }
