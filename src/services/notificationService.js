@@ -86,7 +86,7 @@ class EmailTemplateService {
       throw new Error(`Unknown email template: ${templateId}`);
     }
 
-    return templateFn(data);
+    return templateFn.call(EmailTemplateService, data);
   }
 
   // ========== Template Functions ==========
