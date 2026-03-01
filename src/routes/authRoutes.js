@@ -10,7 +10,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const UserController = require('../controllers/userController');
 
 // Import services and models
-const { JWTService, TwoFactorService, RBACService, SessionService } = require('../services/authenticationService');
+const { JWTService, TwoFactorService, RBACService, SessionService, AuthenticationService } = require('../services/authenticationService');
 const { UserModel } = require('../models');
 
 /**
@@ -48,6 +48,15 @@ module.exports = (db) => {
   };
   
   const userController = new UserController(userModel, authService);
+
+  const authenticationService = new AuthenticationService({
+    db,
+    userModel,
+    jwtService,
+    twoFactorService,
+    rbacService,
+    sessionService
+  });
 
 /**
  * POST /api/auth/register
@@ -314,6 +323,33 @@ router.post('/2fa/verify', authMiddleware.verifyToken, async (req, res, next) =>
       }
     });
   } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/auth/reset-password
+ * Complete admin-initiated token-based password reset
+ * Auth: Not required (token serves as credential)
+ *
+ * Body: { token: string, newPassword: string }
+ * Response: 200 { success: true, message: string }
+ */
+router.post('/reset-password', async (req, res, next) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Token and new password are required' });
+    }
+
+    await authenticationService.completePasswordReset(token, newPassword);
+
+    return res.json({ success: true, message: 'Password reset successfully. You can now log in.' });
+  } catch (error) {
+    if (error.message === 'INVALID_OR_EXPIRED_RESET_TOKEN') {
+      return res.status(400).json({ success: false, message: 'This reset link is invalid or has already been used.' });
+    }
     next(error);
   }
 });

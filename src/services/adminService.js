@@ -1413,7 +1413,7 @@ class AdminService {
     const admin = await this.verifyAdminAccess(adminId);
 
     const userResult = await pool.query(
-      'SELECT id, email, school_id FROM users WHERE id = $1 AND deleted_at IS NULL',
+      'SELECT id, email, first_name, school_id FROM users WHERE id = $1 AND deleted_at IS NULL',
       [userId]
     );
 
@@ -1444,7 +1444,7 @@ class AdminService {
       'Admin triggered password reset'
     );
 
-    return { success: true, userId, userEmail: user.email, resetToken };
+    return { success: true, userId, userEmail: user.email, userFirstName: user.first_name, resetToken };
   }
 
   /**
