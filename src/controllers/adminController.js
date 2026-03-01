@@ -8,6 +8,17 @@
 
 const AdminService = require('../services/adminService');
 const adminService = new AdminService();
+const { EmailProvider, EmailTemplateService } = require('../services/notificationService');
+
+const emailProvider = new EmailProvider({
+  provider: 'smtp',
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT) || 587,
+  secure: process.env.SMTP_SECURE === 'true',
+  user: process.env.SMTP_USER,
+  password: process.env.SMTP_PASSWORD,
+  fromEmail: process.env.MAIL_FROM || process.env.SMTP_USER
+});
 
 /**
  * AdminController - Handles all HTTP requests for admin operations
@@ -282,7 +293,8 @@ class AdminController {
 
   /**
    * POST /api/admin/users/:userId/reset-password
-   * Admin-triggered password reset — returns a reset URL the admin can relay to the user
+   * Admin-triggered password reset — sends a reset email to the user.
+   * Falls back to returning the URL if email delivery fails.
    */
   async resetUserPassword(req, res) {
     try {
@@ -295,14 +307,28 @@ class AdminController {
 
       const result = await adminService.adminResetUserPassword(userId, adminId);
 
-      // Build the reset URL using the request host so it works on any environment
       const resetUrl = `${req.protocol}://${req.get('host')}/password-reset.html?token=${result.resetToken}`;
+
+      let emailSent = false;
+      try {
+        const emailContent = EmailTemplateService.generateTemplate('password-reset', {
+          firstName: result.userFirstName || result.userEmail.split('@')[0],
+          resetLink: resetUrl
+        });
+        await emailProvider.send(result.userEmail, emailContent.subject, emailContent.html, emailContent.text);
+        emailSent = true;
+      } catch (emailError) {
+        console.error('Failed to send password reset email:', emailError.message);
+      }
 
       return res.status(200).json({
         success: true,
         userEmail: result.userEmail,
-        resetUrl,
-        message: `Password reset link generated for ${result.userEmail}. Share this link with the user — it expires in 24 hours.`
+        emailSent,
+        resetUrl: emailSent ? undefined : resetUrl,
+        message: emailSent
+          ? `Password reset email sent to ${result.userEmail}.`
+          : `Could not send email. Share this link with the user — expires in 24 hours.`
       });
     } catch (error) {
       return this.handleError(error, res);

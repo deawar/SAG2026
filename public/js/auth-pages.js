@@ -681,6 +681,53 @@ class AuthPages {
         const form = document.getElementById('password-reset-form');
         if (!form) return;
 
+        // If a token is in the URL, skip directly to the "enter new password" step
+        const urlParams = new URLSearchParams(window.location.search);
+        const resetToken = urlParams.get('token');
+        if (resetToken) {
+            this.currentStep = 3;
+            this.showStep(form, 3);
+            this.updateProgressIndicator();
+
+            // Show a contextual message above the step
+            const step3 = form.querySelector('[data-step="3"]');
+            if (step3) {
+                const msg = document.createElement('p');
+                msg.className = 'help-text';
+                msg.textContent = 'Your reset link is valid. Enter your new password below.';
+                step3.prepend(msg);
+            }
+
+            // Wire the Next button on step 3 to submit via token
+            const nextBtn = form.querySelector('.btn-next');
+            nextBtn?.addEventListener('click', () => {
+                const newPass = form.querySelector('input[name="new-password"]');
+                const confirmPass = form.querySelector('input[name="confirm-password"]');
+                const errors = {};
+                if (!newPass?.value) errors.newpassword = 'Password is required';
+                else {
+                    const strength = UIComponents.validatePassword(newPass.value);
+                    if (strength.score < 2) errors.newpassword = 'Password too weak';
+                }
+                if (confirmPass?.value !== newPass?.value) errors.confirmpass = 'Passwords do not match';
+                if (Object.keys(errors).length === 0) {
+                    this.submitPasswordResetWithToken(resetToken, newPass.value);
+                } else {
+                    UIComponents.displayFormErrors(form, errors);
+                }
+            });
+
+            // Password strength meter
+            const passwordInput = form.querySelector('input[name="new-password"]');
+            if (passwordInput) {
+                passwordInput.addEventListener('input', () => {
+                    const meter = document.querySelector('.password-strength-meter');
+                    if (meter) meter.replaceWith(UIComponents.createPasswordStrengthMeter(passwordInput.value));
+                });
+            }
+            return;
+        }
+
         const nextBtn = form.querySelector('.btn-next');
         const backBtn = form.querySelector('.btn-back');
         const resendBtn = form.querySelector('[data-resend-code]');
@@ -701,6 +748,35 @@ class AuthPages {
         }
 
         this.updateProgressIndicator();
+    }
+
+    /**
+     * Submit token-based password reset (admin-initiated link)
+     */
+    async submitPasswordResetWithToken(token, newPassword) {
+        try {
+            const loader = UIComponents.showLoading('Resetting password...');
+
+            const response = await fetch('/api/auth/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, newPassword }),
+            });
+
+            const data = await response.json();
+            UIComponents.hideLoading(loader);
+
+            if (!response.ok) {
+                UIComponents.showAlert(data.message || 'Reset failed', 'error');
+                return;
+            }
+
+            UIComponents.createToast({ message: 'Password reset successfully!', type: 'success' });
+            setTimeout(() => window.location.href = '/login.html', 1500);
+        } catch (error) {
+            console.error('Token password reset error:', error);
+            UIComponents.createToast({ message: 'Connection error', type: 'error' });
+        }
     }
 
     /**
