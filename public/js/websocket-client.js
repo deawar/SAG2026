@@ -181,6 +181,15 @@ class WebSocketClient {
                         // Heartbeat response
                         break;
 
+                    case 'connection':
+                        // Server connection acknowledgement
+                        break;
+
+                    case 'error':
+                        console.warn('WebSocket server error:', message.payload || message.message);
+                        this.emit('server_error', message.payload || message.message);
+                        break;
+
                     default:
                         console.warn('Unknown message type:', message.type);
                 }

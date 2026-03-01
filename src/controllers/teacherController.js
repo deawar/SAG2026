@@ -154,7 +154,7 @@ class TeacherController {
                     id: 'sub_1',
                     title: 'Sample Submission',
                     studentName: 'John Doe',
-                    imageUrl: '/images/auction-items/placeholder.jpg',
+                    imageUrl: '/images/auction-items/placeholder.svg',
                     status: 'PENDING'
                 }
             ];
