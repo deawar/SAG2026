@@ -407,7 +407,7 @@ class AuctionDetail {
      */
     async toggleWatchlist() {
         try {
-            const btn = document.querySelector('.btn-watch-auction');
+            const btn = document.getElementById('watchlist-btn');
             const isWatched = btn.classList.contains('watched');
 
             const response = await fetch(`/api/auctions/${this.auctionId}/watchlist`, {
@@ -485,8 +485,7 @@ class AuctionDetail {
         // Generate QR code if not already done
         const container = document.querySelector('#qr-code-modal .qr-code');
         if (container && container.innerHTML.trim() === '') {
-            const url = window.location.href;
-            // Placeholder: In production, use qrcode.js library
+            // Placeholder: In production, use qrcode.js library with window.location.href
             container.innerHTML = `
                 <div style="text-align: center; padding: 20px;">
                     <p>📱 QR Code would be displayed here</p>
