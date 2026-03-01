@@ -78,7 +78,8 @@ class EmailTemplateService {
       'refund-confirmation': EmailTemplateService.refundConfirmationTemplate,
       'password-reset': EmailTemplateService.passwordResetTemplate,
       'security-alert': EmailTemplateService.securityAlertTemplate,
-      'auction-approved': EmailTemplateService.auctionApprovedTemplate
+      'auction-approved': EmailTemplateService.auctionApprovedTemplate,
+      'student-registration-invite': EmailTemplateService.studentRegistrationInviteTemplate
     };
 
     const templateFn = templates[templateId];
@@ -245,6 +246,35 @@ class EmailTemplateService {
         <p><a href="${auctionLink}" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Auction</a></p>
       `,
       text: `Your auction is live: ${artworkTitle} - ${auctionLink}`
+    };
+  }
+
+  static studentRegistrationInviteTemplate(data) {
+    const { studentName, teacherName, schoolName, registrationLink } = data;
+    const escapedStudent = this.escapeHtml(studentName);
+    const escapedTeacher = this.escapeHtml(teacherName);
+    const escapedSchool = this.escapeHtml(schoolName);
+    return {
+      subject: `You've been invited to register for ${schoolName} Silent Auction Gallery`,
+      html: `
+        <h2>You're Invited!</h2>
+        <p>Hello ${escapedStudent},</p>
+        <p>${escapedTeacher} from ${escapedSchool} has invited you to register for the Silent Auction Gallery.</p>
+        <p>Click the button below to create your account and get started:</p>
+        <p>
+          <a href="${registrationLink}"
+             style="background-color:#007bff;color:white;padding:12px 24px;text-decoration:none;border-radius:5px;display:inline-block;">
+            Register Now
+          </a>
+        </p>
+        <p>Or copy this link into your browser:<br>
+           <code style="word-break:break-all;">${registrationLink}</code>
+        </p>
+        <p><small>This invitation link expires in 30 days. It is unique to you — please do not share it.</small></p>
+        <hr />
+        <p><small>Sent on behalf of ${escapedTeacher} &mdash; ${escapedSchool}<br>Silent Auction Gallery</small></p>
+      `,
+      text: `Hello ${studentName},\n\n${teacherName} from ${schoolName} has invited you to register for the Silent Auction Gallery.\n\nRegister here: ${registrationLink}\n\nThis link expires in 30 days and is unique to you — please do not share it.\n\nSent on behalf of ${teacherName} — ${schoolName}\nSilent Auction Gallery`
     };
   }
 
