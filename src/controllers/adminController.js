@@ -319,7 +319,11 @@ class AdminController {
         await emailProvider.send(result.userEmail, emailContent.subject, emailContent.html, emailContent.text);
         emailSent = true;
       } catch (emailError) {
-        console.error('Failed to send password reset email:', emailError.message);
+        console.error('Failed to send password reset email:', emailError.message, {
+          smtpHost: process.env.SMTP_HOST || '(not set)',
+          smtpPort: process.env.SMTP_PORT || '(not set)',
+          smtpUser: process.env.SMTP_USER ? '(set)' : '(not set)'
+        });
       }
 
       return res.status(200).json({
