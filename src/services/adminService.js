@@ -73,7 +73,7 @@ class AdminService {
       (SELECT COUNT(*) FROM bids b WHERE b.placed_by_user_id = u.id) AS total_bids
       FROM users u
       LEFT JOIN schools s ON u.school_id = s.id
-      WHERE 1=1`;
+      WHERE u.deleted_at IS NULL`;
     const params = [];
 
     // Multi-tenant isolation: SCHOOL_ADMIN sees only their school; SITE_ADMIN sees all
@@ -104,7 +104,7 @@ class AdminService {
     const result = await pool.query(query, params);
 
     // Get total count
-    let countQuery = 'SELECT COUNT(*) as count FROM users WHERE 1=1';
+    let countQuery = 'SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL';
     const countParams = [];
     
     if (admin.role === 'SCHOOL_ADMIN') {
@@ -1354,6 +1354,97 @@ class AdminService {
     }
 
     return admin;
+  }
+
+  /**
+   * Permanently delete a user (sets deleted_at + INACTIVE)
+   * RBAC: SITE_ADMIN only. Cannot delete self or other SITE_ADMINs.
+   */
+  async adminDeleteUser(userId, reason, adminId) {
+    const admin = await this.verifyAdminAccess(adminId);
+
+    if (admin.role !== 'SITE_ADMIN') {
+      throw new Error('INSUFFICIENT_PERMISSIONS');
+    }
+
+    if (userId === adminId) {
+      throw new Error('CANNOT_DELETE_SELF');
+    }
+
+    const userResult = await pool.query(
+      'SELECT id, role, account_status FROM users WHERE id = $1 AND deleted_at IS NULL',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      throw new Error('USER_NOT_FOUND');
+    }
+
+    const user = userResult.rows[0];
+
+    if (user.role === 'SITE_ADMIN') {
+      throw new Error('CANNOT_DELETE_SITE_ADMIN');
+    }
+
+    await pool.query(
+      `UPDATE users
+       SET deleted_at = CURRENT_TIMESTAMP, account_status = 'INACTIVE', updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [userId]
+    );
+
+    await this.logAdminAction(
+      adminId, 'USER_DELETED', 'USER', userId,
+      { account_status: user.account_status, role: user.role },
+      { deleted_at: new Date(), account_status: 'INACTIVE' },
+      reason || 'Admin permanently deleted user'
+    );
+
+    return { success: true, userId };
+  }
+
+  /**
+   * Admin-triggered password reset for a user.
+   * Generates a reset token and returns a reset URL the admin can relay to the user.
+   * RBAC: SITE_ADMIN or SCHOOL_ADMIN (own school only)
+   */
+  async adminResetUserPassword(userId, adminId) {
+    const crypto = require('crypto');
+    const admin = await this.verifyAdminAccess(adminId);
+
+    const userResult = await pool.query(
+      'SELECT id, email, school_id FROM users WHERE id = $1 AND deleted_at IS NULL',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      throw new Error('USER_NOT_FOUND');
+    }
+
+    const user = userResult.rows[0];
+
+    if (admin.role === 'SCHOOL_ADMIN' && user.school_id !== admin.school_id) {
+      throw new Error('CROSS_SCHOOL_ACCESS_DENIED');
+    }
+
+    // Generate reset token (same pattern as self-service reset)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    // 24-hour expiry (longer than self-service 1-hour since user hasn't requested it)
+    await pool.query(
+      `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '24 hours')`,
+      [userId, resetTokenHash]
+    );
+
+    await this.logAdminAction(
+      adminId, 'USER_PASSWORD_RESET_TRIGGERED', 'USER', userId,
+      {}, { reset_token_generated: true },
+      'Admin triggered password reset'
+    );
+
+    return { success: true, userId, userEmail: user.email, resetToken };
   }
 
   /**
