@@ -43,6 +43,7 @@ class JWTService {
       role: userData.role,
       schoolId: userData.schoolId,
       iat: Math.floor(Date.now() / 1000),
+      ...(userData.purpose && { purpose: userData.purpose }),
     };
 
     const token = jwt.sign(payload, this.accessTokenSecret, {
