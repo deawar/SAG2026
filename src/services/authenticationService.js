@@ -587,7 +587,7 @@ class SessionService {
   async revokeSession(userId, tokenJti) {
     await this.db.query(
       `UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP
-       WHERE user_id = $1 AND token_jti = $2`,
+       WHERE user_id = $1 AND token_jti = $2 AND expires_at > CURRENT_TIMESTAMP`,
       [userId, tokenJti]
     );
   }
@@ -600,7 +600,7 @@ class SessionService {
   async revokeAllSessions(userId) {
     await this.db.query(
       `UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP
-       WHERE user_id = $1 AND revoked_at IS NULL`,
+       WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > CURRENT_TIMESTAMP`,
       [userId]
     );
   }
