@@ -545,6 +545,8 @@ class AdminDashboard {
             return;
         }
 
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+
         users.forEach(user => {
             const row = document.createElement('tr');
             const accountStatus = user.account_status || 'ACTIVE';
