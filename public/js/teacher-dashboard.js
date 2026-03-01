@@ -18,6 +18,8 @@ class TeacherDashboard {
         this.uiComponents = window.UIComponents;
         this.tokens = [];
         this.students = [];
+        this.teacherName = '';
+        this.schoolName = '';
     }
 
     /**
@@ -37,6 +39,9 @@ class TeacherDashboard {
 
         // Load teacher data
         await this.loadTeacherData();
+
+        // Load teacher name + school for email attribution
+        await this.loadTeacherInfo();
     }
 
     /**
@@ -61,6 +66,30 @@ class TeacherDashboard {
                 this.copyLinkToClipboard(e.target);
             }
         });
+
+        // Select all checkbox
+        const selectAll = document.getElementById('select-all-students');
+        if (selectAll) {
+            selectAll.addEventListener('change', () => {
+                document.querySelectorAll('.student-select').forEach(cb => {
+                    cb.checked = selectAll.checked;
+                });
+            });
+        }
+
+        // Action buttons
+        const saveBtn = document.getElementById('save-changes-btn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => this.saveStudentChanges());
+        }
+        const sendSelectedBtn = document.getElementById('send-selected-btn');
+        if (sendSelectedBtn) {
+            sendSelectedBtn.addEventListener('click', () => this.sendInvites('selected'));
+        }
+        const sendAllBtn = document.getElementById('send-all-btn');
+        if (sendAllBtn) {
+            sendAllBtn.addEventListener('click', () => this.sendInvites('all'));
+        }
 
         // Create auction button
         const createAuctionBtn = document.getElementById('create-auction-btn');
@@ -213,46 +242,157 @@ class TeacherDashboard {
     }
 
     /**
-     * Display student registration tokens in table
+     * Display student registration tokens in an editable table
      */
     displayStudentTokens() {
         const card = document.getElementById('student-links-card');
         const tbody = document.getElementById('student-links-tbody');
 
-        // Clear existing rows
         tbody.innerHTML = '';
 
-        // Add row for each token
         this.tokens.forEach(token => {
             const row = document.createElement('tr');
+            row.dataset.tokenId = token.id;
             const registrationLink = `${window.location.origin}/register.html?token=${token.token}&email=${encodeURIComponent(token.studentEmail)}`;
-            
+
             row.innerHTML = `
-                <td>${this.escapeHtml(token.studentName)}</td>
-                <td>${this.escapeHtml(token.studentEmail)}</td>
+                <td><input type="checkbox" class="student-select" data-id="${this.escapeHtml(token.id)}"
+                           aria-label="Select ${this.escapeHtml(token.studentName)}"></td>
+                <td><input type="text" class="edit-name" data-id="${this.escapeHtml(token.id)}"
+                           value="${this.escapeHtml(token.studentName)}"
+                           aria-label="Student name" style="width:100%;box-sizing:border-box;"></td>
+                <td><input type="email" class="edit-email" data-id="${this.escapeHtml(token.id)}"
+                           value="${this.escapeHtml(token.studentEmail)}"
+                           aria-label="Student email" style="width:100%;box-sizing:border-box;"></td>
                 <td>
                     <div class="link-wrapper">
-                        <code class="registration-link">${registrationLink}</code>
-                        <button class="copy-link-btn" data-link="${registrationLink}" 
-                                aria-label="Copy registration link for ${token.studentName}">
-                            Copy
-                        </button>
+                        <code class="registration-link" style="word-break:break-all;font-size:0.75em;">${registrationLink}</code>
                     </div>
                 </td>
-                <td><span class="badge badge-pending">${token.used ? 'Registered' : 'Pending'}</span></td>
+                <td><span class="badge badge-${token.used ? 'success' : 'pending'}">${token.used ? 'Registered' : 'Pending'}</span></td>
                 <td>
-                    <button class="btn btn-sm btn-secondary resend-link-btn" 
-                            data-token="${token.token}"
-                            aria-label="Resend link to ${token.studentName}">
-                        Resend
+                    <button class="copy-link-btn" data-link="${registrationLink}"
+                            aria-label="Copy registration link for ${this.escapeHtml(token.studentName)}">
+                        Copy
                     </button>
                 </td>
             `;
             tbody.appendChild(row);
         });
 
-        // Show the card
         card.style.display = 'block';
+
+        // Reset select-all checkbox
+        const selectAll = document.getElementById('select-all-students');
+        if (selectAll) selectAll.checked = false;
+    }
+
+    /**
+     * Load teacher name and school name for email attribution
+     */
+    async loadTeacherInfo() {
+        try {
+            const response = await this.apiClient.get('/api/teacher/teacher-info');
+            if (response.success && response.data) {
+                this.teacherName = response.data.teacherName || '';
+                this.schoolName = response.data.schoolName || '';
+            }
+        } catch (error) {
+            console.error('Failed to load teacher info:', error);
+        }
+    }
+
+    /**
+     * Save edited student name/email for changed rows
+     */
+    async saveStudentChanges() {
+        const nameInputs = document.querySelectorAll('.edit-name');
+        const emailInputs = document.querySelectorAll('.edit-email');
+
+        // Build a map of id -> { name, email } from current inputs
+        const updated = {};
+        nameInputs.forEach(input => {
+            updated[input.dataset.id] = { name: input.value.trim() };
+        });
+        emailInputs.forEach(input => {
+            if (updated[input.dataset.id]) {
+                updated[input.dataset.id].email = input.value.trim();
+            }
+        });
+
+        // Find tokens that differ from stored values
+        const toSave = this.tokens.filter(token => {
+            const u = updated[token.id];
+            return u && (u.name !== token.studentName || u.email !== token.studentEmail);
+        });
+
+        if (toSave.length === 0) {
+            this.showMessage('No changes to save.', 'info');
+            return;
+        }
+
+        let saved = 0;
+        const errors = [];
+
+        for (const token of toSave) {
+            const u = updated[token.id];
+            try {
+                const response = await this.apiClient.put(`/api/teacher/tokens/${token.id}`, {
+                    studentName: u.name,
+                    studentEmail: u.email
+                });
+                if (response.success) {
+                    token.studentName = u.name;
+                    token.studentEmail = u.email;
+                    saved++;
+                } else {
+                    errors.push(`${token.studentEmail}: ${response.message}`);
+                }
+            } catch (err) {
+                errors.push(`${token.studentEmail}: ${err.message}`);
+            }
+        }
+
+        if (errors.length) {
+            this.showMessage(`Saved ${saved}, failed ${errors.length}: ${errors.join('; ')}`, 'error');
+        } else {
+            this.showMessage(`Saved changes for ${saved} student${saved !== 1 ? 's' : ''}.`, 'success');
+        }
+    }
+
+    /**
+     * Send registration invite emails
+     * @param {'selected'|'all'} mode
+     */
+    async sendInvites(mode) {
+        let tokenIds;
+
+        if (mode === 'selected') {
+            const checked = document.querySelectorAll('.student-select:checked');
+            tokenIds = Array.from(checked).map(cb => cb.dataset.id);
+            if (tokenIds.length === 0) {
+                this.showMessage('Please select at least one student.', 'error');
+                return;
+            }
+        } else {
+            tokenIds = this.tokens.map(t => t.id);
+            if (tokenIds.length === 0) {
+                this.showMessage('No students to send invites to.', 'error');
+                return;
+            }
+        }
+
+        try {
+            const response = await this.apiClient.post('/api/teacher/send-invites', { tokenIds });
+            if (response.success) {
+                this.showMessage(response.message, 'success');
+            } else {
+                this.showMessage(response.message || 'Failed to send invites.', 'error');
+            }
+        } catch (error) {
+            console.error('Send invites error:', error);
+            this.showMessage('Error sending invites: ' + error.message, 'error');
+        }
     }
 
     /**
