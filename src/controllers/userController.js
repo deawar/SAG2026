@@ -330,13 +330,29 @@ class UserController {
    */
   async verify2FA(req, res, next) {
     try {
-      const { userId, tempToken, code } = req.body;
+      const { code } = req.body;
 
-      if (!userId || !code) {
+      // Extract the temp token from the Authorization header
+      const authHeader = req.headers['authorization'];
+      const tempToken = authHeader && authHeader.split(' ')[1];
+
+      if (!tempToken || !code) {
         return res.status(400).json({
           success: false,
-          message: 'userId and 2FA code required'
+          message: '2FA code and token required'
         });
+      }
+
+      // Decode the temp token to get userId (validates signature and expiry)
+      let userId;
+      try {
+        const decoded = this.authService.jwtService.verifyAccessToken(tempToken);
+        if (decoded.purpose !== '2fa_challenge') {
+          return res.status(401).json({ success: false, message: 'Invalid token type' });
+        }
+        userId = decoded.sub;
+      } catch (err) {
+        return res.status(401).json({ success: false, message: 'Token invalid or expired' });
       }
 
       // 1. Retrieve user
@@ -368,14 +384,20 @@ class UserController {
 
       const refreshTokenResult = this.authService.jwtService.generateRefreshToken(user.id);
 
-      // 4. Return tokens
+      // 4. Update last login
+      await this.userModel.updateLastLogin(user.id);
+
+      // 5. Return tokens with user info for the frontend
       return res.json({
         success: true,
         message: '2FA verification successful',
         data: {
           accessToken: accessTokenResult.token,
           refreshToken: refreshTokenResult.token,
-          expiresIn: accessTokenResult.expiresIn
+          expiresIn: accessTokenResult.expiresIn,
+          email: user.email,
+          role: user.role,
+          userId: user.id
         }
       });
     } catch (error) {
