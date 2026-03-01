@@ -88,12 +88,30 @@ class AuthPages {
                 return;
             }
 
-            // Check if 2FA is required
-            if (data.require2FA) {
+            // Check if 2FA is required (response: { data: { requiresMfa, tempToken, userId } })
+            if (data.data?.requiresMfa || data.data?.requires2FA || data.require2FA) {
+                localStorage.setItem('2fa_token', data.data?.tempToken || data.tempToken || '');
+                localStorage.setItem('2fa_user_id', data.data?.userId || data.userId || '');
+                localStorage.setItem('2fa_required', 'true');
                 window.location.href = '/2fa-verify.html';
             } else {
+                // Store tokens from successful login
+                if (data.data?.accessToken) {
+                    localStorage.setItem('auth_token', data.data.accessToken);
+                    if (data.data.refreshToken) localStorage.setItem('refresh_token', data.data.refreshToken);
+                    localStorage.setItem('user', JSON.stringify({
+                        id: data.data.userId,
+                        email: data.data.email,
+                        role: data.data.role,
+                        schoolId: data.data.schoolId || null
+                    }));
+                }
                 UIComponents.createToast({ message: 'Logged in successfully!', type: 'success' });
-                setTimeout(() => window.location.href = '/index.html', 1000);
+                const role = data.data?.role;
+                const adminRoles = ['SUPER_ADMIN', 'SITE_ADMIN', 'SCHOOL_ADMIN'];
+                setTimeout(() => {
+                    window.location.href = adminRoles.includes(role) ? '/admin-dashboard.html' : '/index.html';
+                }, 1000);
             }
         } catch (error) {
             console.error('Login error:', error);
