@@ -44,7 +44,10 @@ class AuctionDetail {
      */
     async loadAuction() {
         try {
-            const response = await fetch(`/api/auctions/${this.auctionId}`);
+            const token = localStorage.getItem('auth_token');
+            const response = await fetch(`/api/auctions/${this.auctionId}`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
             const data = await response.json();
 
             if (!response.ok) {
@@ -147,7 +150,10 @@ class AuctionDetail {
      */
     async loadBidHistory() {
         try {
-            const response = await fetch(`/api/auctions/${this.auctionId}/bids`);
+            const token = localStorage.getItem('auth_token');
+            const response = await fetch(`/api/auctions/${this.auctionId}/bids`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
             const data = await response.json();
 
             if (response.ok) {
@@ -475,19 +481,35 @@ class AuctionDetail {
      * Connect to WebSocket for real-time updates
      */
     connectWebSocket() {
+        if (this._wsReconnectCount >= 5) return;
         try {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/ws/auctions/${this.auctionId}`;
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
 
             this.websocket = new WebSocket(wsUrl);
 
             this.websocket.addEventListener('open', () => {
                 console.log('WebSocket connected');
+                this._wsReconnectCount = 0;
+                // Authenticate with JWT token
+                const token = localStorage.getItem('auth_token');
+                if (token) {
+                    this.websocket.send(JSON.stringify({ type: 'authenticate', payload: { token } }));
+                }
             });
 
             this.websocket.addEventListener('message', (event) => {
-                const data = JSON.parse(event.data);
-                this.handleWebSocketMessage(data);
+                try {
+                    const data = JSON.parse(event.data);
+                    // After authentication, subscribe to this auction
+                    if (data.type === 'authenticated') {
+                        this.websocket.send(JSON.stringify({ type: 'subscribe', auctionId: this.auctionId }));
+                    } else {
+                        this.handleWebSocketMessage(data);
+                    }
+                } catch (e) {
+                    console.error('WS message parse error:', e);
+                }
             });
 
             this.websocket.addEventListener('error', (error) => {
@@ -496,8 +518,10 @@ class AuctionDetail {
 
             this.websocket.addEventListener('close', () => {
                 console.log('WebSocket disconnected');
-                // Attempt to reconnect after 5 seconds
-                setTimeout(() => this.connectWebSocket(), 5000);
+                this._wsReconnectCount = (this._wsReconnectCount || 0) + 1;
+                if (this._wsReconnectCount < 5) {
+                    setTimeout(() => this.connectWebSocket(), 5000);
+                }
             });
         } catch (error) {
             console.error('WebSocket connection error:', error);
@@ -509,6 +533,7 @@ class AuctionDetail {
      */
     handleWebSocketMessage(data) {
         switch (data.type) {
+            // Legacy names kept for compatibility
             case 'bid_placed':
                 this.handleNewBid(data);
                 break;
@@ -525,8 +550,25 @@ class AuctionDetail {
                 this.handleAuctionEnded(data);
                 break;
 
+            // Server broadcast event names
+            case 'bid_update': {
+                const bidData = data.data || data;
+                this.handleNewBid(bidData);
+                this.handlePriceUpdate(bidData);
+                break;
+            }
+
+            case 'auction_status_change':
+                if (data.status === 'ENDED' || data.status === 'CLOSED') {
+                    this.handleAuctionEnded(data);
+                } else if (data.status === 'ENDING_SOON') {
+                    this.handleAuctionEnding(data);
+                }
+                break;
+
             default:
-                console.log('Unknown message type:', data.type);
+                // Ignore connection/pong/subscribed messages
+                break;
         }
     }
 
