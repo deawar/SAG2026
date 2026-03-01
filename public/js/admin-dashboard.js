@@ -1330,16 +1330,34 @@ class AdminDashboard {
                 // Email failed — show fallback URL so admin can share it manually
                 const alertContainer = document.getElementById('alert-container');
                 if (alertContainer) {
-                    alertContainer.innerHTML = `
-                        <div class="alert alert-warning" role="alert" style="word-break:break-all;">
-                            <strong>Email delivery failed for ${this.escapeHtml(data.userEmail)}.</strong><br>
-                            Share this link with the user manually — it expires in 24 hours:<br>
-                            <code style="user-select:all;">${this.escapeHtml(data.resetUrl)}</code>
-                            <button type="button" class="btn btn-sm btn-primary" style="margin-top:0.5rem;"
-                                onclick="navigator.clipboard.writeText('${(data.resetUrl || '').replace(/'/g, "\\'")}').then(() => this.textContent='Copied!')">
-                                Copy Link
-                            </button>
-                        </div>`;
+                    const div = document.createElement('div');
+                    div.className = 'alert alert-warning';
+                    div.setAttribute('role', 'alert');
+                    div.style.wordBreak = 'break-all';
+
+                    const strong = document.createElement('strong');
+                    strong.textContent = `Email delivery failed for ${data.userEmail}.`;
+                    const br1 = document.createElement('br');
+                    const msg = document.createTextNode(' Share this link with the user manually — it expires in 24 hours:');
+                    const br2 = document.createElement('br');
+                    const code = document.createElement('code');
+                    code.style.userSelect = 'all';
+                    code.textContent = data.resetUrl || '';
+
+                    const copyBtn = document.createElement('button');
+                    copyBtn.type = 'button';
+                    copyBtn.className = 'btn btn-sm btn-primary';
+                    copyBtn.style.marginTop = '0.5rem';
+                    copyBtn.textContent = 'Copy Link';
+                    copyBtn.addEventListener('click', () => {
+                        navigator.clipboard.writeText(data.resetUrl || '').then(() => {
+                            copyBtn.textContent = 'Copied!';
+                        });
+                    });
+
+                    div.append(strong, br1, msg, br2, code, copyBtn);
+                    alertContainer.innerHTML = '';
+                    alertContainer.appendChild(div);
                     alertContainer.scrollIntoView({ behavior: 'smooth' });
                 }
             }
