@@ -53,10 +53,10 @@
 
                         <!-- Code Input -->
                         <div class="form-group">
-                            <label for="2fa-code">Authentication Code <span aria-label="required">*</span></label>
-                            <input 
-                                type="text" 
-                                id="2fa-code" 
+                            <label for="2fa-login-code">Authentication Code <span aria-label="required">*</span></label>
+                            <input
+                                type="text"
+                                id="2fa-login-code"
                                 name="code"
                                 class="form-control verification-input" 
                                 placeholder="000000"
@@ -84,10 +84,10 @@
                             <label for="remember-device">Trust this device for 30 days</label>
                         </div>
 
-                        <button 
-                            type="submit" 
+                        <button
+                            type="button"
                             class="btn btn-primary btn-large btn-block"
-                            id="verify-btn"
+                            id="verify-2fa-login-btn"
                             aria-label="Verify authentication code"
                         >
                             Verify & Continue
@@ -102,7 +102,7 @@
 
                 <!-- Use Backup Code -->
                 <div class="alternative-section">
-                    <button type="button" class="btn-link" id="use-backup-btn" aria-label="Use a backup code instead">
+                    <button type="button" class="btn-link" id="use-backup-code-btn" aria-label="Use a backup code instead">
                         Don't have your phone? Use a backup code
                     </button>
                 </div>
@@ -114,7 +114,7 @@
             </div>
 
             <!-- Backup Code Entry (Hidden by default) -->
-            <div id="backup-section" class="auth-card compact" style="display:none;">
+            <div id="backup-code-section" class="auth-card compact" style="display:none;">
                 <div class="auth-header">
                     <h1>Use Backup Code</h1>
                     <p>Enter one of your backup codes to access your account</p>
@@ -125,10 +125,10 @@
                         <legend class="sr-only">Backup Code</legend>
 
                         <div class="form-group">
-                            <label for="backup-code">Backup Code <span aria-label="required">*</span></label>
-                            <input 
-                                type="text" 
-                                id="backup-code" 
+                            <label for="2fa-login-backup-code">Backup Code <span aria-label="required">*</span></label>
+                            <input
+                                type="text"
+                                id="2fa-login-backup-code"
                                 name="backup_code"
                                 class="form-control" 
                                 placeholder="XXXX-XXXX-XXXX"
