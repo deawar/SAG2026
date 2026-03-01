@@ -70,25 +70,29 @@ class AuctionDetail {
     displayAuction() {
         if (!this.auction) return;
 
-        const container = document.querySelector('.auction-detail-container');
-        if (!container) return;
-
-        // Update image
-        const image = container.querySelector('.artwork-image');
+        // Update image (auctions don't have images; use placeholder)
+        const image = document.getElementById('artwork-image');
         if (image) {
-            image.src = this.auction.image;
-            image.alt = this.auction.title;
+            image.src = this.auction.image || '/images/auction-items/placeholder.svg';
+            image.alt = this.auction.title || 'Auction';
         }
 
-        // Update details
-        const titleEl = container.querySelector('.auction-title');
-        if (titleEl) titleEl.textContent = this.auction.title;
+        // Update titles
+        const titleEl = document.getElementById('artwork-title');
+        if (titleEl) titleEl.textContent = this.auction.title || '';
 
-        const descEl = container.querySelector('.auction-description');
-        if (descEl) descEl.textContent = this.auction.description;
+        const titleSmall = document.getElementById('artwork-title-small');
+        if (titleSmall) titleSmall.textContent = this.auction.title || '';
 
-        const schoolEl = container.querySelector('.auction-school');
-        if (schoolEl) schoolEl.textContent = `School: ${this.auction.school || 'N/A'}`;
+        const descEl = document.getElementById('artwork-description');
+        if (descEl) descEl.textContent = this.auction.description || '';
+
+        const schoolEl = document.getElementById('school-name');
+        if (schoolEl) schoolEl.textContent = this.auction.schoolName || this.auction.schoolId || 'N/A';
+
+        // Update breadcrumb
+        const breadcrumb = document.getElementById('breadcrumb-title');
+        if (breadcrumb) breadcrumb.textContent = this.auction.title || 'Auction Details';
 
         // Update bid info
         this.updateBidInfo();
@@ -101,23 +105,34 @@ class AuctionDetail {
      * Update current bid information
      */
     updateBidInfo() {
-        const container = document.querySelector('.current-bid-section');
-        if (!container) return;
-
-        const currentBid = container.querySelector('.current-bid-amount');
-        if (currentBid) {
-            currentBid.textContent = UIComponents.formatCurrency(this.auction.currentBid);
+        const currentBidEl = document.getElementById('display-current-bid');
+        if (currentBidEl) {
+            const bid = this.auction.currentBid ?? null;
+            currentBidEl.textContent = bid !== null ? UIComponents.formatCurrency(bid) : '-';
         }
 
-        const minBid = container.querySelector('.min-bid-amount');
-        if (minBid) {
-            const minBidAmount = this.auction.currentBid + (this.auction.minBidIncrement || 10);
-            minBid.textContent = UIComponents.formatCurrency(minBidAmount);
+        const openingBidEl = document.getElementById('display-opening-bid');
+        if (openingBidEl) {
+            const opening = this.auction.openingBid ?? null;
+            openingBidEl.textContent = opening !== null ? UIComponents.formatCurrency(opening) : '-';
         }
 
-        const bidCount = container.querySelector('.bid-count');
-        if (bidCount) {
-            bidCount.textContent = `${this.auction.bidCount || 0} bids`;
+        const minIncrementEl = document.getElementById('display-minimum-increment');
+        if (minIncrementEl) {
+            const increment = this.auction.minBidIncrement ?? null;
+            minIncrementEl.textContent = increment !== null ? UIComponents.formatCurrency(increment) : '-';
+        }
+
+        const bidCountEl = document.getElementById('display-bid-count');
+        if (bidCountEl) {
+            bidCountEl.textContent = this.auction.totalBids ?? this.auction.bidCount ?? 0;
+        }
+
+        const minBidHelpEl = document.getElementById('min-bid-amount');
+        if (minBidHelpEl) {
+            const current = this.auction.currentBid ?? 0;
+            const increment = this.auction.minBidIncrement ?? 10;
+            minBidHelpEl.textContent = UIComponents.formatCurrency(current + increment);
         }
     }
 
@@ -125,23 +140,40 @@ class AuctionDetail {
      * Update auction status
      */
     updateAuctionStatus() {
-        const statusBadge = document.querySelector('.auction-status-badge');
+        const statusBadge = document.getElementById('auction-status-badge');
         if (!statusBadge) return;
 
-        const now = Date.now();
-        const endTime = new Date(this.auction.endTime).getTime();
+        const status = this.auction.status;
 
-        if (endTime < now) {
-            statusBadge.className = 'auction-status-badge status-ended';
-            statusBadge.textContent = '⛔ Auction Ended';
+        if (status === 'DRAFT') {
+            statusBadge.className = 'auction-status-badge status-draft';
+            statusBadge.textContent = '📝 Draft';
             this.disableBidding();
-        } else if (endTime - now < 3600000) {
-            // Less than 1 hour remaining
-            statusBadge.className = 'auction-status-badge status-ending-soon';
-            statusBadge.textContent = '⚠️ Ending Soon';
+        } else if (status === 'APPROVED') {
+            statusBadge.className = 'auction-status-badge status-approved';
+            statusBadge.textContent = '✅ Approved';
+            this.disableBidding();
+        } else if (status === 'ENDED' || status === 'CLOSED' || status === 'CANCELLED') {
+            statusBadge.className = 'auction-status-badge status-ended';
+            statusBadge.textContent = status === 'CANCELLED' ? '❌ Cancelled' : '⛔ Auction Ended';
+            this.disableBidding();
+        } else if (status === 'LIVE') {
+            const now = Date.now();
+            const endTime = new Date(this.auction.endTime).getTime();
+            if (endTime < now) {
+                statusBadge.className = 'auction-status-badge status-ended';
+                statusBadge.textContent = '⛔ Auction Ended';
+                this.disableBidding();
+            } else if (endTime - now < 3600000) {
+                statusBadge.className = 'auction-status-badge status-ending-soon';
+                statusBadge.textContent = '⚠️ Ending Soon';
+            } else {
+                statusBadge.className = 'auction-status-badge status-active';
+                statusBadge.textContent = '🔴 Live';
+            }
         } else {
-            statusBadge.className = 'auction-status-badge status-active';
-            statusBadge.textContent = '🔴 Active';
+            statusBadge.className = 'auction-status-badge';
+            statusBadge.textContent = status || 'Unknown';
         }
     }
 
@@ -169,7 +201,7 @@ class AuctionDetail {
      * Display bid history
      */
     displayBidHistory() {
-        const list = document.querySelector('.bid-history-list');
+        const list = document.getElementById('bid-history-container');
         if (!list) return;
 
         list.innerHTML = '';
@@ -197,11 +229,11 @@ class AuctionDetail {
      * Check if user is logged in
      */
     checkLoginStatus() {
-        const token = localStorage.getItem('authToken');
+        const token = localStorage.getItem('auth_token');
         this.isUserLoggedIn = !!token;
 
-        const authRequired = document.querySelector('.auth-required-alert');
-        const biddingForm = document.querySelector('.bidding-form');
+        const authRequired = document.getElementById('auth-required');
+        const biddingForm = document.getElementById('bidding-form-container');
 
         if (this.isUserLoggedIn) {
             if (authRequired) authRequired.style.display = 'none';
@@ -216,38 +248,38 @@ class AuctionDetail {
      * Attach event listeners
      */
     attachEventListeners() {
-        const biddingForm = document.querySelector('.bidding-form');
+        const biddingForm = document.getElementById('bidding-form');
         if (biddingForm) {
             const submitBtn = biddingForm.querySelector('button[type="submit"]');
             submitBtn?.addEventListener('click', (e) => this.submitBid(e, biddingForm));
         }
 
         // Watch list button
-        const watchBtn = document.querySelector('.btn-watch-auction');
+        const watchBtn = document.getElementById('watchlist-btn');
         if (watchBtn) {
             watchBtn.addEventListener('click', () => this.toggleWatchlist());
         }
 
-        // Share buttons
-        const shareBtn = document.querySelector('.btn-share');
+        // Share button
+        const shareBtn = document.getElementById('share-btn');
         if (shareBtn) {
             shareBtn.addEventListener('click', () => this.showShareOptions());
         }
 
         // QR code button
-        const qrBtn = document.querySelector('.btn-qr-code');
+        const qrBtn = document.getElementById('qr-btn');
         if (qrBtn) {
             qrBtn.addEventListener('click', () => this.showQRCode());
         }
 
         // Fullscreen button
-        const fullscreenBtn = document.querySelector('.btn-fullscreen');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
         if (fullscreenBtn) {
             fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
         }
 
-        // Auth modal login button
-        const loginBtn = document.querySelector('.btn-auth-login');
+        // Auth required login button
+        const loginBtn = document.getElementById('login-from-auction');
         if (loginBtn) {
             loginBtn.addEventListener('click', () => window.location.href = '/login.html');
         }
@@ -259,15 +291,16 @@ class AuctionDetail {
     async submitBid(e, form) {
         e.preventDefault();
 
-        const bidAmount = form.querySelector('input[name="bid-amount"]')?.value;
-        const paymentMethod = form.querySelector('select[name="payment-method"]')?.value;
+        const bidAmount = form.querySelector('#bid-amount')?.value;
+        const paymentMethod = form.querySelector('#payment-method')?.value;
 
         if (!bidAmount || isNaN(parseFloat(bidAmount))) {
             UIComponents.showAlert('Please enter a valid bid amount', 'warning');
             return;
         }
 
-        const minBid = this.auction.currentBid + (this.auction.minBidIncrement || 10);
+        const currentBid = this.auction.currentBid ?? 0;
+        const minBid = currentBid + (this.auction.minBidIncrement || 10);
         if (parseFloat(bidAmount) < minBid) {
             UIComponents.showAlert(
                 `Minimum bid is ${UIComponents.formatCurrency(minBid)}`,
@@ -283,7 +316,7 @@ class AuctionDetail {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
                 body: JSON.stringify({
                     amount: parseFloat(bidAmount),
@@ -306,7 +339,7 @@ class AuctionDetail {
 
             // Update auction with new bid
             this.auction.currentBid = data.currentBid;
-            this.auction.bidCount = data.bidCount;
+            this.auction.totalBids = data.bidCount ?? data.totalBids ?? this.auction.totalBids;
             this.updateBidInfo();
 
             // Clear form
@@ -327,8 +360,14 @@ class AuctionDetail {
      * Start countdown timer
      */
     startCountdown() {
-        const countdownEl = document.querySelector('.countdown-timer');
+        const countdownEl = document.getElementById('timer-value');
         if (!countdownEl) return;
+
+        // Only count down for LIVE auctions
+        if (this.auction.status !== 'LIVE' || !this.auction.endTime) {
+            countdownEl.textContent = '--:--:--';
+            return;
+        }
 
         const updateCountdown = () => {
             const now = Date.now();
@@ -352,12 +391,12 @@ class AuctionDetail {
      * Disable bidding when auction ends
      */
     disableBidding() {
-        const form = document.querySelector('.bidding-form');
-        if (form) {
-            form.style.display = 'none';
+        const formContainer = document.getElementById('bidding-form-container');
+        if (formContainer) {
+            formContainer.style.display = 'none';
         }
 
-        const closedAlert = document.querySelector('.auction-closed-alert');
+        const closedAlert = document.getElementById('auction-closed');
         if (closedAlert) {
             closedAlert.style.display = 'block';
         }
@@ -374,7 +413,7 @@ class AuctionDetail {
             const response = await fetch(`/api/auctions/${this.auctionId}/watchlist`, {
                 method: isWatched ? 'DELETE' : 'POST',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
@@ -600,7 +639,7 @@ class AuctionDetail {
      */
     handlePriceUpdate(data) {
         this.auction.currentBid = data.currentBid;
-        this.auction.bidCount = data.bidCount;
+        this.auction.totalBids = data.bidCount ?? data.totalBids ?? this.auction.totalBids;
         this.updateBidInfo();
 
         // Highlight the update
@@ -614,7 +653,7 @@ class AuctionDetail {
     /**
      * Handle auction ending notification
      */
-    handleAuctionEnding(data) {
+    handleAuctionEnding(_data) {
         UIComponents.createToast({
             message: 'Auction ending soon!',
             type: 'warning',
@@ -625,7 +664,7 @@ class AuctionDetail {
     /**
      * Handle auction ended notification
      */
-    handleAuctionEnded(data) {
+    handleAuctionEnded(_data) {
         this.disableBidding();
         UIComponents.createToast({
             message: 'Auction has ended',
