@@ -211,7 +211,7 @@ class UserDashboard {
         try {
             const response = await fetch('/api/user/bids/active', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
@@ -271,7 +271,7 @@ class UserDashboard {
         try {
             const response = await fetch('/api/user/bids/history', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
@@ -326,7 +326,7 @@ class UserDashboard {
         try {
             const response = await fetch('/api/user/wins', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
@@ -399,7 +399,7 @@ class UserDashboard {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
                 body: JSON.stringify({
                     fullName,
@@ -455,7 +455,7 @@ class UserDashboard {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
                 body: JSON.stringify({
                     street,
@@ -520,7 +520,7 @@ class UserDashboard {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
                 body: JSON.stringify({
                     oldPassword,
@@ -590,7 +590,7 @@ class UserDashboard {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
                 body: JSON.stringify(prefs),
             });
@@ -643,7 +643,7 @@ class UserDashboard {
             const response = await fetch('/api/user/2fa', {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
@@ -693,7 +693,7 @@ class UserDashboard {
             const response = await fetch('/api/user', {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
             });
 
@@ -704,7 +704,7 @@ class UserDashboard {
                 return;
             }
 
-            localStorage.removeItem('authToken');
+            localStorage.removeItem('auth_token');
             UIComponents.createToast({
                 message: 'Account deleted successfully',
                 type: 'success',
@@ -724,7 +724,7 @@ class UserDashboard {
      * Logout
      */
     logout() {
-        localStorage.removeItem('authToken');
+        localStorage.removeItem('auth_token');
         UIComponents.createToast({
             message: 'Logged out successfully',
             type: 'success',
