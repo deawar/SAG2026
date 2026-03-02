@@ -509,8 +509,19 @@ class AuthPages {
                 return;
             }
 
-            UIComponents.createToast({ message: 'Account created successfully!', type: 'success' });
-            setTimeout(() => window.location.href = '/login.html', 1500);
+            // Store tokens so 2FA setup page can authenticate immediately
+            if (data.data?.accessToken) {
+                authManager.setToken(data.data.accessToken);
+                authManager.setRefreshToken(data.data.refreshToken);
+                authManager.setUser({
+                    id: data.data.userId,
+                    email: data.data.email,
+                    role: data.data.role,
+                });
+            }
+
+            UIComponents.createToast({ message: 'Account created! Setting up 2FA...', type: 'success' });
+            setTimeout(() => window.location.href = '/2fa-setup.html', 800);
         } catch (error) {
             console.error('Registration error:', error);
             UIComponents.createToast({ message: 'Connection error: ' + error.message, type: 'error' });
