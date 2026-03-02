@@ -3,5 +3,7 @@
  */
 
 describe('Auction Model', () => {
-  // Unit tests for Auction model
+  test.todo('validate required fields');
+  test.todo('enforce valid status transitions');
+  test.todo('validate date range logic');
 });

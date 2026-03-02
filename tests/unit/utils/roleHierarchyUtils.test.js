@@ -48,7 +48,7 @@ describe('Role Hierarchy Utilities', () => {
     id: 'art-2',
     school_id: 'school-1',
     status: 'DRAFT',
-    submitted_by: '4'
+    submitted_by: '99' // different user — not teacher ('3') nor student ('4')
   };
 
   // ============ canAccessRole Tests ============

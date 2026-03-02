@@ -13,6 +13,15 @@ module.exports = {
   testEnvironment: 'node',
 
   /**
+   * Test Path Ignore Patterns
+   * Exclude node_modules and .claude agent worktrees
+   */
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/.claude/',
+  ],
+
+  /**
    * Test Match Patterns
    * Find all test files with .test.js or .spec.js extensions
    */
@@ -85,16 +94,18 @@ module.exports = {
 
   /**
    * Transform Files
-   * No transformation needed for plain JavaScript
+   * Use babel-jest so jest.mock() is hoisted above require() calls
    */
-  transform: {},
+  transform: {
+    '^.+\\.js$': 'babel-jest',
+  },
 
   /**
    * Transform Ignore Patterns
-   * Standard pattern (uuid not needed since using built-in randomUUID)
+   * Do not transform node_modules
    */
   transformIgnorePatterns: [
-    'node_modules/(?!.*)'
+    '/node_modules/',
   ],
 
   /**
