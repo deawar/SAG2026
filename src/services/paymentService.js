@@ -376,7 +376,7 @@ class PaymentService {
     const idempotencyKey = uuidv4();
 
     // Get gateway instance
-    const gateway = this.gateways[gatewayConfig.gatewayType];
+    const gateway = this.gateways[gatewayConfig.gateway_type];
     if (!gateway) {
       throw new Error('GATEWAY_NOT_AVAILABLE');
     }
@@ -421,7 +421,7 @@ class PaymentService {
         userId,
         action: 'PAYMENT_PROCESSED',
         amount,
-        gatewayType: gatewayConfig.gatewayType,
+        gatewayType: gatewayConfig.gateway_type,
       });
 
       return {
@@ -460,21 +460,21 @@ class PaymentService {
     // Get transaction
     const transaction = await this._getTransaction(transactionId);
 
-    if (transaction.transactionStatus !== 'COMPLETED') {
+    if (transaction.transaction_status !== 'COMPLETED') {
       throw new Error('TRANSACTION_NOT_REFUNDABLE');
     }
 
     // Get gateway config
-    const gatewayConfig = await this._getGatewayConfig(transaction.gatewayId);
+    const gatewayConfig = await this._getGatewayConfig(transaction.gateway_id);
 
     // Get gateway instance
-    const gateway = this.gateways[gatewayConfig.gatewayType];
+    const gateway = this.gateways[gatewayConfig.gateway_type];
 
     try {
       // Process refund
       const refundResult = await gateway.refundCharge({
-        transactionId: transaction.gatewayTransactionId,
-        amount: transaction.totalAmount,
+        transactionId: transaction.gateway_transaction_id,
+        amount: transaction.total_amount,
         reason,
         metadata: {
           originalTransactionId: transaction.id,

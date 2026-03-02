@@ -330,7 +330,7 @@ describe('SchoolModel', () => {
 
   test('Should validate phone number format', () => {
     const validator = require('validator');
-    const phone = '+1234567890';
+    const phone = '+12345678901'; // valid US: +1 + 10-digit number
     expect(validator.isMobilePhone(phone, 'en-US', { strictMode: false })).toBe(true);
   });
 

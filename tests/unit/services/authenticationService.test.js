@@ -235,7 +235,7 @@ describe('TwoFactorService', () => {
     const result = await twoFactorService.generateSecret(uuidv4(), 'test@example.com');
 
     expect(result.qrCode).toMatch(/^otpauth:\/\/totp/);
-    expect(result.qrCode).toContain('Silent Auction');
+    expect(result.qrCode).toContain('Silent%20Auction'); // otpauth URIs URL-encode spaces
   });
 
   test('Should generate 8 backup codes', async () => {

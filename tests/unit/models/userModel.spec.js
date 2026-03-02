@@ -3,5 +3,7 @@
  */
 
 describe('User Model', () => {
-  // Unit tests for User model
+  test.todo('validate required fields');
+  test.todo('reject invalid email format');
+  test.todo('enforce unique email constraint');
 });
