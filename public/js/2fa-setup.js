@@ -69,9 +69,12 @@ class TwoFactorAuthSetup {
         if (completeBtn) {
             completeBtn.addEventListener('click', () => {
                 const user = authManager.getUser();
+                const role = user?.role;
                 const adminRoles = ['SUPER_ADMIN', 'SITE_ADMIN', 'SCHOOL_ADMIN'];
-                if (user && adminRoles.includes(user.role)) {
+                if (adminRoles.includes(role)) {
                     window.location.href = '/admin-dashboard.html';
+                } else if (role === 'TEACHER') {
+                    window.location.href = '/teacher-dashboard.html';
                 } else {
                     window.location.href = '/user-dashboard.html';
                 }
@@ -111,14 +114,9 @@ class TwoFactorAuthSetup {
                 this.currentQrCode = response.data.qrCode;
                 this.currentBackupCodes = response.data.backupCodes || [];
 
-                // Display QR code
+                // Display QR code and secret in step 1 for the user to scan
                 this.displayQRCode(response.data.qrCode);
-                
-                // Display secret code
                 this.displaySecretCode(response.data.secret);
-
-                // Move to step 2
-                this.goToStep2();
 
                 UIComponents.hideLoading(loader);
             } else {
@@ -234,6 +232,9 @@ class TwoFactorAuthSetup {
                 }
             });
         }
+
+        // Populate backup codes list now that we're on step 2
+        this.displayBackupCodes();
 
         // Focus on code input
         const codeInput = document.getElementById('2fa-code-input');
