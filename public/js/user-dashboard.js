@@ -148,10 +148,16 @@ class UserDashboard {
         const tabButtons = document.querySelectorAll('.tab-button');
         tabButtons.forEach(btn => {
             btn.addEventListener('click', () => {
-                const tabName = btn.dataset.tab;
+                const tabName = btn.getAttribute('aria-controls');
                 this.switchTab(tabName);
             });
         });
+
+        // Activate tab from URL hash (e.g. /user-dashboard.html#account)
+        const hash = window.location.hash.slice(1);
+        if (hash && document.getElementById(hash)) {
+            this.switchTab(hash);
+        }
     }
 
     /**
@@ -163,24 +169,26 @@ class UserDashboard {
         tabButtons.forEach(btn => {
             btn.classList.remove('active');
             btn.setAttribute('aria-selected', 'false');
+            btn.setAttribute('tabindex', '-1');
         });
 
-        const activeBtn = document.querySelector(`.tab-button[data-tab="${tabName}"]`);
+        const activeBtn = document.querySelector(`.tab-button[aria-controls="${tabName}"]`);
         if (activeBtn) {
             activeBtn.classList.add('active');
             activeBtn.setAttribute('aria-selected', 'true');
+            activeBtn.setAttribute('tabindex', '0');
         }
 
         // Update panels
-        const tabPanels = document.querySelectorAll('.tab-panel');
+        const tabPanels = document.querySelectorAll('.tab-content');
         tabPanels.forEach(panel => {
-            panel.classList.remove('active');
+            panel.style.display = 'none';
             panel.setAttribute('aria-hidden', 'true');
         });
 
-        const activePanel = document.querySelector(`.tab-panel[data-tab="${tabName}"]`);
+        const activePanel = document.getElementById(tabName);
         if (activePanel) {
-            activePanel.classList.add('active');
+            activePanel.style.display = '';
             activePanel.setAttribute('aria-hidden', 'false');
 
             // Load data for this tab
@@ -188,7 +196,7 @@ class UserDashboard {
                 this.loadActiveBids();
             } else if (tabName === 'bid-history') {
                 this.loadBidHistory();
-            } else if (tabName === 'my-wins') {
+            } else if (tabName === 'wins') {
                 this.loadWins();
             }
         }
