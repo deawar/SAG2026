@@ -100,12 +100,26 @@ class UserController {
         }
       });
     } catch (error) {
-      // Check for specific error types
-      if (error.message === 'EMAIL_ALREADY_EXISTS') {
-        return res.status(409).json({
-          success: false,
-          message: 'Email already registered'
-        });
+      // Map model/validation error codes to user-facing 400/409 responses
+      const validationErrors = {
+        'EMAIL_ALREADY_EXISTS': { status: 409, message: 'Email already registered' },
+        'INVALID_EMAIL': { status: 400, message: 'Invalid email format' },
+        'PASSWORD_TOO_SHORT': { status: 400, message: 'Password must be at least 12 characters' },
+        'PASSWORD_MISSING_UPPERCASE': { status: 400, message: 'Password must contain an uppercase letter' },
+        'PASSWORD_MISSING_LOWERCASE': { status: 400, message: 'Password must contain a lowercase letter' },
+        'PASSWORD_MISSING_NUMBER': { status: 400, message: 'Password must contain a number' },
+        'PASSWORD_MISSING_SPECIAL_CHAR': { status: 400, message: 'Password must contain a special character (!@#$%^&*()_+-=etc.)' },
+        'PASSWORD_TOO_COMMON': { status: 400, message: 'Password is too common, please choose a stronger one' },
+        'INVALID_FIRST_NAME': { status: 400, message: 'First name must be 2–100 characters' },
+        'INVALID_LAST_NAME': { status: 400, message: 'Last name must be 2–100 characters' },
+        'INVALID_ROLE': { status: 400, message: 'Invalid account type' },
+        'INVALID_DATE_OF_BIRTH': { status: 400, message: 'Invalid date of birth' },
+        'COPPA_PARENTAL_CONSENT_REQUIRED': { status: 400, message: 'Parental consent required for users under 13' },
+      };
+
+      const mapped = validationErrors[error.message];
+      if (mapped) {
+        return res.status(mapped.status).json({ success: false, message: mapped.message });
       }
       next(error);
     }
