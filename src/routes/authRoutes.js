@@ -213,14 +213,21 @@ router.post('/verify-2fa', (req, res, next) => userController.verify2FA(req, res
  *   }
  * }
  */
-router.post('/2fa/setup', authMiddleware.verifyToken, (req, res, next) => {
+router.post('/2fa/setup', authMiddleware.verifyToken, async (req, res, next) => {
   try {
+    const QRCode = require('qrcode');
     const userId = req.user.id;
-    const secret = authenticationService.twoFactorService.generateSecret(userId, req.user.email);
-    
+    const secretData = await authenticationService.twoFactorService.generateSecret(userId, req.user.email);
+
+    // Convert otpauth:// URI to a scannable PNG data URL
+    const qrCodeDataUrl = await QRCode.toDataURL(secretData.qrCode);
+
     return res.json({
       success: true,
-      data: secret
+      data: {
+        ...secretData,
+        qrCode: qrCodeDataUrl
+      }
     });
   } catch (error) {
     next(error);
