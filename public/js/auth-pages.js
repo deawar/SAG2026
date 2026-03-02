@@ -138,6 +138,23 @@ class AuthPages {
         nextBtn?.addEventListener('click', () => this.nextRegisterStep(form));
         backBtn?.addEventListener('click', () => this.prevRegisterStep(form));
 
+        // Step 2 navigation buttons
+        form.querySelector('#back-step-btn')?.addEventListener('click', () => this.prevRegisterStep(form));
+        form.querySelector('#next-step-2-btn')?.addEventListener('click', () => this.nextRegisterStep(form));
+
+        // Step 3 navigation buttons
+        form.querySelector('#back-step-2-btn')?.addEventListener('click', () => this.prevRegisterStep(form));
+        form.querySelector('#create-account-btn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.nextRegisterStep(form);
+        });
+
+        // Prevent native form submission (create-account-btn is type="submit")
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.nextRegisterStep(form);
+        });
+
         // Load schools on page init
         if (schoolSelect) {
           this.loadSchools(schoolSelect);
@@ -178,7 +195,7 @@ class AuthPages {
         }
 
         // Age verification listener
-        const dobInput = form.querySelector('input[name="dob"]');
+        const dobInput = form.querySelector('input[name="date_of_birth"]');
         if (dobInput) {
             dobInput.addEventListener('change', () => this.checkCOPPA(form));
         }
@@ -281,12 +298,12 @@ class AuthPages {
         let isValid = true;
 
         if (step === 1) {
-            const fullName = form.querySelector('input[name="full-name"]');
+            const fullName = form.querySelector('input[name="full_name"]');
             const email = form.querySelector('input[name="email"]');
-            const dob = form.querySelector('input[name="dob"]');
+            const dob = form.querySelector('input[name="date_of_birth"]');
             const school = form.querySelector('select[name="school_id"]');
             const password = form.querySelector('input[name="password"]');
-            const confirmPass = form.querySelector('input[name="confirm-password"]');
+            const confirmPass = form.querySelector('input[name="confirm_password"]');
 
             const errors = {};
 
@@ -347,8 +364,8 @@ class AuthPages {
                 return false;
             }
         } else if (step === 3) {
-            const termsCheck = form.querySelector('input[name="accept-terms"]');
-            const privacyCheck = form.querySelector('input[name="accept-privacy"]');
+            const termsCheck = form.querySelector('input[name="accept_terms"]');
+            const privacyCheck = form.querySelector('input[name="accept_privacy"]');
 
             if (!termsCheck?.checked || !privacyCheck?.checked) {
                 UIComponents.showAlert('You must accept terms and privacy policy', 'warning');
