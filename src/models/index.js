@@ -525,7 +525,7 @@ class UserModel {
       throw new Error('PASSWORD_MISSING_NUMBER');
     }
 
-    if (!/[!@#$%^&*]/.test(password)) {
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(password)) {
       throw new Error('PASSWORD_MISSING_SPECIAL_CHAR');
     }
 
