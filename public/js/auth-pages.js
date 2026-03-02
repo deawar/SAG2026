@@ -211,7 +211,7 @@ class AuthPages {
       try {
         const form = selectElement.closest('form');
         const stateInput = form?.querySelector('input[name="state"]');
-        const cityInput = form?.querySelector('input[name="city"]');
+        // cityInput reserved for future city-based filtering
         
         let url = '/api/schools';
         const params = new URLSearchParams();
@@ -295,7 +295,6 @@ class AuthPages {
      */
     validateRegisterStep(form) {
         const step = this.currentStep;
-        let isValid = true;
 
         if (step === 1) {
             const fullName = form.querySelector('input[name="full_name"]');
@@ -475,13 +474,29 @@ class AuthPages {
     async submitRegister(form) {
         this.saveStepData(form);
 
+        // Map form field names to API field names
+        const fullName = (this.formData.full_name || '').trim();
+        const nameParts = fullName.split(/\s+/);
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : firstName;
+
+        const payload = {
+            email: this.formData.email,
+            password: this.formData.password,
+            firstName,
+            lastName,
+            dateOfBirth: this.formData.date_of_birth,
+            schoolId: this.formData.school_id,
+            accountType: this.formData.account_type,
+        };
+
         try {
             const loader = UIComponents.showLoading('Creating account...');
 
             const response = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.formData),
+                body: JSON.stringify(payload),
             });
 
             const data = await response.json();
@@ -757,7 +772,7 @@ class AuthPages {
 
         nextBtn?.addEventListener('click', () => this.nextPasswordResetStep(form));
         backBtn?.addEventListener('click', () => this.prevPasswordResetStep(form));
-        resendBtn?.addEventListener('click', () => this.resendResetCode(form));
+        resendBtn?.addEventListener('click', (e) => this.resendResetCode(form, e));
 
         // Password input listener for strength meter
         const passwordInput = form.querySelector('input[name="new-password"]');
@@ -867,7 +882,7 @@ class AuthPages {
     /**
      * Send reset code to email
      */
-    async sendResetCode(form, email) {
+    async sendResetCode(_form, email) {
         try {
             const response = await fetch('/api/auth/password-reset/send-code', {
                 method: 'POST',
@@ -893,7 +908,7 @@ class AuthPages {
     /**
      * Resend reset code
      */
-    resendResetCode(form) {
+    resendResetCode(form, e) {
         const email = form.querySelector('input[name="email"]');
         const timer = form.querySelector('[data-resend-timer]');
 
@@ -906,7 +921,7 @@ class AuthPages {
 
         // Start cooldown timer
         let seconds = 60;
-        const btn = event.target;
+        const btn = e?.target || form.querySelector('[data-resend-code]');
         btn.disabled = true;
 
         const countdown = setInterval(() => {
