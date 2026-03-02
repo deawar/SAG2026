@@ -451,16 +451,14 @@ describe('PaymentService', () => {
   });
 
   test('Should refund transaction', async () => {
-    // Setup
-    mockDb.query = jest.fn().mockResolvedValue({
-      rows: [{
-        id: uuidv4(),
-        gateway_transaction_id: 'txn_test',
-        total_amount: 1000,
-        transaction_status: 'COMPLETED',
-        gateway_id: uuidv4(),
-      }],
-    });
+    // Setup — refundTransaction makes 4 DB calls:
+    // 1. _getTransaction, 2. _getGatewayConfig, 3. _recordRefund, 4. UPDATE transaction status
+    const gatewayId = uuidv4();
+    mockDb.query = jest.fn()
+      .mockResolvedValueOnce({ rows: [{ id: uuidv4(), gateway_transaction_id: 'txn_test', total_amount: 1000, transaction_status: 'COMPLETED', gateway_id: gatewayId }] })
+      .mockResolvedValueOnce({ rows: [{ id: gatewayId, gateway_type: 'STRIPE', api_key_encrypted: 'encrypted' }] })
+      .mockResolvedValueOnce({ rows: [{ id: uuidv4(), refund_amount: 1000, refund_status: 'COMPLETED' }] })
+      .mockResolvedValueOnce({});  // UPDATE transaction status
 
     const transactionId = uuidv4();
     const result = await paymentService.refundTransaction(transactionId, 'customer_request');
@@ -552,25 +550,31 @@ describe('FraudDetectionService', () => {
   });
 
   test('Should block high-risk transactions', async () => {
-    // Mock multiple fraud signals
+    // To exceed fraud score of 70, trigger 4 rules (total 100 pts):
+    // TRANSACTION_AMOUNT_EXCEEDS_LIMIT(25) + DAILY_SPENDING_LIMIT_EXCEEDED(20) +
+    // TRANSACTION_FREQUENCY_LIMIT_EXCEEDED(15) + NEW_PAYMENT_METHOD(10) +
+    // GEOGRAPHIC_ANOMALY(30)
     mockDb.query = jest.fn()
-      .mockResolvedValueOnce({ rows: [{ total: 9500 }] }) // High daily total
-      .mockResolvedValueOnce({ rows: [{ count: 9 }] }) // High transaction count
+      .mockResolvedValueOnce({ rows: [{ total: 9000 }] }) // High daily total (9000+6000>10000)
+      .mockResolvedValueOnce({ rows: [{ count: 10 }] }) // At frequency limit (10>=10)
       .mockResolvedValueOnce({ rows: [] }) // New payment method
-      .mockResolvedValueOnce({ rows: [] }); // Geographic anomaly
+      .mockResolvedValueOnce({ rows: [{ ip_address: '10.0.0.1' }] }); // Geographic anomaly
 
     await expect(fraudService.checkTransaction({
       userId: uuidv4(),
-      amount: 500,
+      amount: 6000, // Exceeds maxAmountPerTransaction (5000)
       paymentMethod: { id: uuidv4() },
       metadata: { ipAddress: '192.168.1.1' },
     })).rejects.toThrow('TRANSACTION_BLOCKED_FRAUD_DETECTION');
   });
 
   test('Should check daily spending limit', async () => {
-    mockDb.query = jest.fn().mockResolvedValueOnce({
-      rows: [{ total: 9500 }], // Already spent $9500
-    });
+    // Need all 4 DB mocks: daily total, daily count, payment method check, geographic check
+    mockDb.query = jest.fn()
+      .mockResolvedValueOnce({ rows: [{ total: 9500 }] }) // Already spent $9500 (9500+600>10000)
+      .mockResolvedValueOnce({ rows: [{ count: 0 }] }) // Transaction count
+      .mockResolvedValueOnce({ rows: [{ created_at: new Date(Date.now() - 2 * 3600000) }] }) // Old payment method (not new)
+      .mockResolvedValueOnce({ rows: [] }); // No geographic history
 
     const result = await fraudService.checkTransaction({
       userId: uuidv4(),
@@ -583,10 +587,12 @@ describe('FraudDetectionService', () => {
   });
 
   test('Should detect new payment methods', async () => {
+    // Need all 4 DB mocks: daily total, daily count, payment method check, geographic check
     mockDb.query = jest.fn()
       .mockResolvedValueOnce({ rows: [{ total: 0 }] }) // Daily total
       .mockResolvedValueOnce({ rows: [{ count: 0 }] }) // Daily count
-      .mockResolvedValueOnce({ rows: [] }); // No payment method history
+      .mockResolvedValueOnce({ rows: [] }) // No payment method history → isNew = true
+      .mockResolvedValueOnce({ rows: [] }); // No geographic history
 
     const result = await fraudService.checkTransaction({
       userId: uuidv4(),

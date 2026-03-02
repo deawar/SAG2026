@@ -5,6 +5,18 @@
  * ============================================================================
  */
 
+// Mock twilio (not installed) before any service is instantiated (TwilioSMSProvider requires it in constructor)
+jest.mock('twilio', () => () => ({
+  messages: { create: jest.fn().mockResolvedValue({ sid: 'SM_test' }) }
+}), { virtual: true });
+
+// Mock nodemailer so sendMail doesn't try to connect to a real SMTP server
+jest.mock('nodemailer', () => ({
+  createTransport: jest.fn(() => ({
+    sendMail: jest.fn().mockResolvedValue({ messageId: 'test-message-id' })
+  }))
+}));
+
 describe('NotificationService', () => {
   let notificationService;
   let mockDb;
@@ -36,14 +48,14 @@ describe('NotificationService', () => {
       fromNumber: '+12125551234'
     };
 
-    const { NotificationService, EmailProvider } = require('../../src/services/notificationService');
+    const { NotificationService, EmailProvider } = require('../../../src/services/notificationService');
     notificationService = new NotificationService(mockDb, emailConfig, smsConfig);
   });
 
   // ========== Email Template Tests ==========
 
   describe('EmailTemplateService', () => {
-    const { EmailTemplateService } = require('../../src/services/notificationService');
+    const { EmailTemplateService } = require('../../../src/services/notificationService');
 
     test('should generate welcome email template', () => {
       const data = {
@@ -87,7 +99,7 @@ describe('NotificationService', () => {
       const template = EmailTemplateService.generateTemplate('winner-notification', data);
 
       expect(template.subject).toContain('Congratulations');
-      expect(template.html).toContain('You won');
+      expect(template.html).toContain('You Won'); // template uses 'You Won!' (capital W)
       expect(template.html).toContain('$500.00');
     });
 
@@ -148,18 +160,20 @@ describe('NotificationService', () => {
 
   describe('queue', () => {
     test('should queue email notification successfully', async () => {
+      const templateData = { firstName: 'John', artworkTitle: 'Art', currentBid: 100, auctionLink: 'https://example.com', auctionEndTime: '2026-01-01' };
       mockDb.query
-        .mockResolvedValueOnce({ rows: [{ email: 'test@example.com', phone_number: '+12125551234' }] })
-        .mockResolvedValueOnce({ rows: [{ email: 'test@example.com', phone_number: '+12125551234' }] })
-        .mockResolvedValueOnce({ rows: [{ email: 'test@example.com', phone_number: '+12125551234' }] })
-        .mockResolvedValueOnce({ rows: [{ id: 'notif-123', status: 'pending' }] });
+        .mockResolvedValueOnce({ rows: [{ email: 'test@example.com', phone_number: '+12125551234' }] }) // SELECT user
+        .mockResolvedValueOnce({ rows: [] }) // checkPreferences — no prefs, defaults to enabled
+        .mockResolvedValueOnce({ rows: [{ id: 'notif-123', status: 'pending' }] }) // INSERT notification
+        .mockResolvedValueOnce({ rows: [{ id: 'notif-123', channel: 'email', template_id: 'outbid-alert', template_data: JSON.stringify(templateData), delivery_attempts: 0, recipient: 'test@example.com' }] }) // deliver: SELECT notification
+        .mockResolvedValueOnce({}); // deliver: UPDATE status='sent'
 
       const result = await notificationService.queue({
         userId: 'user-123',
         type: 'outbid-alert',
         channel: 'email',
         templateId: 'outbid-alert',
-        templateData: { firstName: 'John', artworkTitle: 'Art', currentBid: 100 }
+        templateData
       });
 
       expect(result.status).toBe('queued');
@@ -202,8 +216,8 @@ describe('NotificationService', () => {
 
     test('should skip notification if user disabled preference', async () => {
       mockDb.query
-        .mockResolvedValueOnce({ rows: [{ email: 'test@example.com', phone_number: '+12125551234' }] })
-        .mockResolvedValueOnce({ rows: [{ email_outbid: false }] });
+        .mockResolvedValueOnce({ rows: [{ email: 'test@example.com', phone_number: '+12125551234' }] }) // SELECT user
+        .mockResolvedValueOnce({ rows: [{ email_outbid_alert: false }] }); // checkPreferences — service builds key: `${channel}_${type.replace('-','_')}` = 'email_outbid_alert'
 
       const result = await notificationService.queue({
         userId: 'user-123',
@@ -440,7 +454,7 @@ describe('NotificationController', () => {
       unsubscribe: jest.fn()
     };
 
-    const { NotificationController } = require('../../src/controllers/notificationController');
+    const { NotificationController } = require('../../../src/controllers/notificationController');
     controller = new NotificationController(mockService);
 
     req = {

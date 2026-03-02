@@ -4,11 +4,13 @@
  * Tests: User management, auction management, payments, compliance, monitoring
  */
 
-const AdminService = require('../src/services/adminService');
-const { Pool } = require('pg');
+const AdminService = require('../../../src/services/adminService');
+const { pool } = require('../../../src/models/index');
 
-// Mock the Pool
-jest.mock('pg');
+// Mock the shared pool from models/index
+jest.mock('../../../src/models/index', () => ({
+  pool: { query: jest.fn() }
+}));
 
 describe('AdminService', () => {
   let adminService;
@@ -18,11 +20,9 @@ describe('AdminService', () => {
     // Clear all mocks before each test
     jest.clearAllMocks();
 
-    // Setup mock pool
-    mockPool = {
-      query: jest.fn()
-    };
-    Pool.mockImplementation(() => mockPool);
+    // Use the mocked pool directly — same object the service uses
+    mockPool = pool;
+    mockPool.query.mockReset(); // Clear queued return values to prevent test contamination
 
     adminService = new AdminService();
   });
@@ -133,7 +133,7 @@ describe('AdminService', () => {
 
       mockPool.query
         .mockResolvedValueOnce({ rows: [{ role: 'SITE_ADMIN', school_id: null }] }) // verifyAdminAccess
-        .mockResolvedValueOnce({ rows: [{ status: 'PENDING_APPROVAL', school_id: 'school-1' }] }) // getAuctionById
+        .mockResolvedValueOnce({ rows: [{ auction_status: 'PENDING_APPROVAL', school_id: 'school-1' }] }) // getAuctionById
         .mockResolvedValueOnce(undefined) // UPDATE auction
         .mockResolvedValueOnce(undefined); // logAdminAction
 
@@ -150,14 +150,14 @@ describe('AdminService', () => {
 
       mockPool.query
         .mockResolvedValueOnce({ rows: [{ role: 'SITE_ADMIN', school_id: null }] }) // verifyAdminAccess
-        .mockResolvedValueOnce({ rows: [{ status: 'PENDING_APPROVAL', school_id: 'school-1' }] }) // getAuctionById
+        .mockResolvedValueOnce({ rows: [{ auction_status: 'PENDING_APPROVAL', school_id: 'school-1' }] }) // getAuctionById
         .mockResolvedValueOnce(undefined) // UPDATE auction
         .mockResolvedValueOnce(undefined); // logAdminAction
 
       const result = await adminService.rejectAuction(auctionId, reason, adminId);
 
       expect(result.success).toBe(true);
-      expect(result.newStatus).toBe('REJECTED');
+      expect(result.newStatus).toBe('CANCELLED'); // service maps REJECTED -> CANCELLED in DB
     });
 
     test('setAuctionFee - should enforce fee percentage bounds', async () => {
@@ -178,7 +178,7 @@ describe('AdminService', () => {
 
       mockPool.query
         .mockResolvedValueOnce({ rows: [{ role: 'SITE_ADMIN', school_id: null }] }) // verifyAdminAccess
-        .mockResolvedValueOnce({ rows: [{ school_id: 'school-1', end_time: oldTime }] }) // getAuctionById
+        .mockResolvedValueOnce({ rows: [{ school_id: 'school-1', ends_at: oldTime }] }) // getAuctionById
         .mockResolvedValueOnce(undefined) // UPDATE auction
         .mockResolvedValueOnce(undefined); // logAdminAction
 
@@ -194,7 +194,7 @@ describe('AdminService', () => {
 
       mockPool.query
         .mockResolvedValueOnce({ rows: [{ role: 'SITE_ADMIN', school_id: null }] }) // verifyAdminAccess
-        .mockResolvedValueOnce({ rows: [{ status: 'CLOSED', school_id: 'school-1' }] }); // getAuctionById
+        .mockResolvedValueOnce({ rows: [{ auction_status: 'CANCELLED', school_id: 'school-1' }] }); // getAuctionById (service checks auction_status === 'CANCELLED' to throw AUCTION_ALREADY_CLOSED)
 
       await expect(adminService.closeForcibly(auctionId, 'Force close', adminId))
         .rejects.toThrow('AUCTION_ALREADY_CLOSED');
@@ -211,7 +211,7 @@ describe('AdminService', () => {
 
       mockPool.query
         .mockResolvedValueOnce({ rows: [{ role: 'SITE_ADMIN', school_id: null }] }) // verifyAdminAccess
-        .mockResolvedValueOnce({ rows: [{ amount: 100.00, status: 'COMPLETED' }] }) // getPaymentById
+        .mockResolvedValueOnce({ rows: [{ total_amount: 100.00, transaction_status: 'COMPLETED' }] }) // getPaymentById
         .mockResolvedValueOnce(undefined) // UPDATE payment
         .mockResolvedValueOnce(undefined); // logAdminAction
 
@@ -227,7 +227,7 @@ describe('AdminService', () => {
 
       mockPool.query
         .mockResolvedValueOnce({ rows: [{ role: 'SITE_ADMIN', school_id: null }] }) // verifyAdminAccess
-        .mockResolvedValueOnce({ rows: [{ amount: 100.00 }] }); // getPaymentById
+        .mockResolvedValueOnce({ rows: [{ total_amount: 100.00 }] }); // getPaymentById
 
       await expect(adminService.processRefund(paymentId, 150.00, 'Refund', adminId))
         .rejects.toThrow('REFUND_EXCEEDS_PAYMENT');
@@ -387,7 +387,9 @@ describe('AdminService', () => {
     test('extendAuction - should validate hours range', async () => {
       const adminId = 'admin-123';
 
-      mockPool.query.mockResolvedValueOnce({ rows: [{ role: 'SITE_ADMIN' }] });
+      mockPool.query
+        .mockResolvedValueOnce({ rows: [{ role: 'SITE_ADMIN' }] }) // verifyAdminAccess for first call
+        .mockResolvedValueOnce({ rows: [{ role: 'SITE_ADMIN' }] }); // verifyAdminAccess for second call
 
       await expect(adminService.extendAuction('auction-123', 0, adminId))
         .rejects.toThrow('INVALID_EXTENSION_HOURS');

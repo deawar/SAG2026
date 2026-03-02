@@ -82,8 +82,8 @@ function canViewAuction(user, auction) {
       return sameSchool;
 
     case 'TEACHER':
-      // Can see all auctions from own school (including DRAFT, PENDING_APPROVAL, ENDED, CANCELLED)
-      return sameSchool;
+      // Can see APPROVED and LIVE auctions from own school (gallery view)
+      return sameSchool && ['APPROVED', 'LIVE'].includes(auctionStatus);
 
     case 'STUDENT':
       // Can see APPROVED and LIVE auctions from own school

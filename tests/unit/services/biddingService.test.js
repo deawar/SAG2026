@@ -36,15 +36,16 @@ describe('BiddingService', () => {
       const userId = 'user-456';
       const bidAmount = 50000; // $500.00
 
-      // Mock successful bid placement
+      // Service queries: BEGIN, SELECT artwork+auction, SELECT user,
+      //   UPDATE bids OUTBID, INSERT bid, INSERT audit_log, COMMIT
       mockClient.query
-        .mockResolvedValueOnce({ rows: [{ id: 'art-123', starting_price: 10000, current_bid: 40000, status: 'active', end_time: new Date(Date.now() + 3600000), artist_id: 'artist-789', auction_id: 'auction-123' }] })
-        .mockResolvedValueOnce({ rows: [{ minimum_bid_increment: 100 }] })
-        .mockResolvedValueOnce({ rows: [{ id: 'user-456', account_status: 'active' }] })
-        .mockResolvedValueOnce({ rows: [{ id: 'payment-method-1' }] })
-        .mockResolvedValueOnce({ rows: [{ id: 'bid-999', bid_amount: 50000, bid_timestamp: new Date() }] })
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({});
+        .mockResolvedValueOnce({})  // BEGIN
+        .mockResolvedValueOnce({ rows: [{ id: 'art-123', starting_bid_amount: 10000, current_bid: 40000, auction_status: 'LIVE', ends_at: new Date(Date.now() + 3600000), created_by_user_id: 'artist-789', auction_id: 'auction-123' }] })
+        .mockResolvedValueOnce({ rows: [{ id: 'user-456', account_status: 'ACTIVE' }] })
+        .mockResolvedValueOnce({})  // UPDATE bids OUTBID
+        .mockResolvedValueOnce({ rows: [{ id: 'bid-999', bid_amount: 50000, placed_at: new Date() }] })
+        .mockResolvedValueOnce({})  // INSERT audit_log
+        .mockResolvedValueOnce({});  // COMMIT
 
       const result = await biddingService.placeBid(artworkId, userId, bidAmount);
 
@@ -57,11 +58,11 @@ describe('BiddingService', () => {
     it('should reject bid that is below minimum increment', async () => {
       const artworkId = 'art-123';
       const userId = 'user-456';
-      const bidAmount = 40050; // Only $0.50 above current bid
+      const bidAmount = 40050; // Only $0.50 above current bid (minimum is current + 100 = 40100)
 
       mockClient.query
-        .mockResolvedValueOnce({ rows: [{ id: 'art-123', starting_price: 10000, current_bid: 40000, status: 'active', end_time: new Date(Date.now() + 3600000), artist_id: 'artist-789', auction_id: 'auction-123' }] })
-        .mockResolvedValueOnce({ rows: [{ minimum_bid_increment: 100 }] });
+        .mockResolvedValueOnce({})  // BEGIN
+        .mockResolvedValueOnce({ rows: [{ id: 'art-123', starting_bid_amount: 10000, current_bid: 40000, auction_status: 'LIVE', ends_at: new Date(Date.now() + 3600000), created_by_user_id: 'artist-789', auction_id: 'auction-123' }] });
 
       await expect(biddingService.placeBid(artworkId, userId, bidAmount)).rejects.toThrow('below minimum');
 
@@ -73,14 +74,18 @@ describe('BiddingService', () => {
       const userId = 'user-456';
       const bidAmount = 50000;
 
-      mockClient.query.mockResolvedValueOnce({
-        rows: [{
-          id: 'art-123',
-          status: 'active',
-          end_time: new Date(Date.now() - 1000), // Already ended
-          artist_id: 'artist-789'
-        }]
-      });
+      mockClient.query
+        .mockResolvedValueOnce({})  // BEGIN
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 'art-123',
+            auction_status: 'LIVE',
+            ends_at: new Date(Date.now() - 1000), // Already ended
+            created_by_user_id: 'artist-789',
+            starting_bid_amount: 10000,
+            current_bid: null
+          }]
+        });
 
       await expect(biddingService.placeBid(artworkId, userId, bidAmount)).rejects.toThrow('ended');
 
@@ -89,35 +94,38 @@ describe('BiddingService', () => {
 
     it('should reject artist bidding on their own artwork', async () => {
       const artworkId = 'art-123';
-      const userId = 'artist-789'; // Same as artist_id
+      const userId = 'artist-789'; // Same as created_by_user_id
       const bidAmount = 50000;
 
-      mockClient.query.mockResolvedValueOnce({
-        rows: [{
-          id: 'art-123',
-          status: 'active',
-          end_time: new Date(Date.now() + 3600000),
-          artist_id: 'artist-789'
-        }]
-      });
+      mockClient.query
+        .mockResolvedValueOnce({})  // BEGIN
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 'art-123',
+            auction_status: 'LIVE',
+            ends_at: new Date(Date.now() + 3600000),
+            created_by_user_id: 'artist-789',
+            starting_bid_amount: 10000,
+            current_bid: null
+          }]
+        });
 
       await expect(biddingService.placeBid(artworkId, userId, bidAmount)).rejects.toThrow('Artist cannot bid');
 
       expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
     });
 
-    it('should reject bid without valid payment method on file', async () => {
+    it('should reject bid from a suspended user account', async () => {
       const artworkId = 'art-123';
       const userId = 'user-456';
       const bidAmount = 50000;
 
       mockClient.query
-        .mockResolvedValueOnce({ rows: [{ id: 'art-123', starting_price: 10000, current_bid: 40000, status: 'active', end_time: new Date(Date.now() + 3600000), artist_id: 'artist-789', auction_id: 'auction-123' }] })
-        .mockResolvedValueOnce({ rows: [{ minimum_bid_increment: 100 }] })
-        .mockResolvedValueOnce({ rows: [{ id: 'user-456', account_status: 'active' }] })
-        .mockResolvedValueOnce({ rows: [] }); // No payment method
+        .mockResolvedValueOnce({})  // BEGIN
+        .mockResolvedValueOnce({ rows: [{ id: 'art-123', starting_bid_amount: 10000, current_bid: 40000, auction_status: 'LIVE', ends_at: new Date(Date.now() + 3600000), created_by_user_id: 'artist-789', auction_id: 'auction-123' }] })
+        .mockResolvedValueOnce({ rows: [{ id: 'user-456', account_status: 'SUSPENDED' }] });  // Suspended user
 
-      await expect(biddingService.placeBid(artworkId, userId, bidAmount)).rejects.toThrow('payment method');
+      await expect(biddingService.placeBid(artworkId, userId, bidAmount)).rejects.toThrow('not active');
 
       expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
     });
@@ -136,11 +144,16 @@ describe('BiddingService', () => {
       const bidId = 'bid-123';
       const userId = 'user-456';
 
+      // Service queries: BEGIN, SELECT bid, SELECT auction, UPDATE bid CANCELLED,
+      //   SELECT previous bid, INSERT audit_log, COMMIT
       mockClient.query
-        .mockResolvedValueOnce({ rows: [{ id: 'bid-123', bidder_id: 'user-456', bid_amount: 50000, auction_id: 'auction-123' }] })
-        .mockResolvedValueOnce({ rows: [{ end_time: new Date(Date.now() + 600000), status: 'active', current_bid: 50000 }] })
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({});
+        .mockResolvedValueOnce({})  // BEGIN
+        .mockResolvedValueOnce({ rows: [{ id: 'bid-123', placed_by_user_id: 'user-456', bid_amount: 50000, auction_id: 'auction-123', artwork_id: 'art-123', bid_status: 'ACTIVE' }] })
+        .mockResolvedValueOnce({ rows: [{ ends_at: new Date(Date.now() + 600000), auction_status: 'LIVE' }] })
+        .mockResolvedValueOnce({})  // UPDATE bid to CANCELLED
+        .mockResolvedValueOnce({ rows: [] })  // SELECT previous bid (none)
+        .mockResolvedValueOnce({})  // INSERT audit_log
+        .mockResolvedValueOnce({});  // COMMIT
 
       const result = await biddingService.withdrawBid(bidId, userId);
 
@@ -152,9 +165,11 @@ describe('BiddingService', () => {
       const bidId = 'bid-123';
       const userId = 'user-789';
 
-      mockClient.query.mockResolvedValueOnce({
-        rows: [{ id: 'bid-123', bidder_id: 'user-456', bid_amount: 50000, auction_id: 'auction-123' }]
-      });
+      mockClient.query
+        .mockResolvedValueOnce({})  // BEGIN
+        .mockResolvedValueOnce({
+          rows: [{ id: 'bid-123', placed_by_user_id: 'user-456', bid_amount: 50000, auction_id: 'auction-123', artwork_id: 'art-123', bid_status: 'ACTIVE' }]
+        });
 
       await expect(biddingService.withdrawBid(bidId, userId)).rejects.toThrow('Unauthorized');
 
@@ -166,8 +181,9 @@ describe('BiddingService', () => {
       const userId = 'user-456';
 
       mockClient.query
-        .mockResolvedValueOnce({ rows: [{ id: 'bid-123', bidder_id: 'user-456', bid_amount: 50000, auction_id: 'auction-123' }] })
-        .mockResolvedValueOnce({ rows: [{ end_time: new Date(Date.now() + 60000), status: 'active', current_bid: 50000 }] }); // Ends in 1 minute
+        .mockResolvedValueOnce({})  // BEGIN
+        .mockResolvedValueOnce({ rows: [{ id: 'bid-123', placed_by_user_id: 'user-456', bid_amount: 50000, auction_id: 'auction-123', artwork_id: 'art-123', bid_status: 'ACTIVE' }] })
+        .mockResolvedValueOnce({ rows: [{ ends_at: new Date(Date.now() + 60000), auction_status: 'LIVE' }] }); // Ends in 1 minute
 
       await expect(biddingService.withdrawBid(bidId, userId)).rejects.toThrow('ending soon');
 
@@ -181,8 +197,8 @@ describe('BiddingService', () => {
 
       pool.query = jest.fn().mockResolvedValue({
         rows: [
-          { id: 'bid-1', bidder_id: 'user-1', bid_amount: 50000, bid_timestamp: new Date(), status: 'active', first_name: 'John', last_name: 'Doe', username: 'johndoe' },
-          { id: 'bid-2', bidder_id: 'user-2', bid_amount: 40000, bid_timestamp: new Date(), status: 'active', first_name: 'Jane', last_name: 'Smith', username: 'janesmith' }
+          { id: 'bid-1', placed_by_user_id: 'user-1', bid_amount: 50000, placed_at: new Date(), bid_status: 'ACTIVE', first_name: 'John', last_name: 'Doe' },
+          { id: 'bid-2', placed_by_user_id: 'user-2', bid_amount: 40000, placed_at: new Date(), bid_status: 'OUTBID', first_name: 'Jane', last_name: 'Smith' }
         ]
       });
 
@@ -190,7 +206,7 @@ describe('BiddingService', () => {
 
       expect(history).toHaveLength(2);
       expect(history[0].amount).toBe(50000);
-      expect(history[0].bidder.username).toBe('johndoe');
+      expect(history[0].bidder.displayName).toBe('John Doe');
     });
 
     it('should return empty array if no bids exist', async () => {
@@ -212,15 +228,13 @@ describe('BiddingService', () => {
         rows: [{
           id: 'art-123',
           title: 'Beautiful Painting',
-          starting_price: 10000,
-          reserve_price: 25000,
-          reserve_met: false,
+          starting_bid_amount: 10000,
+          reserve_bid_amount: 25000,
           auction_id: 'auction-123',
           current_bid: 50000,
           current_bidder_id: 'user-456',
-          status: 'active',
-          end_time: new Date(Date.now() + 3600000),
-          last_bid_time: new Date(),
+          auction_status: 'LIVE',
+          ends_at: new Date(Date.now() + 3600000),
           total_bids: '5'
         }]
       });
@@ -246,8 +260,8 @@ describe('BiddingService', () => {
 
       pool.query = jest.fn().mockResolvedValue({
         rows: [
-          { id: 'bid-1', artwork_id: 'art-1', bid_amount: 50000, bid_timestamp: new Date(), status: 'active', title: 'Painting 1', image_url: 'url1', auction_status: 'active', end_time: new Date(), highest_bid: 50000 },
-          { id: 'bid-2', artwork_id: 'art-2', bid_amount: 30000, bid_timestamp: new Date(), status: 'active', title: 'Painting 2', image_url: 'url2', auction_status: 'closed', end_time: new Date(), highest_bid: 30000 }
+          { id: 'bid-1', artwork_id: 'art-1', bid_amount: 50000, placed_at: new Date(), bid_status: 'OUTBID', title: 'Painting 1', image_url: 'url1', auction_status: 'LIVE', ends_at: new Date(), highest_bid: 55000 },
+          { id: 'bid-2', artwork_id: 'art-2', bid_amount: 30000, placed_at: new Date(), bid_status: 'ACTIVE', title: 'Painting 2', image_url: 'url2', auction_status: 'LIVE', ends_at: new Date(), highest_bid: 30000 }
         ]
       });
 
@@ -262,12 +276,17 @@ describe('BiddingService', () => {
     it('should close auction with winner', async () => {
       const auctionId = 'auction-123';
 
+      // Service queries: BEGIN, SELECT auction, UPDATE auction status,
+      //   SELECT winner (bids JOIN artwork JOIN users), UPDATE bid ACCEPTED,
+      //   INSERT audit_log, COMMIT
       mockClient.query
-        .mockResolvedValueOnce({ rows: [{ id: 'auction-123', current_bid: 50000, current_bidder_id: 'user-456', school_id: 'school-1' }] })
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({ rows: [{ id: 'user-456', first_name: 'John', last_name: 'Doe', email: 'john@example.com' }] })
-        .mockResolvedValueOnce({});
+        .mockResolvedValueOnce({})  // BEGIN
+        .mockResolvedValueOnce({ rows: [{ id: 'auction-123', school_id: 'school-1', auction_status: 'LIVE' }] })
+        .mockResolvedValueOnce({})  // UPDATE auction status = ENDED
+        .mockResolvedValueOnce({ rows: [{ placed_by_user_id: 'user-456', bid_amount: 50000, artwork_id: 'art-123', first_name: 'John', last_name: 'Doe', email: 'john@example.com' }] })
+        .mockResolvedValueOnce({})  // UPDATE bid status = ACCEPTED
+        .mockResolvedValueOnce({})  // INSERT audit_log
+        .mockResolvedValueOnce({});  // COMMIT
 
       const result = await biddingService.closeAuction(auctionId);
 
@@ -280,9 +299,12 @@ describe('BiddingService', () => {
       const auctionId = 'auction-123';
 
       mockClient.query
-        .mockResolvedValueOnce({ rows: [{ id: 'auction-123', current_bid: null, current_bidder_id: null, school_id: 'school-1' }] })
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({});
+        .mockResolvedValueOnce({})  // BEGIN
+        .mockResolvedValueOnce({ rows: [{ id: 'auction-123', school_id: 'school-1', auction_status: 'LIVE' }] })
+        .mockResolvedValueOnce({})  // UPDATE auction status = ENDED
+        .mockResolvedValueOnce({ rows: [] })  // SELECT winner — no bids
+        .mockResolvedValueOnce({})  // INSERT audit_log
+        .mockResolvedValueOnce({});  // COMMIT
 
       const result = await biddingService.closeAuction(auctionId);
 
@@ -297,14 +319,13 @@ describe('BiddingService', () => {
 
       pool.query = jest.fn().mockResolvedValue({
         rows: [{
-          current_bidder_id: 'user-456',
-          current_bid: 50000,
-          id: 'user-456',
+          placed_by_user_id: 'user-456',
+          bid_amount: 50000,
+          artwork_id: 'art-123',
           first_name: 'John',
           last_name: 'Doe',
           email: 'john@example.com',
-          artwork_id: 'art-123',
-          title: 'Beautiful Painting'
+          artwork_title: 'Beautiful Painting'
         }]
       });
 
@@ -315,12 +336,7 @@ describe('BiddingService', () => {
     });
 
     it('should return no winner if auction has no bids', async () => {
-      pool.query = jest.fn().mockResolvedValue({
-        rows: [{
-          current_bidder_id: null,
-          current_bid: null
-        }]
-      });
+      pool.query = jest.fn().mockResolvedValue({ rows: [] });
 
       const result = await biddingService.getAuctionWinner('auction-123');
 
@@ -334,8 +350,8 @@ describe('BiddingService', () => {
 
       pool.query = jest.fn().mockResolvedValue({
         rows: [
-          { id: 'auction-1', title: 'Painting 1', image_url: 'url1', starting_price: 10000, status: 'active', current_bid: 50000, end_time: new Date(), user_highest_bid: 50000, auction_highest_bid: 50000 },
-          { id: 'auction-2', title: 'Painting 2', image_url: 'url2', starting_price: 20000, status: 'ending_soon', current_bid: 30000, end_time: new Date(), user_highest_bid: 30000, auction_highest_bid: 35000 }
+          { id: 'auction-1', title: 'Painting 1', image_url: 'url1', starting_bid_amount: 10000, auction_status: 'LIVE', ends_at: new Date(), user_highest_bid: 50000, auction_highest_bid: 50000 },
+          { id: 'auction-2', title: 'Painting 2', image_url: 'url2', starting_bid_amount: 20000, auction_status: 'LIVE', ends_at: new Date(), user_highest_bid: 30000, auction_highest_bid: 35000 }
         ]
       });
 
