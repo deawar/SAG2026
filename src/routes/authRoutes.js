@@ -290,7 +290,7 @@ router.get('/', (req, res) => {
  */
 router.post('/2fa/verify', authMiddleware.verifyToken, async (req, res, next) => {
   try {
-    const { secret, code } = req.body;
+    const { secret, code, backupCodes: clientBackupCodes } = req.body;
     const userId = req.user.id;
 
     if (!secret || !code) {
@@ -300,36 +300,22 @@ router.post('/2fa/verify', authMiddleware.verifyToken, async (req, res, next) =>
       });
     }
 
-    // Verify code against the secret
-    const isValid = twoFactorService.verifyToken(secret, code);
+    // Use backup codes sent from setup step; fall back to generating new ones
+    const backupCodes = Array.isArray(clientBackupCodes) && clientBackupCodes.length > 0
+      ? clientBackupCodes
+      : twoFactorService._generateBackupCodes(8);
 
-    if (!isValid) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid 2FA code'
-      });
-    }
-
-    // Generate backup codes using the service
-    const backupCodes = twoFactorService.generateBackupCodes();
-
-    // Update user in database to enable 2FA
-    // Store: secret (encrypted), backup codes (encrypted), and enabled flag
-    await userModel.update(userId, {
-      two_fa_enabled: true,
-      two_fa_secret: secret,
-      two_fa_backup_codes: JSON.stringify(backupCodes),
-      two_fa_backup_codes_used: JSON.stringify([])
-    });
+    // confirmSetup verifies the TOTP code and persists 2FA (secret + backup codes) to DB
+    await twoFactorService.confirmSetup(userId, secret, code, backupCodes);
 
     return res.json({
       success: true,
-      message: '2FA enabled successfully',
-      data: {
-        backupCodes
-      }
+      message: '2FA enabled successfully'
     });
   } catch (error) {
+    if (error.message === 'INVALID_2FA_TOKEN') {
+      return res.status(400).json({ success: false, message: 'Invalid 2FA code' });
+    }
     next(error);
   }
 });

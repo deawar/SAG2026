@@ -186,7 +186,8 @@ class TwoFactorAuthSetup {
             const response = await apiClient.request('POST', '/api/auth/2fa/verify', {
                 body: {
                     secret: this.currentSecret,
-                    code: code
+                    code: code,
+                    backupCodes: this.currentBackupCodes
                 },
                 headers: { 'Authorization': `Bearer ${authManager.getToken()}` }
             });
