@@ -1,0 +1,121 @@
+/* ============================================
+   Silent Auction Gallery - Theme System
+   School Color Theming Infrastructure
+   ============================================ */
+
+/* ===== Font Variables ===== */
+/* Fonts are loaded via <link> in HTML for performance. */
+/* Fallback stacks ensure graceful degradation. */
+:root {
+    --font-display: 'Cormorant Garant', Georgia, 'Times New Roman', serif;
+    --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+    --font-mono: 'Courier New', Courier, monospace;
+}
+
+/* ===== Typography Application ===== */
+/* Apply display font to headings for a refined gallery aesthetic */
+h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+}
+
+.logo-text {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
+.hero h1,
+.auth-header h1,
+.page-header h1 {
+    font-family: var(--font-display);
+    font-style: italic;
+}
+
+/* ===== School Color Theming ===== */
+/*
+ * HOW IT WORKS:
+ * 1. --school-* variables define the active school's colors (set below as SAG defaults).
+ * 2. All --color-primary/secondary throughout the UI reference these variables.
+ * 3. When a school is selected, JavaScript calls ThemeManager.apply(school) which
+ *    sets --school-* directly on documentElement via style.setProperty().
+ * 4. Alternatively, add a .school-theme-* class to <body> for CSS-only preset themes.
+ *
+ * To set a school theme from JS:
+ *   ThemeManager.apply({ primary: '#A41034', primaryDark: '#7A1525', primaryLight: '#C2223D',
+ *                         secondary: '#C5A028', secondaryDark: '#A08020', secondaryLight: '#E0B830' });
+ */
+
+/* ===== School Color Presets ===== */
+/* These CSS classes can be applied to <body> to activate a school theme without JS.
+   JavaScript can also override via inline style (see theme-manager.js). */
+
+/* Crimson & Gold (e.g. many high schools) */
+.school-theme-crimson-gold {
+    --school-primary: #9B1B30;
+    --school-primary-dark: #7A1525;
+    --school-primary-light: #C2223D;
+    --school-secondary: #B8860B;
+    --school-secondary-dark: #956D09;
+    --school-secondary-light: #D4A017;
+}
+
+/* Navy & Gold */
+.school-theme-navy-gold {
+    --school-primary: #003087;
+    --school-primary-dark: #00246B;
+    --school-primary-light: #0040A8;
+    --school-secondary: #C5A028;
+    --school-secondary-dark: #A08020;
+    --school-secondary-light: #E0B830;
+}
+
+/* Forest Green & Gold */
+.school-theme-forest-gold {
+    --school-primary: #1B5E20;
+    --school-primary-dark: #155118;
+    --school-primary-light: #217328;
+    --school-secondary: #B7820A;
+    --school-secondary-dark: #8F6508;
+    --school-secondary-light: #D49A10;
+}
+
+/* Royal Purple & Gold */
+.school-theme-purple-gold {
+    --school-primary: #4A1D7B;
+    --school-primary-dark: #39165E;
+    --school-primary-light: #5E2599;
+    --school-secondary: #C5A028;
+    --school-secondary-dark: #A08020;
+    --school-secondary-light: #E0B830;
+}
+
+/* Scarlet & Gray */
+.school-theme-scarlet-gray {
+    --school-primary: #BB0000;
+    --school-primary-dark: #960000;
+    --school-primary-light: #D90000;
+    --school-secondary: #666666;
+    --school-secondary-dark: #444444;
+    --school-secondary-light: #888888;
+}
+
+/* Royal Blue & White */
+.school-theme-royal-blue {
+    --school-primary: #003FA5;
+    --school-primary-dark: #002D7A;
+    --school-primary-light: #0050D0;
+    --school-secondary: #4A90C4;
+    --school-secondary-dark: #3373A0;
+    --school-secondary-light: #65ABDF;
+}
+
+/* Orange & Black */
+.school-theme-orange-black {
+    --school-primary: #C85200;
+    --school-primary-dark: #A34200;
+    --school-primary-light: #E06000;
+    --school-secondary: #1A1A1A;
+    --school-secondary-dark: #000000;
+    --school-secondary-light: #333333;
+}
