@@ -32,6 +32,13 @@ class AdminDashboard {
                 ? '/teacher-dashboard.html'
                 : '/user-dashboard.html';
         }
+
+        const adminNameEl = document.getElementById('admin-name');
+        if (adminNameEl) {
+            const firstName = user.first_name || user.firstName || '';
+            const lastName = user.last_name || user.lastName || '';
+            adminNameEl.textContent = [firstName, lastName].filter(Boolean).join(' ') || user.email || 'Admin';
+        }
     }
 
     /**
