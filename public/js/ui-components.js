@@ -902,7 +902,10 @@ class UIComponents {
             if (registerBtn) registerBtn.style.display = 'none';
             if (userMenuWrapper) userMenuWrapper.style.display = 'flex';
             if (userMenuBtn && userName) {
-                userName.textContent = user.first_name || user.firstName || user.email;
+                const firstName = user.first_name || user.firstName || '';
+                const lastName = user.last_name || user.lastName || '';
+                const displayName = [firstName, lastName].filter(Boolean).join(' ') || user.email;
+                userName.textContent = displayName;
             }
 
             // Show/hide admin-only link and update dashboard links by role
