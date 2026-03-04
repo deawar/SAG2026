@@ -226,6 +226,8 @@ class UserController {
         data: {
           userId: user.id,
           email: user.email,
+          firstName: user.first_name || '',
+          lastName: user.last_name || '',
           role: user.role,
           schoolId: user.school_id || null,
           accessToken: accessTokenResult.token,
@@ -409,9 +411,12 @@ class UserController {
           accessToken: accessTokenResult.token,
           refreshToken: refreshTokenResult.token,
           expiresIn: accessTokenResult.expiresIn,
+          userId: user.id,
           email: user.email,
+          firstName: user.first_name || '',
+          lastName: user.last_name || '',
           role: user.role,
-          userId: user.id
+          schoolId: user.school_id || null
         }
       });
     } catch (error) {

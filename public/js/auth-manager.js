@@ -81,6 +81,8 @@ class AuthManager {
                     this.setUser({
                         id: response.data.userId,
                         email: response.data.email,
+                        firstName: response.data.firstName || '',
+                        lastName: response.data.lastName || '',
                         role: response.data.role,
                         schoolId: response.data.schoolId || null
                     });
