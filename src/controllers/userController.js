@@ -465,6 +465,7 @@ class UserController {
           role: user.role,
           schoolId: user.school_id,
           accountStatus: user.account_status,
+          twoFactorEnabled: !!user.two_fa_enabled,
           lastLogin: user.last_login,
           createdAt: user.created_at
         }
