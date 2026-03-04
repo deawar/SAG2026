@@ -167,10 +167,15 @@ class AuthManager {
         try {
             const response = await apiClient.refreshToken();
 
-            if (response.token) {
-                this.setToken(response.token);
-                if (response.refresh_token) {
-                    this.setRefreshToken(response.refresh_token);
+            // Handle both response formats:
+            // New: { success: true, data: { accessToken, expiresIn } }
+            // Old: { token, refresh_token }
+            const newToken = response.data?.accessToken || response.token;
+            if (newToken) {
+                this.setToken(newToken);
+                const newRefresh = response.data?.refreshToken || response.refresh_token;
+                if (newRefresh) {
+                    this.setRefreshToken(newRefresh);
                 }
                 return true;
             }
@@ -189,10 +194,12 @@ class AuthManager {
      */
     setupTokenRefresh() {
         setInterval(async () => {
-            if (this.isAuthenticated()) {
+            // Refresh while token exists — fires at 14 min so token is still valid
+            // when the 15-min expiry hits
+            if (this.token) {
                 await this.refreshAccessToken();
             }
-        }, 15 * 60 * 1000); // Refresh every 15 minutes
+        }, 14 * 60 * 1000); // 14 minutes (1 min before the 15-min access token expires)
     }
 
     /**
