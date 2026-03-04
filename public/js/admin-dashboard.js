@@ -1780,6 +1780,15 @@ class AdminDashboard {
             const data = await response.json();
             const is2FAEnabled = data.data?.twoFactorEnabled || data.data?.two_fa_enabled;
 
+            // Update admin name display from live profile data (overrides localStorage fallback)
+            const adminNameEl = document.getElementById('admin-name');
+            if (adminNameEl && data.data) {
+                const firstName = data.data.firstName || '';
+                const lastName = data.data.lastName || '';
+                const displayName = [firstName, lastName].filter(Boolean).join(' ') || data.data.email || 'Admin';
+                adminNameEl.textContent = displayName;
+            }
+
             if (statusText) {
                 statusText.textContent = is2FAEnabled
                     ? '2FA is currently enabled. Your account is protected.'
