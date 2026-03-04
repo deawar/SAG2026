@@ -1614,6 +1614,16 @@ tbody tr:hover {
     font-family: 'Courier New', monospace;
     font-size: var(--font-size-lg);
     font-weight: 600;
+    overflow: hidden;
+}
+
+.secret-code code {
+    flex: 1;
+    min-width: 0;
+    word-break: break-all;
+    overflow-wrap: break-word;
+    white-space: normal;
+    letter-spacing: 0.05em;
 }
 
 .btn-icon {
