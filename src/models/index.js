@@ -315,7 +315,7 @@ class UserModel {
     const secret = speakeasy.generateSecret({
       name: `Silent Auction (${userId})`,
       issuer: 'Silent Auction Gallery',
-      length: 32,
+      length: 20, // 20 bytes = 160 bits = exactly 32 base32 chars (fits VARCHAR(32))
     });
 
     // Generate backup codes

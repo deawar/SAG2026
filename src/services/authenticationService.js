@@ -167,7 +167,7 @@ class TwoFactorService {
     const secret = speakeasy.generateSecret({
       name: `Silent Auction (${userEmail})`,
       issuer: 'Silent Auction Gallery',
-      length: 32,
+      length: 20, // 20 bytes = 160 bits = exactly 32 base32 chars (fits VARCHAR(32))
     });
 
     const backupCodes = this._generateBackupCodes(8);
