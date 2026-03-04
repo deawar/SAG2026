@@ -248,10 +248,11 @@ class TwoFactorService {
     const encrypted = this._encryptData(JSON.stringify(backupCodes));
 
     // Update user to enable 2FA
+    // backup_codes is TEXT[] in schema; wrap the encrypted blob in an array
     await this.db.query(
       `UPDATE users SET two_fa_enabled = TRUE, two_fa_secret = $1, backup_codes = $2, updated_at = CURRENT_TIMESTAMP
        WHERE id = $3`,
-      [secret, encrypted, userId]
+      [secret, [encrypted], userId]
     );
   }
 
@@ -304,7 +305,7 @@ class TwoFactorService {
 
     await this.db.query(
       `UPDATE users SET backup_codes = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
-      [encrypted, userId]
+      [[encrypted], userId]
     );
 
     return backupCodes;
