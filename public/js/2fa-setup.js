@@ -147,9 +147,7 @@ class TwoFactorAuthSetup {
     displaySecretCode(secret) {
         const secretEl = document.getElementById('secret-code');
         if (secretEl && secret) {
-            // Show only the first 12 characters, rest as dots for privacy
-            const displaySecret = secret.substring(0, 12) + '•'.repeat(Math.max(0, secret.length - 12));
-            secretEl.textContent = displaySecret;
+            secretEl.textContent = secret;
             secretEl.dataset.fullSecret = secret;
         }
     }
