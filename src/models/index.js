@@ -327,7 +327,7 @@ class UserModel {
     await this.db.query(
       `UPDATE users SET two_fa_secret = $1, backup_codes = $2, two_fa_enabled = TRUE, updated_at = CURRENT_TIMESTAMP
        WHERE id = $3`,
-      [secret.base32, backupCodesEncrypted, userId]
+      [secret.base32, [backupCodesEncrypted], userId]
     );
 
     return {
