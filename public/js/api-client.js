@@ -185,7 +185,8 @@ class APIClient {
      * @returns {Promise}
      */
     refreshToken() {
-        return this.request('POST', '/api/auth/refresh');
+        const refreshToken = localStorage.getItem('refresh_token');
+        return this.request('POST', '/api/auth/refresh', { body: { refreshToken } });
     }
 
     /**
