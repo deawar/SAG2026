@@ -906,6 +906,24 @@ class UIComponents {
                 const lastName = user.last_name || user.lastName || '';
                 const displayName = [firstName, lastName].filter(Boolean).join(' ') || user.email;
                 userName.textContent = displayName;
+
+                // If only email is available (stale localStorage), fetch live profile
+                if (!firstName && !lastName && authManager.getToken()) {
+                    fetch('/api/user/profile', {
+                        headers: { 'Authorization': `Bearer ${authManager.getToken()}` }
+                    }).then(r => r.ok ? r.json() : null).then(data => {
+                        if (!data?.data) return;
+                        const fn = data.data.firstName || '';
+                        const ln = data.data.lastName || '';
+                        const name = [fn, ln].filter(Boolean).join(' ') || data.data.email;
+                        if (userName) userName.textContent = name;
+                        // Update localStorage so future page loads don't need to re-fetch
+                        const stored = authManager.getUser();
+                        if (stored && (fn || ln)) {
+                            authManager.setUser({ ...stored, firstName: fn, lastName: ln });
+                        }
+                    }).catch(() => {});
+                }
             }
 
             // Show/hide admin-only link and update dashboard links by role
