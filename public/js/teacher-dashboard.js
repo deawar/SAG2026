@@ -54,6 +54,16 @@ class TeacherDashboard {
             csvForm.addEventListener('submit', (e) => this.handleCSVUpload(e));
         }
 
+        // Mobile sidebar toggle
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const sidebar = document.getElementById('dashboard-sidebar');
+        if (sidebarToggle && sidebar) {
+            sidebarToggle.addEventListener('click', () => {
+                const isOpen = sidebar.classList.toggle('open');
+                sidebarToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+        }
+
         // Sidebar navigation
         const sidebarLinks = document.querySelectorAll('.sidebar-link');
         sidebarLinks.forEach(link => {
@@ -442,6 +452,14 @@ class TeacherDashboard {
         if (sectionElement) {
             sectionElement.style.display = 'block';
             sectionElement.classList.add('active');
+        }
+
+        // Close sidebar on mobile after selecting a section
+        const sidebar = document.getElementById('dashboard-sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        if (sidebar && window.innerWidth < 769) {
+            sidebar.classList.remove('open');
+            if (sidebarToggle) sidebarToggle.setAttribute('aria-expanded', 'false');
         }
     }
 

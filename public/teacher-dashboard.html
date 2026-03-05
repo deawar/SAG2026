@@ -69,8 +69,15 @@
 
         <div class="container">
             <div class="dashboard-container">
+                <!-- Mobile sidebar toggle -->
+                <button class="sidebar-toggle" id="sidebar-toggle"
+                        aria-label="Toggle navigation menu" aria-expanded="false"
+                        aria-controls="dashboard-sidebar">
+                    &#9776; Menu
+                </button>
+
                 <!-- Sidebar Navigation -->
-                <aside class="dashboard-sidebar" role="complementary">
+                <aside class="dashboard-sidebar" id="dashboard-sidebar" role="complementary">
                     <nav class="sidebar-nav" role="navigation" aria-label="Dashboard Navigation">
                         <ul>
                             <li><a href="#students" class="sidebar-link active" data-section="students">Students</a></li>
