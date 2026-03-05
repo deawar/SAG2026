@@ -339,6 +339,7 @@
         flex-direction: column;
         width: 100%;
         gap: var(--spacing-sm);
+        order: 4; /* keep auth below hamburger row */
     }
     
     .navbar-auth .btn {
