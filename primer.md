@@ -19,8 +19,8 @@ Start date: 2026-01-26 | Target: Q2 2026
 | 2 | Core Models & Services | Complete |
 | 3 | Authentication & Authorization | Complete |
 | 4 | Payment Processing | Complete |
-| 5 | Auction Management API | Routes exist and now mounted |
-| 6 | Frontend Development | Partial - HTML/CSS done, JS stubs incomplete |
+| 5 | Auction Management API | Complete |
+| 6 | Frontend Development | Partial - auctions list wired, detail/teacher stubs remain |
 | 7 | Notification System | Pending - service file exists, no email wired |
 | 8 | Admin Dashboard | Partial - HTML/CSS/JS exists, backend incomplete |
 | 9 | Deployment & Testing | Pending |
@@ -34,55 +34,69 @@ Start date: 2026-01-26 | Target: Q2 2026
 
 ## What Was Done Last Session (2026-03-13)
 
-P1 Critical Bug Fixes - pushed as commit ebc5a09
+### Commit 81c051f — Hamburger menu fix
+- responsive.css: .menu-toggle was display:flex with no flex-direction, causing 3 spans
+  to lay out side-by-side (single thin line). Fixed with flex-direction:column; gap:5px.
+- main.css: span height bumped to 3px, border-radius:2px, margin removed (gap handles spacing).
 
-1. Mounted missing API routes (src/index.js): /api/auctions, /api/bidding, /api/payments
-   were never registered with Express - all frontend calls returned 404.
-   Fixed and paired with correct rate limiters (apiLimiter, bidLimiter, paymentLimiter).
+### Commit fcd2a3d — P2 Responsive polish + ESLint + Auction card wiring
 
-2. Fixed refresh token key mismatch (public/js/auth-manager.js line 40):
-   register() was writing 'refreshToken' (camelCase) directly to localStorage but
-   the constructor reads 'refresh_token' (snake_case). Changed to this.setRefreshToken().
-   Token refresh silently broke for every registered user.
+**ESLint setup:**
+- Created eslint.config.js (flat config for ESLint v9 — no .eslintrc needed)
+- Covers src/**/*.js (node globals), public/js/**/*.js (browser globals + UIComponents etc.),
+  tests/**/*.js (jest globals)
+- varsIgnorePattern: ^_ so _prefixed vars do not trigger no-unused-vars
+- Fixed all 70 lint errors: dead imports removed, unused destructured vars prefixed with _,
+  no-useless-escape fixed in 5 files, intentional control-char regex suppressed,
+  incomplete test stubs suppressed with file-level eslint-disable
 
-3. Added mobile menu toggle (public/admin-dashboard.html):
-   Hamburger button was missing - admin nav tabs unreachable on mobile.
-   Root fix applied in UIComponents.setupNavbarEventListeners() so all pages benefit.
-   Removed duplicate handler from index.js to prevent double-toggle bug on homepage.
+**CSS P2 fixes:**
+- Mobile .btn width:100% scoped to .form-actions/.card-actions/.page-actions only
+- .hero gets display:flex on desktop (content + image side-by-side), collapses to
+  flex-direction:column on mobile with hero-image capped at 180px
+- Added .hero-content, .hero-image, .hero-img baseline styles
 
-Also created CLAUDE.md (session rule: rewrite primer.md) and primer.md (this file).
+**Auction list API + card rendering:**
+- auctionService.listAuctions: query now LEFT JOINs schools, adds subqueries for
+  current_bid, bid_count, and cover_image (first approved artwork per auction)
+- Response fields changed: now returns id (was auctionId), school (name), currentBid,
+  bidCount, image
+- auctions-page.js: added normaliseStatus() mapping LIVE to active, DRAFT to draft,
+  ENDED/CANCELLED to ended; status filter compares normalised values;
+  image falls back to /images/placeholder-art.svg
+
+**index.js cleanup:**
+- handleVerify2FA exposed on globalThis for HTML onsubmit handlers
+- Dead functions (handleLogout, show2FAForm) removed; updateAuthUI bug eliminated
 
 ---
 
 ## Active Work / In Progress
-Nothing mid-flight. All P1 fixes complete and pushed.
+Nothing mid-flight. All P2 priorities addressed and pushed.
 
 ---
 
 ## Known Issues / Blockers (Prioritised)
 
-P2 - Responsive Polish
-- responsive.css:334 - .btn { width: 100% } on mobile too aggressive, breaks icon/table/inline buttons. Scope to .form-actions .btn only.
-- Hero section has no mobile column-stack rule for .hero-image
-- Auth buttons stack awkwardly below hamburger on very small screens
-
-P2 - Frontend Wiring
-- auctions-page.js - filter/sort/pagination now calls working /api/auctions but card rendering needs verification
-- auction-detail.js - bidding flow needs end-to-end test
+P2 - Frontend Wiring (remaining)
+- auction-detail.js - bidding flow needs end-to-end test against live API
 - teacher-dashboard.js - artwork submission and student management are stubs
 
 P3 - Dark Mode Breaks Theming
-- responsive.css:559 dark mode uses hardcoded hex values, bypassing CSS variable school-theme system
+- responsive.css:559+ dark mode uses hardcoded hex values, bypassing CSS variable school-theme system
 
 P3 - Housekeeping
 - public/test-registration.html - test file is publicly served, should be deleted
 - 80+ .md files in project root should move to /docs/
 - README.md API docs are stale (lists /users, /auctions - actual routes are /api/auth/*, /api/auctions/*)
+- main.css has ~7 duplicate selectors (tabs-list, tab-button, text-center, text-muted, text-success)
+  at lines 1719+ vs 1125+
 
 P4 - Unimplemented Features
 - Section 7 Notifications: notificationService.js exists but no email provider configured
 - Payment UI: winner checkout flow has no HTML page
 - Admin dashboard backend: user management, reporting, compliance endpoints incomplete
+- /images/placeholder-art.svg does not exist yet - needed for auction cards without artwork
 
 ---
 
@@ -90,11 +104,14 @@ P4 - Unimplemented Features
 
 | File | Change |
 |------|--------|
-| src/index.js | Added auction, bidding, payment route mounts with rate limiters (lines 139-179) |
-| public/js/auth-manager.js | Fixed refresh token storage key on line 40 |
-| public/js/ui-components.js | Added shared mobile menu toggle handler in setupNavbarEventListeners() |
-| public/js/index.js | Removed duplicate menu toggle handler |
-| public/admin-dashboard.html | Added missing .menu-toggle button to navbar |
+| public/css/responsive.css | Hamburger flex-direction, .btn scoping, hero mobile stack |
+| public/css/main.css | .menu-toggle span height/radius, .hero flex layout + image styles |
+| public/js/auctions-page.js | normaliseStatus(), field mapping fix, image fallback |
+| src/services/auctionService.js | listAuctions extended with school JOIN + bid/image subqueries |
+| eslint.config.js | New file - ESLint v9 flat config |
+| public/js/index.js | handleVerify2FA on globalThis, dead code removed |
+| src/app.js | Dead rate limiter imports removed |
+| Multiple src/ files | Dead imports and unused vars cleaned up |
 
 ---
 
@@ -135,6 +152,7 @@ P4 - Unimplemented Features
 - Framework: Jest | npm test | npm run test:unit | npm run test:integration
 - Target: 80%+ overall, 100% security-critical
 - Last known run: Section 11 security tests passing (Feb 2026)
+- Lint: npm run lint (ESLint v9, 0 errors as of fcd2a3d)
 
 ---
 
@@ -142,15 +160,18 @@ P4 - Unimplemented Features
 - Dev: npm run dev (nodemon, port 3000)
 - DB: PostgreSQL - schema.sql, seeds.sql
 - Docker: docker-compose.yml (dev) / docker-compose.prod.yml (prod)
+- Live: https://sag.live (Apache reverse proxy to Node app on VPS 15.204.210.161)
 - Payments: Stripe + Square - tokenisation only, no card data stored
 - WebSocket: ws library, initialised at server start in realtimeService.js
 
 ---
 
 ## What To Do Next Session
-1. Fix .btn width:100% mobile scoping and hero image mobile layout (P2 responsive)
-2. Verify auction list page end-to-end with now-working /api/auctions endpoint
-3. Test login > register > page reload to confirm refresh token key fix works in browser
+1. Create /images/placeholder-art.svg so auction cards render cleanly when no artwork exists
+2. Test auction list page end-to-end at https://sag.live - verify cards render with bid counts
+3. Test auction-detail.js bidding flow end-to-end
+4. Fix dark mode hardcoded hex values in responsive.css (P3)
+5. Delete public/test-registration.html (P3)
 
 ---
 
@@ -162,3 +183,8 @@ P4 - Unimplemented Features
 - Auction/bidding/payment route files are NOT factory functions - require() directly
   (unlike auth/user/school routes which receive a db param)
 - API routes are /api/* not /api/v1/* - README is wrong, do not follow it for route paths
+- auctionService.listAuctions returns id (not auctionId) - changed in fcd2a3d
+- ESLint config is eslint.config.js (v9 flat config) - do not create .eslintrc files
+- Prefix unused-but-intentional variables with _ to satisfy ESLint varsIgnorePattern
+- Use Number.parseInt / Number.parseFloat not global parseInt/parseFloat (SonarLint S7773)
+- Use globalThis instead of window for cross-env globals (SonarLint S7764)
