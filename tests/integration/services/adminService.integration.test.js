@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /**
  * Admin API Integration Tests - Section 8
  * Tests for all admin endpoints with real request/response cycles

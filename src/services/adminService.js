@@ -813,7 +813,7 @@ class AdminService {
    * Get payment details
    */
   async getPaymentById(paymentId, adminId) {
-    const admin = await this.verifyAdminAccess(adminId);
+    const _admin = await this.verifyAdminAccess(adminId);
 
     const result = await pool.query(
       `SELECT t.*, u.email FROM transactions t
@@ -837,7 +837,7 @@ class AdminService {
   async listPayments(filters, adminId) {
     const admin = await this.verifyAdminAccess(adminId);
 
-    const { status, gateway, minAmount, maxAmount, page = 1, limit = 20 } = filters;
+    const { status, gateway: _gateway, minAmount, maxAmount, page = 1, limit = 20 } = filters;
     const offset = (page - 1) * limit;
 
     let query = `SELECT t.id, t.buyer_user_id, t.total_amount, t.transaction_status, t.created_at
@@ -879,7 +879,7 @@ class AdminService {
    * Process refund
    */
   async processRefund(paymentId, amount, reason, adminId) {
-    const admin = await this.verifyAdminAccess(adminId);
+    const _admin = await this.verifyAdminAccess(adminId);
 
     const paymentResult = await pool.query(
       'SELECT id, total_amount, transaction_status FROM transactions WHERE id = $1',
@@ -1290,7 +1290,7 @@ class AdminService {
   async getSystemHealth() {
     try {
       // Test database connection
-      const dbTest = await pool.query('SELECT NOW()');
+      const _dbTest = await pool.query('SELECT NOW()');
       
       return {
         database: 'HEALTHY',

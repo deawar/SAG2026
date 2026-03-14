@@ -662,7 +662,7 @@ class AuthenticationService {
    * @returns {Promise<Object>} - Pre-auth session or tokens if 2FA disabled
    */
   async login(email, password, metadata = {}) {
-    const { ipAddress, userAgent } = metadata;
+    const { ipAddress, userAgent: _userAgent } = metadata;
 
     // Get user
     const user = await this.userModel.getByEmail(email);

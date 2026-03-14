@@ -6,7 +6,6 @@
 
 const { pool } = require('../models/index');
 const QRCode = require('qrcode');
-const { v4: uuidv4 } = require('uuid');
 
 class AuctionService {
   /**
@@ -76,7 +75,7 @@ class AuctionService {
 
       // Add artwork to auction if provided
       if (artworkIds && artworkIds.length > 0) {
-        const placeholders = artworkIds
+        const _placeholders = artworkIds
           .map((_, i) => `($1, $${i + 2})`)
           .join(',');
 
@@ -356,26 +355,39 @@ class AuctionService {
       sort = null  // Alternative sort parameter name
     } = options;
 
-    let query = 'SELECT * FROM auctions WHERE deleted_at IS NULL';
+    let query = `
+      SELECT a.*,
+             s.name AS school_name,
+             (SELECT MAX(b.bid_amount) FROM bids b
+              JOIN artwork aw ON b.artwork_id = aw.id
+              WHERE aw.auction_id = a.id AND b.bid_status = 'ACTIVE') AS current_bid,
+             (SELECT COUNT(b.id) FROM bids b
+              JOIN artwork aw ON b.artwork_id = aw.id
+              WHERE aw.auction_id = a.id AND b.bid_status = 'ACTIVE') AS bid_count,
+             (SELECT aw2.image_url FROM artwork aw2
+              WHERE aw2.auction_id = a.id AND aw2.approval_status = 'APPROVED'
+              ORDER BY aw2.created_at ASC LIMIT 1) AS cover_image
+      FROM auctions a
+      LEFT JOIN schools s ON s.id = a.school_id
+      WHERE a.deleted_at IS NULL`;
     const params = [];
     let paramCount = 1;
 
     // Map frontend status values to database values
     if (status) {
       let dbStatus = status.toUpperCase();
-      // Map common status values
       if (dbStatus === 'ACTIVE') dbStatus = 'LIVE';
       if (dbStatus === 'PENDING') dbStatus = 'PENDING_APPROVAL';
       if (dbStatus === 'DRAFT') dbStatus = 'DRAFT';
       if (dbStatus === 'FINISHED' || dbStatus === 'ENDED') dbStatus = 'ENDED';
-      
-      query += ` AND auction_status = $${paramCount}`;
+
+      query += ` AND a.auction_status = $${paramCount}`;
       params.push(dbStatus);
       paramCount++;
     }
 
     if (schoolId) {
-      query += ` AND school_id = $${paramCount}`;
+      query += ` AND a.school_id = $${paramCount}`;
       params.push(schoolId);
       paramCount++;
     }
@@ -431,13 +443,17 @@ class AuctionService {
     return {
       success: true,
       auctions: result.rows.map(auction => ({
-        auctionId: auction.id,
+        id: auction.id,
         title: auction.title,
         status: auction.auction_status,
         schoolId: auction.school_id,
+        school: auction.school_name || null,
         startTime: auction.starts_at,
         endTime: auction.ends_at,
-        createdAt: auction.created_at
+        createdAt: auction.created_at,
+        currentBid: auction.current_bid ? Number.parseFloat(auction.current_bid) / 100 : 0,
+        bidCount: Number.parseInt(auction.bid_count) || 0,
+        image: auction.cover_image || null
       })),
       pagination: {
         limit,
@@ -799,7 +815,7 @@ class AuctionService {
    * @private
    */
   _validateAuctionInputs(data) {
-    const { title, description, schoolId, startTime, endTime, platformFeePercentage } = data;
+    const { title, description: _description, schoolId, startTime, endTime, platformFeePercentage } = data;
 
     if (!title || typeof title !== 'string' || title.trim().length === 0) {
       throw new Error('Valid auction title is required');

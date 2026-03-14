@@ -14,11 +14,9 @@ require('dotenv').config();
 /**
  * Import Middleware
  */
-const { loginLimiter, apiLimiter, paymentLimiter, authLimiter, bidLimiter } = require('./middleware/rateLimitMiddleware');
+const { apiLimiter, paymentLimiter, bidLimiter } = require('./middleware/rateLimitMiddleware');
 const {
   sanitizeInput,
-  authLimiter: securityAuthLimiter,
-  paymentLimiter: securityPaymentLimiter,
   idempotencyMiddleware,
   securityLogger
 } = require('./middleware/securityMiddleware');

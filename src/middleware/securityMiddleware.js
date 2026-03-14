@@ -69,7 +69,7 @@ const validatePasswordStrength = (password) => {
   const hasUppercase = /[A-Z]/.test(password);
   const hasLowercase = /[a-z]/.test(password);
   const hasNumber = /\d/.test(password);
-  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+  const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
 
   return {
     isStrong: password.length >= minLength && hasUppercase && hasLowercase && hasNumber && hasSpecial,
@@ -205,7 +205,6 @@ const paymentLimiter = rateLimit({
  */
 
 const csrf = require('csurf');
-const cookieParser = require('cookie-parser');
 
 // CSRF protection middleware
 const csrfProtection = csrf({ cookie: false, httpOnly: true });
@@ -251,6 +250,7 @@ const escapeSQLSpecialChars = (str) => {
     .replace(/\0/g, '\\0')
     .replace(/\n/g, '\\n')
     .replace(/\r/g, '\\r')
+    // eslint-disable-next-line no-control-regex
     .replace(/\x1a/g, '\\Z');
 };
 
@@ -281,7 +281,7 @@ const encodeHTML = (str) => {
     "'": '&#x27;',
     '/': '&#x2F;'
   };
-  return str.replace(/[&<>"'\/]/g, (c) => map[c]);
+  return str.replace(/[&<>"'/]/g, (c) => map[c]);
 };
 
 /**

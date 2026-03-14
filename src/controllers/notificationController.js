@@ -143,8 +143,8 @@ class NotificationController {
    */
   async markAsRead(req, res, next) {
     try {
-      const userId = req.user.id;
-      const { id } = req.params;
+      const _userId = req.user.id;
+      const { id: _id } = req.params;
 
       // Verify notification belongs to user
       // (Implementation depends on notification table structure)

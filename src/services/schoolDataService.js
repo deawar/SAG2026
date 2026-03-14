@@ -13,7 +13,6 @@
  */
 
 const https = require('https');
-const http = require('http');
 
 class SchoolDataService {
   constructor(database) {

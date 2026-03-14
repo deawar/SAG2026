@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /**
  * ============================================================================
  * Section 3: Authentication Service Unit Tests

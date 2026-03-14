@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /**
  * ============================================================================
  * Section 11: Security Audit & Penetration Testing
