@@ -439,8 +439,14 @@ class AdminService {
     const admin = await this.verifyAdminAccess(adminId);
 
     const result = await pool.query(
-      `SELECT a.*, s.name as school_name FROM auctions a
-       LEFT JOIN schools s ON a.school_id = s.id
+      `SELECT a.*,
+              s.name        AS school_name,
+              u.first_name  AS creator_first_name,
+              u.last_name   AS creator_last_name,
+              u.email       AS creator_email
+       FROM auctions a
+       LEFT JOIN schools s ON s.id = a.school_id
+       LEFT JOIN users   u ON u.id = a.created_by_user_id
        WHERE a.id = $1`,
       [auctionId]
     );
