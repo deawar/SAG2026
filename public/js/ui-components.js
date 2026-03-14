@@ -1026,6 +1026,16 @@ class UIComponents {
                 }
             });
         }
+
+        // Mobile menu toggle (hamburger) — shared across all pages
+        const menuToggle = document.getElementById('menu-toggle');
+        const navMenu = document.querySelector('.navbar-nav');
+        if (menuToggle && navMenu) {
+            menuToggle.addEventListener('click', () => {
+                const isExpanded = navMenu.classList.toggle('active');
+                menuToggle.setAttribute('aria-expanded', String(isExpanded));
+            });
+        }
     }
 
     /**
