@@ -13,13 +13,28 @@
 
 class TeacherDashboard {
     constructor() {
-        this.apiClient = window.apiClient;
-        this.authManager = window.authManager;
-        this.uiComponents = window.UIComponents;
+        this.apiClient = globalThis.apiClient;
+        this.authManager = globalThis.authManager;
+        this.uiComponents = globalThis.UIComponents;
         this.tokens = [];
         this.students = [];
         this.teacherName = '';
         this.schoolName = '';
+        this.schoolId = null;
+        this.currentThemePreset = null;
+    }
+
+    // Preset display metadata — primary hex used for swatch background colour
+    static get PRESETS() {
+        return [
+            { key: 'crimson-gold',  label: 'Crimson & Gold',  primary: '#9B1B30', secondary: '#B8860B' },
+            { key: 'navy-gold',     label: 'Navy & Gold',     primary: '#003087', secondary: '#C5A028' },
+            { key: 'forest-gold',   label: 'Forest & Gold',   primary: '#1B5E20', secondary: '#B7820A' },
+            { key: 'purple-gold',   label: 'Purple & Gold',   primary: '#4A1D7B', secondary: '#C5A028' },
+            { key: 'scarlet-gray',  label: 'Scarlet & Gray',  primary: '#BB0000', secondary: '#666666' },
+            { key: 'royal-blue',    label: 'Royal Blue',      primary: '#003FA5', secondary: '#4A90C4' },
+            { key: 'orange-black',  label: 'Orange & Black',  primary: '#C85200', secondary: '#1A1A1A' },
+        ];
     }
 
     /**
@@ -42,6 +57,9 @@ class TeacherDashboard {
 
         // Load teacher name + school for email attribution
         await this.loadTeacherInfo();
+
+        // Initialise theme tab now that schoolId is known
+        await this.initThemeTab();
     }
 
     /**
@@ -126,6 +144,14 @@ class TeacherDashboard {
                 if (e.target === auctionModal) this.hideAuctionModal();
             });
         }
+
+        // Theme buttons
+        const saveThemeBtn    = document.getElementById('save-theme-btn');
+        const previewThemeBtn = document.getElementById('preview-theme-btn');
+        const resetThemeBtn   = document.getElementById('reset-theme-btn');
+        if (saveThemeBtn)    saveThemeBtn.addEventListener('click',    () => this.saveTheme());
+        if (previewThemeBtn) previewThemeBtn.addEventListener('click', () => this.previewTheme());
+        if (resetThemeBtn)   resetThemeBtn.addEventListener('click',   () => this.resetTheme());
     }
 
     /**
@@ -263,7 +289,7 @@ class TeacherDashboard {
         this.tokens.forEach(token => {
             const row = document.createElement('tr');
             row.dataset.tokenId = token.id;
-            const registrationLink = `${window.location.origin}/register.html?token=${token.token}&email=${encodeURIComponent(token.studentEmail)}`;
+            const registrationLink = `${globalThis.location.origin}/register.html?token=${token.token}&email=${encodeURIComponent(token.studentEmail)}`;
 
             row.innerHTML = `
                 <td><input type="checkbox" class="student-select" data-id="${this.escapeHtml(token.id)}"
@@ -306,10 +332,215 @@ class TeacherDashboard {
             if (response.success && response.data) {
                 this.teacherName = response.data.teacherName || '';
                 this.schoolName = response.data.schoolName || '';
+                this.schoolId   = response.data.schoolId   || null;
             }
         } catch (error) {
             console.error('Failed to load teacher info:', error);
         }
+    }
+
+    /**
+     * Populate the School Theme tab with preset swatches and custom colour inputs,
+     * then fetch the school's current theme from the API.
+     */
+    async initThemeTab() {
+        const swatchContainer = document.getElementById('theme-swatches');
+        const colorGrid       = document.getElementById('theme-colors-grid');
+
+        this._renderSwatches(swatchContainer);
+        this._renderColorInputs(colorGrid);
+
+        if (this.schoolId) {
+            await this._loadCurrentThemeFromAPI(swatchContainer, colorGrid);
+        }
+    }
+
+    /** Render preset swatch buttons and wire click → live preview */
+    _renderSwatches(container) {
+        if (!container) return;
+        container.innerHTML = TeacherDashboard.PRESETS.map(p => `
+            <button type="button"
+                    class="theme-swatch"
+                    data-preset="${this.escapeHtml(p.key)}"
+                    aria-pressed="false"
+                    title="${this.escapeHtml(p.label)}"
+                    style="background:${p.primary};"
+                    aria-label="${this.escapeHtml(p.label)}">
+                <span class="theme-swatch-label">${this.escapeHtml(p.label)}</span>
+            </button>
+        `).join('');
+
+        container.addEventListener('click', (e) => {
+            const btn = e.target.closest('.theme-swatch');
+            if (!btn) return;
+            container.querySelectorAll('.theme-swatch').forEach(b => b.setAttribute('aria-pressed', 'false'));
+            btn.setAttribute('aria-pressed', 'true');
+            this.currentThemePreset = btn.dataset.preset;
+            const preset = TeacherDashboard.PRESETS.find(p => p.key === this.currentThemePreset);
+            if (preset) ThemeManager.apply({ primary: preset.primary, secondary: preset.secondary });
+        });
+    }
+
+    /** Render custom hex colour inputs and wire picker ↔ text sync */
+    _renderColorInputs(grid) {
+        if (!grid) return;
+        const fields = [
+            { key: 'primary',        label: 'Primary' },
+            { key: 'primaryDark',    label: 'Primary Dark' },
+            { key: 'primaryLight',   label: 'Primary Light' },
+            { key: 'secondary',      label: 'Secondary' },
+            { key: 'secondaryDark',  label: 'Secondary Dark' },
+            { key: 'secondaryLight', label: 'Secondary Light' },
+        ];
+        grid.innerHTML = fields.map(f => `
+            <div class="color-input-group">
+                <label for="color-${f.key}">${this.escapeHtml(f.label)}</label>
+                <input type="color" id="color-${f.key}" name="${f.key}" value="#000000">
+                <input type="text"  id="color-${f.key}-hex" placeholder="#000000"
+                       pattern="^#[0-9A-Fa-f]{6}$" aria-label="${this.escapeHtml(f.label)} hex value"
+                       style="width:7rem;">
+            </div>
+        `).join('');
+
+        fields.forEach(({ key }) => {
+            const picker = document.getElementById(`color-${key}`);
+            const hex    = document.getElementById(`color-${key}-hex`);
+            if (!picker || !hex) return;
+            picker.addEventListener('input', () => { hex.value = picker.value; });
+            hex.addEventListener('change', () => {
+                if (/^#[0-9A-Fa-f]{6}$/.test(hex.value)) picker.value = hex.value;
+            });
+        });
+    }
+
+    /** Fetch the saved theme from the API and pre-fill the form */
+    async _loadCurrentThemeFromAPI(swatchContainer, colorGrid) {
+        try {
+            const res  = await fetch(`/api/schools/${this.schoolId}/theme`);
+            const data = await res.json();
+            if (!data.success || !data.data) return;
+
+            const { preset, resolved } = data.data;
+
+            if (preset && swatchContainer) {
+                this.currentThemePreset = preset;
+                const active = swatchContainer.querySelector(`[data-preset="${preset}"]`);
+                if (active) active.setAttribute('aria-pressed', 'true');
+            }
+
+            if (resolved && colorGrid) {
+                Object.entries(resolved).forEach(([key, val]) => {
+                    const picker = document.getElementById(`color-${key}`);
+                    const hex    = document.getElementById(`color-${key}-hex`);
+                    if (picker) picker.value = val;
+                    if (hex)    hex.value    = val;
+                });
+            }
+        } catch (err) {
+            console.warn('Could not load school theme:', err);
+        }
+    }
+
+    /**
+     * Save the current theme (preset + optional custom overrides) to the API.
+     */
+    async saveTheme() {
+        if (!this.schoolId) {
+            this.showMessage('No school associated with your account.', 'error');
+            return;
+        }
+
+        // Collect custom colours (only if all six are valid hex)
+        const colorKeys = ['primary','primaryDark','primaryLight','secondary','secondaryDark','secondaryLight'];
+        const customColors = {};
+        let hasCustom = false;
+        let invalidKey = null;
+
+        for (const key of colorKeys) {
+            const hex = document.getElementById(`color-${key}-hex`)?.value?.trim() || '';
+            if (hex && hex !== '#000000') {
+                if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+                    invalidKey = key;
+                    break;
+                }
+                customColors[key] = hex;
+                hasCustom = true;
+            }
+        }
+
+        if (invalidKey) {
+            this.showMessage(`Invalid hex colour for "${invalidKey}". Use format #RRGGBB.`, 'error');
+            return;
+        }
+
+        const body = {
+            preset: this.currentThemePreset || null,
+            colors: hasCustom ? customColors : null,
+        };
+
+        try {
+            const token = localStorage.getItem('auth_token');
+            const res = await fetch(`/api/schools/${this.schoolId}/theme`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(body),
+            });
+            const data = await res.json();
+            if (data.success) {
+                this.showMessage('Theme saved.', 'success');
+                if (data.data?.resolved) ThemeManager.apply(data.data.resolved);
+            } else {
+                this.showMessage(data.message || 'Failed to save theme.', 'error');
+            }
+        } catch (err) {
+            console.error('Theme save error:', err);
+            this.showMessage('An error occurred saving the theme.', 'error');
+        }
+    }
+
+    /**
+     * Live-preview the currently selected preset or custom colours without saving.
+     */
+    previewTheme() {
+        const colorKeys = ['primary','primaryDark','primaryLight','secondary','secondaryDark','secondaryLight'];
+        const custom = {};
+        let hasCustom = false;
+
+        for (const key of colorKeys) {
+            const val = document.getElementById(`color-${key}-hex`)?.value?.trim() || '';
+            if (val && /^#[0-9A-Fa-f]{6}$/.test(val) && val !== '#000000') {
+                custom[key] = val;
+                hasCustom = true;
+            }
+        }
+
+        if (hasCustom) {
+            ThemeManager.apply(custom);
+        } else if (this.currentThemePreset) {
+            const preset = TeacherDashboard.PRESETS.find(p => p.key === this.currentThemePreset);
+            if (preset) ThemeManager.apply({ primary: preset.primary, secondary: preset.secondary });
+        } else {
+            this.showMessage('Select a preset or enter custom colours to preview.', 'info');
+        }
+    }
+
+    /**
+     * Reset the page theme to defaults and clear selections.
+     */
+    resetTheme() {
+        ThemeManager.reset();
+        this.currentThemePreset = null;
+        document.querySelectorAll('.theme-swatch').forEach(b => b.setAttribute('aria-pressed', 'false'));
+        const colorKeys = ['primary','primaryDark','primaryLight','secondary','secondaryDark','secondaryLight'];
+        colorKeys.forEach(key => {
+            const picker = document.getElementById(`color-${key}`);
+            const hex    = document.getElementById(`color-${key}-hex`);
+            if (picker) picker.value = '#000000';
+            if (hex)    hex.value    = '';
+        });
     }
 
     /**
@@ -366,7 +597,7 @@ class TeacherDashboard {
         if (errors.length) {
             this.showMessage(`Saved ${saved}, failed ${errors.length}: ${errors.join('; ')}`, 'error');
         } else {
-            this.showMessage(`Saved changes for ${saved} student${saved !== 1 ? 's' : ''}.`, 'success');
+            this.showMessage(`Saved changes for ${saved} student${saved === 1 ? '' : 's'}.`, 'success');
         }
     }
 
@@ -410,7 +641,7 @@ class TeacherDashboard {
      * @param {HTMLElement} button - Copy button element
      */
     copyLinkToClipboard(button) {
-        const link = button.getAttribute('data-link');
+        const link = button.dataset.link;
 
         navigator.clipboard.writeText(link).then(() => {
             const originalText = button.textContent;
@@ -432,7 +663,7 @@ class TeacherDashboard {
     handleSectionChange(e) {
         e.preventDefault();
 
-        const section = e.target.getAttribute('data-section');
+        const section = e.target.dataset.section;
         
         // Hide all sections
         document.querySelectorAll('.dashboard-section').forEach(section => {
@@ -560,7 +791,7 @@ class TeacherDashboard {
                             <span class="badge badge-${statusClass}">${status}</span>
                             &nbsp;
                             <span class="text-muted">${auction.bid_count || 0} bids</span>
-                            ${auction.current_high_bid ? ` &middot; high bid $${parseFloat(auction.current_high_bid).toFixed(2)}` : ''}
+                            ${auction.current_high_bid ? ` &middot; high bid $${Number.parseFloat(auction.current_high_bid).toFixed(2)}` : ''}
                         </p>
                     </div>
                     <div style="display:flex; gap:0.5rem; flex-shrink:0;">
@@ -593,38 +824,38 @@ class TeacherDashboard {
         // Replace any previous submit handler (onsubmit ensures only one handler exists)
         form.onsubmit = (e) => this.handleAuctionSubmit(e, auctionId);
 
+        const submitBtn = document.getElementById('auction-submit-btn');
         if (auctionId) {
             titleEl.textContent = 'Edit Auction';
-            const submitBtn = document.getElementById('auction-submit-btn');
             if (submitBtn) submitBtn.textContent = 'Save Changes';
-
-            // Pre-fill with existing data — set values AFTER onsubmit is wired
-            try {
-                const token = localStorage.getItem('auth_token');
-                const res   = await fetch(`/api/auctions/${auctionId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                });
-                const data = await res.json();
-                const a = data.auction;
-                if (a) {
-                    document.getElementById('auction-title').value       = a.title || '';
-                    document.getElementById('auction-description').value = a.description || '';
-                    // datetime-local expects "YYYY-MM-DDTHH:MM"
-                    if (a.starts_at) document.getElementById('auction-start').value = a.starts_at.slice(0, 16);
-                    if (a.ends_at)   document.getElementById('auction-end').value   = a.ends_at.slice(0, 16);
-                }
-            } catch (err) {
-                console.error('Failed to load auction for editing:', err);
-            }
+            await this._prefillAuctionForm(auctionId);
         } else {
             titleEl.textContent = 'Create New Auction';
-            const submitBtn = document.getElementById('auction-submit-btn');
             if (submitBtn) submitBtn.textContent = 'Create Auction';
         }
 
         modal.style.display = 'flex';
         modal.removeAttribute('aria-hidden');
         document.getElementById('auction-title').focus();
+    }
+
+    /** Fetch an existing auction and populate the modal form fields */
+    async _prefillAuctionForm(auctionId) {
+        try {
+            const token = localStorage.getItem('auth_token');
+            const res   = await fetch(`/api/auctions/${auctionId}`, {
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            const data = await res.json();
+            const a = data.auction;
+            if (!a) return;
+            document.getElementById('auction-title').value       = a.title || '';
+            document.getElementById('auction-description').value = a.description || '';
+            if (a.starts_at) document.getElementById('auction-start').value = a.starts_at.slice(0, 16);
+            if (a.ends_at)   document.getElementById('auction-end').value   = a.ends_at.slice(0, 16);
+        } catch (err) {
+            console.error('Failed to load auction for editing:', err);
+        }
     }
 
     /** Hide the auction modal */
@@ -730,7 +961,7 @@ class TeacherDashboard {
             '"': '&quot;',
             "'": '&#039;'
         };
-        return text.replace(/[&<>"']/g, m => map[m]);
+        return text.replaceAll(/[&<>"']/g, m => map[m]);
     }
 }
 

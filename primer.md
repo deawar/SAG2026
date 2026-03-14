@@ -78,6 +78,18 @@ Nothing mid-flight. All P2 priorities addressed and pushed.
 
 ## Known Issues / Blockers (Prioritised)
 
+P2 - Homepage Re-engineering (index.html)
+- The homepage body content (Featured Auctions, How It Works, CTA section) renders as
+  plain unstyled text — no hero gradient, no cards, no branded colours or spacing
+- "Failed to load auctions" error showing in Featured Auctions section (API call failing
+  or no active auctions seeded in live DB)
+- How It Works step numbers (1-4) are unstyled — should use .step-number styled circles
+- "Get Started" CTA button renders full-width grey — should be btn-primary with correct width
+- Root cause is likely a combination of: missing CSS classes on index.html elements,
+  loadFeaturedAuctions() calling a different endpoint than /api/auctions/active/list,
+  and the page not inheriting the site theme correctly
+- ENTIRE homepage sections need a design audit against auctions.html as the reference page
+
 P2 - Frontend Wiring (remaining)
 - auction-detail.js - bidding flow needs end-to-end test against live API
 - teacher-dashboard.js - artwork submission and student management are stubs
