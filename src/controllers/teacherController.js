@@ -276,7 +276,7 @@ class TeacherController {
     static async getTeacherInfo(req, res) {
         try {
             const result = await pool.query(
-                `SELECT u.first_name, u.last_name, s.name AS school_name
+                `SELECT u.first_name, u.last_name, u.school_id, s.name AS school_name
                  FROM users u
                  LEFT JOIN schools s ON s.id = u.school_id
                  WHERE u.id = $1`,
@@ -285,12 +285,13 @@ class TeacherController {
             if (result.rows.length === 0) {
                 return res.status(404).json({ success: false, message: 'Teacher not found' });
             }
-            const { first_name, last_name, school_name } = result.rows[0];
+            const { first_name, last_name, school_id, school_name } = result.rows[0];
             return res.json({
                 success: true,
                 data: {
                     teacherName: `${first_name || ''} ${last_name || ''}`.trim(),
-                    schoolName: school_name || ''
+                    schoolName: school_name || '',
+                    schoolId: school_id || null,
                 }
             });
         } catch (error) {

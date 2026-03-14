@@ -83,6 +83,7 @@
                             <li><a href="#students" class="sidebar-link active" data-section="students">Students</a></li>
                             <li><a href="#submissions" class="sidebar-link" data-section="submissions">Artwork Submissions</a></li>
                             <li><a href="#auctions" class="sidebar-link" data-section="auctions">My Auctions</a></li>
+                            <li><a href="#theme" class="sidebar-link" data-section="theme">School Theme</a></li>
                         </ul>
                     </nav>
                 </aside>
@@ -180,6 +181,40 @@
 
                         <div class="auctions-list" id="auctions-list">
                             <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- School Theme Section -->
+                    <div id="theme-section" class="dashboard-section" style="display:none;">
+                        <div class="section-header">
+                            <h2>School Theme</h2>
+                            <p>Choose colours that represent your school. Changes apply immediately to your auction pages and the homepage when your auctions are featured.</p>
+                        </div>
+
+                        <!-- Preset swatches -->
+                        <div class="card">
+                            <h3>Colour Preset</h3>
+                            <p class="text-muted" style="margin-bottom:1rem;">Select a preset to instantly theme your school's auction pages.</p>
+                            <fieldset class="theme-swatches" id="theme-swatches" style="border:none;padding:0;margin:0;">
+                                <legend class="sr-only">School colour presets</legend>
+                                <!-- Populated by JavaScript -->
+                            </fieldset>
+                        </div>
+
+                        <!-- Custom colour overrides -->
+                        <div class="card" id="custom-colors-card">
+                            <h3>Custom Colours <span class="text-muted" style="font-size:0.85em;">(optional — overrides preset)</span></h3>
+                            <p class="text-muted" style="margin-bottom:1rem;">Leave blank to use the preset colours above.</p>
+                            <div class="theme-colors-grid" id="theme-colors-grid">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div style="margin-top:1.5rem; display:flex; gap:var(--spacing-md); flex-wrap:wrap;">
+                            <button class="btn btn-primary" id="save-theme-btn" type="button">Save Theme</button>
+                            <button class="btn btn-secondary" id="preview-theme-btn" type="button">Preview</button>
+                            <button class="btn btn-secondary" id="reset-theme-btn" type="button">Reset to Default</button>
                         </div>
                     </div>
                 </section>
