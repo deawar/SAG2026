@@ -227,6 +227,27 @@ class AdminDashboard {
             }, 500));
         }
 
+        // Logout
+        const logoutBtn = document.getElementById('admin-logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('user');
+                globalThis.location.href = '/';
+            });
+        }
+
+        // Report buttons
+        const reportMap = {
+            'revenue-report-btn':     'revenue',
+            'activity-report-btn':    'activity',
+            'performance-report-btn': 'performance',
+            'compliance-report-btn':  'compliance',
+        };
+        Object.entries(reportMap).forEach(([btnId, reportType]) => {
+            document.getElementById(btnId)?.addEventListener('click', () => this.exportReport(reportType));
+        });
+
         // Payment gateway section
         this.initGatewaySection();
     }
@@ -795,6 +816,8 @@ class AdminDashboard {
             const readonlyAttr = isDraft ? '' : 'readonly';
             const readonlyNote = isDraft ? '' : '<p class="form-help" style="color:var(--color-warning,orange);">Only DRAFT auctions can have their dates/details changed.</p>';
 
+            const creatorName = [a.creator_first_name, a.creator_last_name].filter(Boolean).join(' ') || a.creator_email || '—';
+
             form.innerHTML = `
                 ${readonlyNote}
                 <div class="form-group">
@@ -812,6 +835,10 @@ class AdminDashboard {
                     <p class="form-static">${this.escapeHtml(a.school_name || a.school_id || '—')}</p>
                 </div>
                 <div class="form-group">
+                    <label>Created By</label>
+                    <p class="form-static">${this.escapeHtml(creatorName)}</p>
+                </div>
+                <div class="form-group">
                     <label for="auction-start">Start Date &amp; Time <span aria-label="required">*</span></label>
                     <input type="datetime-local" id="auction-start" name="auction-start" class="form-control"
                            value="${toLocal(a.starts_at)}" required ${readonlyAttr}>
@@ -822,10 +849,14 @@ class AdminDashboard {
                            value="${toLocal(a.ends_at)}" required ${readonlyAttr}>
                 </div>
                 <div style="display:flex; gap:1rem; justify-content:flex-end; margin-top:1rem;">
-                    <button type="button" class="btn btn-secondary" onclick="UIComponents.hideModal('auction-form-modal')">Cancel</button>
+                    <button type="button" class="btn btn-secondary" id="edit-auction-cancel-btn">Cancel</button>
                     ${isDraft ? `<button type="submit" class="btn btn-primary">Save Changes</button>` : ''}
                 </div>
             `;
+
+            document.getElementById('edit-auction-cancel-btn')?.addEventListener('click', () => {
+                UIComponents.hideModal('auction-form-modal');
+            });
 
             if (isDraft) {
                 form.onsubmit = (e) => this.handleUpdateAuction(e, auctionId);
@@ -1630,10 +1661,14 @@ class AdminDashboard {
                     <input type="datetime-local" id="auction-end" name="auction-end" class="form-control" required>
                 </div>
                 <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
-                    <button type="button" class="btn btn-secondary" onclick="UIComponents.hideModal('auction-form-modal')">Cancel</button>
+                    <button type="button" class="btn btn-secondary" id="create-auction-cancel-btn">Cancel</button>
                     <button type="submit" class="btn btn-primary">Create Auction</button>
                 </div>
             `;
+
+            document.getElementById('create-auction-cancel-btn')?.addEventListener('click', () => {
+                UIComponents.hideModal('auction-form-modal');
+            });
 
             // Replace any previous submit handler (avoids duplicate-listener buildup)
             form.onsubmit = (e) => this.handleCreateAuction(e);
