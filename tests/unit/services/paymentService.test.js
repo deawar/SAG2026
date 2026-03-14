@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /**
  * ============================================================================
  * Section 4: Payment Service Unit Tests

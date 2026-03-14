@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /**
  * Bidding Service Integration Tests
  * End-to-end tests for bidding flows with database

@@ -149,11 +149,11 @@ class TeacherController {
      */
     static async getSubmissions(req, res) {
         try {
-            const userId = req.user.id;
-            const schoolId = req.user.schoolId;
+            const _userId = req.user.id;
+            const _schoolId = req.user.schoolId;
 
             // In production, fetch from database
-            // const submissions = await ArtworkModel.getSubmissionsBySchool(schoolId);
+            // const submissions = await ArtworkModel.getSubmissionsBySchool(_schoolId);
 
             const submissions = [
                 {
@@ -236,7 +236,7 @@ class TeacherController {
     static async getTokenDetails(req, res) {
         try {
             const { tokenId } = req.params;
-            const userId = req.user.id;
+            const _userId = req.user.id;
 
             if (!tokenId) {
                 return res.status(400).json({

@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /**
  * Bidding Service Integration Tests
  * Tests for bid placement, validation, and auction logic

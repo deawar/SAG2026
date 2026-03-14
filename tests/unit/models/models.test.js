@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /**
  * ============================================================================
  * Section 2: Unit Tests for Core Models
