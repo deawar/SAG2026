@@ -405,9 +405,9 @@ a:focus {
 .menu-toggle span {
     display: block;
     width: 24px;
-    height: 2px;
+    height: 3px;
     background-color: currentColor;
-    margin: 6px 0;
+    border-radius: 2px;
     transition: var(--transition-normal);
 }
 
