@@ -35,14 +35,7 @@ async function initializePage() {
 function setupPageEventListeners() {
     console.log('=== setupPageEventListeners called ===');
 
-    // Mobile menu toggle
-    const menuToggle = document.getElementById('menu-toggle');
-    const navMenu = document.querySelector('.navbar-nav');
-    if (menuToggle && navMenu) {
-        menuToggle.addEventListener('click', () => {
-            navMenu.classList.toggle('active');
-        });
-    }
+    // Mobile menu toggle is handled by UIComponents.initializeNavbar()
 
     // Login form
     const loginForm = document.getElementById('login-form');

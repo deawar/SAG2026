@@ -135,6 +135,48 @@ async function startServer() {
       } catch (routeErr) {
         console.error('❌ ERROR mounting teacher routes:', routeErr);
       }
+
+      /**
+       * Mount Auction Routes (public list + authenticated CRUD)
+       */
+      console.log('Mounting auction routes...');
+      try {
+        const auctionRoutes = require('./routes/auctionRoutes');
+        const { apiLimiter } = require('./middleware/rateLimitMiddleware');
+        app.use('/api/auctions', apiLimiter);
+        app.use('/api/auctions', auctionRoutes);
+        console.log('✅ Auction routes mounted');
+      } catch (routeErr) {
+        console.error('❌ ERROR mounting auction routes:', routeErr);
+      }
+
+      /**
+       * Mount Bidding Routes (authenticated bidding operations + WebSocket broadcast)
+       */
+      console.log('Mounting bidding routes...');
+      try {
+        const biddingRoutes = require('./routes/biddingRoutes');
+        const { bidLimiter } = require('./middleware/rateLimitMiddleware');
+        app.use('/api/bidding', bidLimiter);
+        app.use('/api/bidding', biddingRoutes);
+        console.log('✅ Bidding routes mounted');
+      } catch (routeErr) {
+        console.error('❌ ERROR mounting bidding routes:', routeErr);
+      }
+
+      /**
+       * Mount Payment Routes (authenticated payment processing + webhook receiver)
+       */
+      console.log('Mounting payment routes...');
+      try {
+        const paymentRoutes = require('./routes/paymentRoutes');
+        const { paymentLimiter } = require('./middleware/rateLimitMiddleware');
+        app.use('/api/payments', paymentLimiter);
+        app.use('/api/payments', paymentRoutes);
+        console.log('✅ Payment routes mounted');
+      } catch (routeErr) {
+        console.error('❌ ERROR mounting payment routes:', routeErr);
+      }
     } else {
       console.warn('⚠️  Skipping auth routes (database unavailable)');
     }

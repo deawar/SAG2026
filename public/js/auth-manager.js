@@ -37,7 +37,7 @@ class AuthManager {
                 // Store tokens
                 this.setToken(accessToken);
                 if (refreshToken) {
-                    localStorage.setItem('refreshToken', refreshToken);
+                    this.setRefreshToken(refreshToken);
                 }
                 
                 // Store user data
