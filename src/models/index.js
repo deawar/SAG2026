@@ -155,7 +155,7 @@ class UserModel {
   async getById(userId, includeSensitive = false) {
     const selectFields = includeSensitive 
       ? '*' 
-      : 'id, email, first_name, last_name, phone_number, role, school_id, account_status, created_at, last_login';
+      : 'id, email, first_name, last_name, phone_number, role, school_id, account_status, two_fa_enabled, created_at, last_login';
 
     const result = await this.db.query(
       `SELECT ${selectFields} FROM users WHERE id = $1 AND deleted_at IS NULL`,
