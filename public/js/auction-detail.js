@@ -5,7 +5,7 @@
 
 class AuctionDetail {
     constructor() {
-        this.auctionId = new URLSearchParams(window.location.search).get('id');
+        this.auctionId = new URLSearchParams(globalThis.location.search).get('id');
         this.auction = null;
         this.bidHistory = [];
         this.isUserLoggedIn = false;
@@ -99,6 +99,28 @@ class AuctionDetail {
 
         // Update auction status
         this.updateAuctionStatus();
+
+        // Apply the school's saved colour theme
+        if (this.auction.schoolId) {
+            this.applySchoolTheme(this.auction.schoolId);
+        }
+    }
+
+    /**
+     * Fetch and apply the school's colour theme.
+     * Non-critical — failure never breaks the page.
+     * @param {string} schoolId
+     */
+    async applySchoolTheme(schoolId) {
+        try {
+            const res  = await fetch(`/api/schools/${schoolId}/theme`);
+            const data = await res.json();
+            if (data.success && data.data?.resolved) {
+                ThemeManager.apply(data.data.resolved);
+            }
+        } catch (err) {
+            console.warn('Could not load school theme:', err);
+        }
     }
 
     /**
@@ -281,7 +303,7 @@ class AuctionDetail {
         // Auth required login button
         const loginBtn = document.getElementById('login-from-auction');
         if (loginBtn) {
-            loginBtn.addEventListener('click', () => window.location.href = '/login.html');
+            loginBtn.addEventListener('click', () => { globalThis.location.href = '/login.html'; });
         }
     }
 
@@ -294,14 +316,14 @@ class AuctionDetail {
         const bidAmount = form.querySelector('#bid-amount')?.value;
         const paymentMethod = form.querySelector('#payment-method')?.value;
 
-        if (!bidAmount || isNaN(parseFloat(bidAmount))) {
+        if (!bidAmount || isNaN(Number.parseFloat(bidAmount))) {
             UIComponents.showAlert('Please enter a valid bid amount', 'warning');
             return;
         }
 
         const currentBid = this.auction.currentBid ?? 0;
         const minBid = currentBid + (this.auction.minBidIncrement || 10);
-        if (parseFloat(bidAmount) < minBid) {
+        if (Number.parseFloat(bidAmount) < minBid) {
             UIComponents.showAlert(
                 `Minimum bid is ${UIComponents.formatCurrency(minBid)}`,
                 'warning'
@@ -319,7 +341,7 @@ class AuctionDetail {
                     'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
                 },
                 body: JSON.stringify({
-                    amount: parseFloat(bidAmount),
+                    amount: Number.parseFloat(bidAmount),
                     paymentMethod: paymentMethod,
                 }),
             });
@@ -441,7 +463,7 @@ class AuctionDetail {
      * Show share options modal
      */
     showShareOptions() {
-        const url = window.location.href;
+        const url = globalThis.location.href;
         const title = this.auction.title;
 
         UIComponents.showModal('share-modal');
@@ -521,8 +543,8 @@ class AuctionDetail {
     connectWebSocket() {
         if (this._wsReconnectCount >= 5) return;
         try {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            const protocol = globalThis.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${globalThis.location.host}/ws`;
 
             this.websocket = new WebSocket(wsUrl);
 
@@ -697,7 +719,7 @@ class AuctionDetail {
             '"': '&quot;',
             "'": '&#039;',
         };
-        return text.replace(/[&<>"']/g, (char) => map[char]);
+        return text.replaceAll(/[&<>"']/g, (char) => map[char]);
     }
 
     /**
@@ -720,14 +742,12 @@ document.addEventListener('DOMContentLoaded', () => {
     UIComponents.initializeNavbar();
     
     // Initialize auction detail
-    window.auctionDetail = new AuctionDetail();
+    globalThis.auctionDetail = new AuctionDetail();
 });
 
 // Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    if (window.auctionDetail) {
-        window.auctionDetail.destroy();
-    }
+globalThis.addEventListener('beforeunload', () => {
+    globalThis.auctionDetail?.destroy();
 });
 
 // Export for module systems

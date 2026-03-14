@@ -167,32 +167,57 @@ async function handleRegister(event) {
  */
 async function loadFeaturedAuctions() {
     try {
-        const response = await apiClient.getAuctions({ 
-            limit: 6, 
+        const response = await apiClient.getAuctions({
+            limit: 6,
             status: 'active',
             sort: 'ending_soon'
         });
 
         const grid = document.getElementById('featured-auctions-grid');
-        if (!grid || !response || !Array.isArray(response)) return;
+        if (!grid) return;
+
+        const auctions = response?.auctions;
+        if (!Array.isArray(auctions)) return;
 
         grid.innerHTML = '';
 
-        if (response.length === 0) {
-            grid.innerHTML = '<p>No active auctions at the moment</p>';
+        if (auctions.length === 0) {
+            grid.innerHTML = '<p class="text-muted">No active auctions at the moment. Check back soon!</p>';
             return;
         }
 
-        response.forEach(auction => {
+        auctions.forEach(auction => {
             const card = createAuctionCard(auction);
             grid.appendChild(card);
         });
+
+        // Apply the school theme of the first featured auction
+        if (auctions[0]?.schoolId) {
+            applyFeaturedSchoolTheme(auctions[0].schoolId);
+        }
     } catch (error) {
         console.error('Failed to load auctions:', error);
         const grid = document.getElementById('featured-auctions-grid');
         if (grid) {
-            grid.innerHTML = '<p>Failed to load auctions. Please try again later.</p>';
+            grid.innerHTML = '<p class="text-muted">Failed to load auctions. Please try again later.</p>';
         }
+    }
+}
+
+/**
+ * Fetch and apply a school's colour theme to the homepage.
+ * Non-critical — failure is silently swallowed so it never breaks the page.
+ * @param {string} schoolId
+ */
+async function applyFeaturedSchoolTheme(schoolId) {
+    try {
+        const res = await fetch(`/api/schools/${schoolId}/theme`);
+        const data = await res.json();
+        if (data.success && data.data?.resolved) {
+            ThemeManager.apply(data.data.resolved);
+        }
+    } catch (err) {
+        console.warn('Could not load featured school theme:', err);
     }
 }
 
@@ -205,38 +230,28 @@ function createAuctionCard(auction) {
     const card = document.createElement('a');
     card.href = `/auction-detail.html?id=${auction.id}`;
     card.className = 'auction-card';
-    card.setAttribute('role', 'listitem');
-    
-    const timeRemaining = calculateTimeRemaining(auction.end_time);
+
+    const timeRemaining = calculateTimeRemaining(auction.endTime);
     const status = getAuctionStatus(auction);
+    const imageSrc = auction.image || '/images/placeholder-art.svg';
 
     card.innerHTML = `
-        <img src="${auction.artwork?.image_url || '/images/placeholder.svg'}" 
-             alt="${auction.artwork?.title || 'Artwork'}"
-             class="auction-image">
-        <div class="auction-body">
-            <h3 class="auction-title">${escapeHtml(auction.artwork?.title || 'Unknown')}</h3>
-            <p class="auction-artist">${escapeHtml(auction.artwork?.artist_name || 'Unknown Artist')}</p>
-            
-            <div class="auction-details">
-                <div class="detail-item">
-                    <span class="detail-label">Current Bid</span>
-                    <span class="detail-value">${formatCurrency(auction.current_bid || auction.opening_bid)}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Bids</span>
-                    <span class="detail-value">${auction.bid_count || 0}</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Time Left</span>
-                    <span class="detail-value">${timeRemaining}</span>
-                </div>
+        <div class="auction-card-image">
+            <img src="${escapeHtml(imageSrc)}"
+                 alt="${escapeHtml(auction.title || 'Auction')}"
+                 class="auction-img" loading="lazy">
+            <span class="status-badge status-${status.toLowerCase()}">${status}</span>
+        </div>
+        <div class="auction-card-body">
+            <h3 class="auction-title">${escapeHtml(auction.title || 'Untitled Auction')}</h3>
+            <p class="auction-school">${escapeHtml(auction.school || '')}</p>
+            <div class="auction-stats">
+                <span class="current-bid">
+                    <strong>${UIComponents.formatCurrency(auction.currentBid || 0)}</strong>
+                </span>
+                <span class="bid-count">${auction.bidCount || 0} bids</span>
             </div>
-
-            <div class="auction-timer">
-                <span class="status-${status.toLowerCase()}">${status}</span>
-                <span class="timer-value">${timeRemaining}</span>
-            </div>
+            <p class="time-remaining">${timeRemaining}</p>
         </div>
     `;
 
@@ -249,6 +264,7 @@ function createAuctionCard(auction) {
  * @returns {string}
  */
 function calculateTimeRemaining(endTime) {
+    if (!endTime) return 'Unknown';
     const end = new Date(endTime);
     const now = new Date();
     const diff = end - now;
@@ -274,25 +290,13 @@ function calculateTimeRemaining(endTime) {
  * @returns {string}
  */
 function getAuctionStatus(auction) {
-    const end = new Date(auction.end_time);
+    const end = new Date(auction.endTime);
     const now = new Date();
     const diff = end - now;
 
     if (diff <= 0) return 'Closed';
     if (diff <= 60 * 60 * 1000) return 'Ending Soon'; // Less than 1 hour
     return 'Active';
-}
-
-/**
- * Format currency
- * @param {number} amount
- * @returns {string}
- */
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-    }).format(amount || 0);
 }
 
 /**
