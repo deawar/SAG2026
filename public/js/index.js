@@ -101,7 +101,7 @@ async function handleLogin(event) {
 
     const email = document.getElementById('login-email')?.value;
     const password = document.getElementById('login-password')?.value;
-    const remember = document.getElementById('login-remember')?.checked;
+    document.getElementById('login-remember')?.checked;
 
     if (!email || !password) {
         UIComponents.showAlert('Email and password required', 'error', 3000);
@@ -160,36 +160,6 @@ async function handleRegister(event) {
 
     // Redirect to the dedicated multi-step registration page
     window.location.href = '/register.html';
-}
-
-/**
- * Handle logout
- */
-async function handleLogout() {
-    try {
-        // Close dropdown menu
-        const userDropdown = document.getElementById('user-dropdown');
-        if (userDropdown) {
-            userDropdown.style.display = 'none';
-        }
-
-        // Call logout from auth manager
-        await authManager.logout();
-
-        // Show success message
-        UIComponents.showAlert('Logged out successfully', 'success', 3000);
-
-        // Update UI
-        updateAuthUI();
-
-        // Redirect to home after a brief delay
-        setTimeout(() => {
-            window.location.href = '/';
-        }, 500);
-    } catch (error) {
-        console.error('Logout error:', error);
-        UIComponents.showAlert('Logout failed: ' + error.message, 'error', 5000);
-    }
 }
 
 /**
@@ -342,39 +312,11 @@ function escapeHtml(text) {
 }
 
 /**
- * Show 2FA verification form
- */
-function show2FAForm() {
-    const modal = document.getElementById('login-modal');
-    if (!modal) return;
-
-    const form = document.getElementById('login-form');
-    if (!form) return;
-
-    const formContent = form.innerHTML;
-    form.innerHTML = `
-        <div class="form-group">
-            <label for="2fa-code">2FA Code</label>
-            <input 
-                type="text" 
-                id="2fa-code" 
-                class="form-control" 
-                placeholder="Enter 6-digit code"
-                required
-                aria-required="true"
-            >
-        </div>
-        <button type="submit" class="btn btn-primary btn-block">Verify</button>
-    `;
-
-    form.removeEventListener('submit', handleLogin);
-    form.addEventListener('submit', handleVerify2FA);
-}
-
-/**
  * Handle 2FA verification
  * @param {Event} event
  */
+// Exposed globally so HTML onsubmit handlers can call it
+globalThis.handleVerify2FA = handleVerify2FA;
 async function handleVerify2FA(event) {
     event.preventDefault();
 

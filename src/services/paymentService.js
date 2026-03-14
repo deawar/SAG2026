@@ -753,7 +753,7 @@ class FraudDetectionService {
   async checkTransaction(transactionData) {
     const { userId, amount, paymentMethod, metadata } = transactionData;
 
-    const fraudScore = 0;
+    const _fraudScore = 0;
     const flaggedRules = [];
 
     // Check 1: Transaction amount limits

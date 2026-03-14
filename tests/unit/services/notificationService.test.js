@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /**
  * ============================================================================
  * Section 7: Notification Service - Unit Tests

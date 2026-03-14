@@ -334,11 +334,13 @@
         grid-template-columns: 1fr;
     }
     
-    /* Mobile Buttons */
-    .btn {
+    /* Mobile Buttons — only stretch buttons in form/action contexts */
+    .form-actions .btn,
+    .card-actions .btn,
+    .page-actions .btn {
         width: 100%;
     }
-    
+
     .navbar-auth {
         flex-direction: column;
         width: 100%;
@@ -411,9 +413,22 @@
         max-width: none;
     }
     
-    /* Mobile Hero */
+    /* Mobile Hero — stack content above image */
     .hero {
         padding: var(--spacing-xl) var(--spacing-lg);
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .hero-image {
+        width: 100%;
+        max-height: 200px;
+        overflow: hidden;
+    }
+
+    .hero-img {
+        max-height: 180px;
+        width: auto;
     }
     
     .hero h1 {

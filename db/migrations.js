@@ -25,7 +25,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { Pool } = require('pg');
 const logger = require('../src/utils/logger');
 
 class MigrationManager {

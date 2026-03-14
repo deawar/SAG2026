@@ -132,9 +132,9 @@ class AuctionsPage {
     applyFilters() {
         let filtered = this.auctions;
 
-        // Status filter
+        // Status filter — compare against normalised values
         if (this.filters.status !== 'all') {
-            filtered = filtered.filter(a => a.status === this.filters.status);
+            filtered = filtered.filter(a => this.normaliseStatus(a.status) === this.filters.status);
         }
 
         // Price range filter
@@ -231,22 +231,25 @@ class AuctionsPage {
         card.className = 'auction-card';
         card.dataset.auctionId = auction.id;
 
-        const statusBadge = this.getStatusBadge(auction.status);
+        // Normalise status: API returns LIVE/DRAFT/ENDED/CANCELLED
+        const normalisedStatus = this.normaliseStatus(auction.status);
+        const statusBadge = this.getStatusBadge(normalisedStatus);
         const timeRemaining = UIComponents.formatTimeRemaining(
             new Date(auction.endTime) - Date.now()
         );
+        const imageSrc = auction.image || '/images/placeholder-art.svg';
 
         card.innerHTML = `
             <div class="auction-card-image">
-                <img src="${this.escapeHtml(auction.image)}" alt="${this.escapeHtml(auction.title)}" loading="lazy">
-                <span class="status-badge status-${auction.status}">${statusBadge}</span>
+                <img src="${this.escapeHtml(imageSrc)}" alt="${this.escapeHtml(auction.title)}" loading="lazy">
+                <span class="status-badge status-${normalisedStatus}">${statusBadge}</span>
             </div>
             <div class="auction-card-body">
                 <h3 class="auction-title">${this.escapeHtml(auction.title)}</h3>
                 <p class="auction-school">${this.escapeHtml(auction.school || 'N/A')}</p>
                 <div class="auction-stats">
                     <span class="current-bid">
-                        <strong>${UIComponents.formatCurrency(auction.currentBid)}</strong>
+                        <strong>${UIComponents.formatCurrency(auction.currentBid || 0)}</strong>
                     </span>
                     <span class="bid-count">${auction.bidCount || 0} bids</span>
                 </div>
@@ -264,14 +267,29 @@ class AuctionsPage {
     }
 
     /**
+     * Normalise API status values to frontend display values
+     * API: LIVE, DRAFT, ENDED, CANCELLED, PENDING_APPROVAL
+     */
+    normaliseStatus(status) {
+        const map = {
+            'LIVE': 'active',
+            'DRAFT': 'draft',
+            'ENDED': 'ended',
+            'CANCELLED': 'ended',
+            'PENDING_APPROVAL': 'draft',
+        };
+        return map[status] || (status || '').toLowerCase();
+    }
+
+    /**
      * Get status badge text
      */
     getStatusBadge(status) {
         const badges = {
-            'active': '🔴 Active',
-            'ending-soon': '⚠️ Ending Soon',
-            'ended': '⛔ Ended',
-            'draft': '📝 Draft',
+            'active': 'Active',
+            'ending-soon': 'Ending Soon',
+            'ended': 'Ended',
+            'draft': 'Draft',
         };
         return badges[status] || status;
     }

@@ -15,8 +15,7 @@ const express = require('express');
  */
 module.exports = (db) => {
   const router = express.Router();
-  const { SchoolModel } = require('../models');
-  const schoolModel = new SchoolModel(db);
+
 
   /**
    * GET /api/schools

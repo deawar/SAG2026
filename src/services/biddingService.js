@@ -343,7 +343,7 @@ class BiddingService {
         throw new Error('Auction not found');
       }
 
-      const auction = auctionResult.rows[0];
+      const _auction = auctionResult.rows[0];
 
       // Update auction status to ENDED
       await client.query(

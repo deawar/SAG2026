@@ -321,7 +321,7 @@ class AuthPages {
                     uppercase: /[A-Z]/.test(pwd),
                     lowercase: /[a-z]/.test(pwd),
                     number: /[0-9]/.test(pwd),
-                    special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)
+                    special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pwd)
                 };
 
                 const allMet = Object.values(requirements).every(req => req === true);
@@ -1014,7 +1014,7 @@ class AuthPages {
             'req-uppercase': /[A-Z]/.test(password),
             'req-lowercase': /[a-z]/.test(password),
             'req-number': /[0-9]/.test(password),
-            'req-special': /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+            'req-special': /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)
         };
 
         // Update UI
