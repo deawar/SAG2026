@@ -28,6 +28,8 @@ CREATE TABLE schools (
   primary_contact_user_id UUID,
   account_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' CHECK (account_status IN ('ACTIVE', 'SUSPENDED', 'PENDING_VERIFICATION')),
   verified_at TIMESTAMP WITH TIME ZONE,
+  theme_preset VARCHAR(50),
+  theme_colors JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT school_name_check CHECK (length(trim(name)) > 0),
