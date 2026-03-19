@@ -365,7 +365,7 @@ class AuctionService {
               JOIN artwork aw ON b.artwork_id = aw.id
               WHERE aw.auction_id = a.id AND b.bid_status = 'ACTIVE') AS bid_count,
              (SELECT aw2.image_url FROM artwork aw2
-              WHERE aw2.auction_id = a.id AND aw2.approval_status = 'APPROVED'
+              WHERE aw2.auction_id = a.id AND aw2.artwork_status = 'APPROVED'
               ORDER BY aw2.created_at ASC LIMIT 1) AS cover_image
       FROM auctions a
       LEFT JOIN schools s ON s.id = a.school_id
