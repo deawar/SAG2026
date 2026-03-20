@@ -125,9 +125,61 @@ class AuthPages {
     initRegister() {
         this.currentStep = 1;
         this.totalSteps = 3;
+        this.inviteToken = null;
+        this.isStudentInvite = false;
 
         const form = document.getElementById('register-form');
         if (!form) return;
+
+        // Detect student invite link (?token=...&email=...)
+        const urlParams = new URLSearchParams(window.location.search);
+        const inviteToken = urlParams.get('token');
+        const inviteEmail = urlParams.get('email');
+
+        if (inviteToken && inviteEmail) {
+            this.isStudentInvite = true;
+            this.inviteToken = inviteToken;
+            this.totalSteps = 4;
+
+            // Hide account type — students only via invite link
+            const accountTypeGroup = document.getElementById('account-type-group');
+            if (accountTypeGroup) accountTypeGroup.style.display = 'none';
+            const studentRadio = document.getElementById('account-student');
+            if (studentRadio) studentRadio.checked = true;
+
+            // Pre-fill and lock the email field
+            const emailInput = document.getElementById('register-email');
+            if (emailInput) {
+                emailInput.value = decodeURIComponent(inviteEmail);
+                emailInput.readOnly = true;
+                emailInput.style.background = 'var(--color-surface-alt, #f5f5f5)';
+            }
+
+            // Show 4th progress step
+            document.getElementById('progress-line-4').style.display = '';
+            document.getElementById('progress-step-4').style.display = '';
+            document.getElementById('progress-indicator').setAttribute('aria-valuemax', '4');
+
+            // Update header description
+            const headerP = document.querySelector('.auth-header p');
+            if (headerP) headerP.textContent = 'Complete your student registration to submit artwork';
+
+            // Wire payment step buttons
+            form.querySelector('#back-payment-btn')?.addEventListener('click', () => this.prevRegisterStep(form));
+            form.querySelector('#next-payment-btn')?.addEventListener('click', () => this.nextRegisterStep(form));
+            form.querySelector('#skip-payment-btn')?.addEventListener('click', () => {
+                this.formData.skipPayment = true;
+                this.saveStepData(form);
+                this.currentStep++;
+                this.updateProgressIndicator();
+                this.showStep(form, this.currentStep);
+                window.scrollTo(0, 0);
+            });
+        } else {
+            // Non-invite flow: remove payment fieldset so it doesn't affect step indexing
+            const paymentFieldset = document.getElementById('step-payment-fieldset');
+            if (paymentFieldset) paymentFieldset.remove();
+        }
 
         const nextBtn = form.querySelector('#next-step-btn') || form.querySelector('.btn-next');
         const backBtn = form.querySelector('#prev-step-btn') || form.querySelector('.btn-back');
@@ -142,7 +194,7 @@ class AuthPages {
         form.querySelector('#back-step-btn')?.addEventListener('click', () => this.prevRegisterStep(form));
         form.querySelector('#next-step-2-btn')?.addEventListener('click', () => this.nextRegisterStep(form));
 
-        // Step 3 navigation buttons
+        // Terms step navigation buttons (step 3 in normal flow, step 4 in invite flow)
         form.querySelector('#back-step-2-btn')?.addEventListener('click', () => this.prevRegisterStep(form));
         form.querySelector('#create-account-btn')?.addEventListener('click', (e) => {
             e.preventDefault();
@@ -487,7 +539,9 @@ class AuthPages {
             lastName,
             dateOfBirth: this.formData.date_of_birth,
             schoolId: this.formData.school_id,
-            accountType: this.formData.account_type,
+            accountType: this.isStudentInvite ? 'student' : this.formData.account_type,
+            ...(this.inviteToken && { registrationToken: this.inviteToken }),
+            ...(this.isStudentInvite && { canBid: !this.formData.skipPayment }),
         };
 
         try {
