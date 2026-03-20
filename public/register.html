@@ -55,12 +55,14 @@
                 </div>
 
                 <!-- Progress Indicator -->
-                <div class="progress-indicator" role="progressbar" aria-valuenow="1" aria-valuemin="1" aria-valuemax="3" aria-label="Account creation step 1 of 3">
+                <div class="progress-indicator" role="progressbar" aria-valuenow="1" aria-valuemin="1" aria-valuemax="3" aria-label="Account creation step 1 of 3" id="progress-indicator">
                     <span class="progress-step active" aria-current="step">1</span>
                     <span class="progress-line"></span>
                     <span class="progress-step">2</span>
                     <span class="progress-line"></span>
                     <span class="progress-step">3</span>
+                    <span class="progress-line" id="progress-line-4" style="display:none;"></span>
+                    <span class="progress-step" id="progress-step-4" style="display:none;">4</span>
                 </div>
 
                 <!-- Step 1: Basic Information -->
@@ -73,8 +75,8 @@
                             <p class="step-subtitle">Basic details to create your account</p>
                         </div>
 
-                        <!-- Account Type Selection -->
-                        <div class="form-group">
+                        <!-- Account Type Selection (hidden for student invite links) -->
+                        <div class="form-group" id="account-type-group">
                             <label>Account Type <span aria-label="required">*</span></label>
                             <div class="radio-group" role="radiogroup" aria-required="true">
                                 <div class="radio-item">
@@ -336,7 +338,33 @@
                         </div>
                     </fieldset>
 
-                    <!-- Step 3: Terms & Agreements -->
+                    <!-- Step 3: Payment Method (student invite flow only) -->
+                    <fieldset id="step-payment-fieldset" style="display:none;">
+                        <legend class="sr-only">Payment Method</legend>
+
+                        <div class="step-header">
+                            <h2>Enable Bidding <span style="font-size:0.75em;font-weight:400;">(Optional)</span></h2>
+                            <p class="step-subtitle">Add a payment method to bid on artwork at auction</p>
+                        </div>
+
+                        <div class="alert alert-info" role="note">
+                            <p><strong>Artwork submission is always free.</strong> To place bids on artwork, you need a payment method on file. You can skip this now and add one later from your dashboard.</p>
+                        </div>
+
+                        <div id="stripe-card-element" class="form-group">
+                            <p class="help-text" style="padding:1rem;border:1px dashed var(--color-border,#ddd);border-radius:4px;text-align:center;color:var(--color-text-muted,#666);">
+                                Payment processing will be available here. You can add a payment method from your dashboard after registering.
+                            </p>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" id="back-payment-btn">Back</button>
+                            <button type="button" class="btn btn-secondary" id="skip-payment-btn">Skip — Upload artwork only</button>
+                            <button type="button" class="btn btn-primary" id="next-payment-btn">Add Payment &amp; Enable Bidding</button>
+                        </div>
+                    </fieldset>
+
+                    <!-- Step 4 (or 3 for non-invite): Terms & Agreements -->
                     <fieldset id="step-3-fieldset" style="display:none;">
                         <legend class="sr-only">Terms and Agreements</legend>
 
