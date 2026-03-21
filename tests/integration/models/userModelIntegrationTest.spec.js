@@ -3,5 +3,7 @@
  */
 
 describe('User Model Integration Tests', () => {
-  // Integration tests for User model
+  test.todo('should create user record');
+  test.todo('should enforce unique email constraint');
+  test.todo('should soft-delete user');
 });

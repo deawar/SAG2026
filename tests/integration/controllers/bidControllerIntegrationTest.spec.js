@@ -3,5 +3,7 @@
  */
 
 describe('Bid Controller Integration Tests', () => {
-  // Integration tests for Bid controller
+  test.todo('should place bid on live auction');
+  test.todo('should reject bid below current high');
+  test.todo('should reject bid by unauthenticated user');
 });

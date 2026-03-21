@@ -3,5 +3,7 @@
  */
 
 describe('User Controller Integration Tests', () => {
-  // Integration tests for User controller
+  test.todo('should register new user');
+  test.todo('should reject duplicate email');
+  test.todo('should login with valid credentials');
 });

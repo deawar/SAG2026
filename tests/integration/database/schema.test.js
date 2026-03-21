@@ -20,7 +20,9 @@
 require('dotenv').config();
 const { Pool } = require('pg');
 
-describe('Database Schema Validation', () => {
+// Requires a running PostgreSQL instance — skip when no DB credentials are configured
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+(runDbTests ? describe : describe.skip)('Database Schema Validation', () => {
   let db;
 
   beforeAll(async () => {
