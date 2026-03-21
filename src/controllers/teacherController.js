@@ -528,7 +528,7 @@ class TeacherController {
                  SET first_name = $1, last_name = $2
                  WHERE id = $3
                    AND school_id = $4
-                   AND account_type = 'student'
+                   AND role = 'STUDENT'
                    AND deleted_at IS NULL
                  RETURNING id`,
                 [firstName.trim(), lastName.trim(), targetUserId, teacherSchoolId]
@@ -568,7 +568,7 @@ class TeacherController {
                  SET deleted_at = NOW()
                  WHERE id = $1
                    AND school_id = $2
-                   AND account_type = 'student'
+                   AND role = 'STUDENT'
                    AND deleted_at IS NULL
                  RETURNING id`,
                 [targetUserId, teacherSchoolId]
