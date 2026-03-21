@@ -425,6 +425,7 @@ class TeacherController {
                  FROM registration_tokens rt
                  LEFT JOIN users u ON LOWER(u.email) = LOWER(rt.student_email)
                                    AND u.deleted_at IS NULL
+                                   AND u.role = 'STUDENT'
                  WHERE rt.teacher_id = $1
                  ORDER BY rt.used_at DESC NULLS LAST, rt.created_at DESC`,
                 [userId]
