@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Silent Auction Gallery Terms of Service — the rules and conditions governing use of the platform.">
+    <title>Terms of Service | Silent Auction Gallery</title>
+
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <!-- Google Fonts: Cormorant Garant (headings) + DM Sans (body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,500;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+
+    <style>
+        /* ===== Legal Page Styles ===== */
+        .legal-hero {
+            background: linear-gradient(135deg, var(--color-dark) 0%, var(--color-dark-gray) 100%);
+            color: white;
+            padding: var(--spacing-2xl) 0;
+            text-align: center;
+        }
+
+        .legal-hero h1 {
+            font-family: var(--font-heading, 'Cormorant Garant', Georgia, serif);
+            font-size: var(--font-size-4xl);
+            color: white;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .legal-hero .effective-date {
+            color: var(--color-light-gray);
+            font-size: var(--font-size-sm);
+            margin-bottom: 0;
+        }
+
+        .legal-back-bar {
+            background-color: var(--color-lightest-gray);
+            border-bottom: 1px solid var(--color-lighter-gray);
+            padding: var(--spacing-md) 0;
+        }
+
+        .legal-back-bar .container {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-lg);
+        }
+
+        .legal-back-bar a,
+        .legal-back-bar button {
+            color: var(--color-primary);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            text-decoration: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            transition: color var(--transition-fast);
+        }
+
+        .legal-back-bar a:hover,
+        .legal-back-bar button:hover {
+            color: var(--color-primary-dark);
+            text-decoration: underline;
+        }
+
+        .legal-back-bar .separator {
+            color: var(--color-light-gray);
+            font-size: var(--font-size-sm);
+        }
+
+        .legal-layout {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: var(--spacing-2xl);
+            padding: var(--spacing-2xl) 0;
+            align-items: start;
+        }
+
+        /* Sticky table of contents */
+        .legal-toc {
+            position: sticky;
+            top: 90px;
+            background-color: var(--color-lightest-gray);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            font-size: var(--font-size-sm);
+        }
+
+        .legal-toc h2 {
+            font-size: var(--font-size-base);
+            font-weight: 700;
+            margin-bottom: var(--spacing-md);
+            color: var(--color-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .legal-toc ol {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            counter-reset: toc-counter;
+        }
+
+        .legal-toc li {
+            counter-increment: toc-counter;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .legal-toc a {
+            color: var(--color-gray);
+            text-decoration: none;
+            display: flex;
+            gap: var(--spacing-sm);
+            line-height: 1.4;
+            transition: color var(--transition-fast);
+        }
+
+        .legal-toc a::before {
+            content: counter(toc-counter) ".";
+            color: var(--color-primary);
+            font-weight: 600;
+            flex-shrink: 0;
+            width: 1.4em;
+        }
+
+        .legal-toc a:hover {
+            color: var(--color-primary);
+        }
+
+        /* Legal content area */
+        .legal-body {
+            min-width: 0;
+        }
+
+        .legal-section {
+            margin-bottom: var(--spacing-2xl);
+            padding-bottom: var(--spacing-2xl);
+            border-bottom: 1px solid var(--color-lighter-gray);
+        }
+
+        .legal-section:last-child {
+            border-bottom: none;
+        }
+
+        .legal-section h2 {
+            font-family: var(--font-heading, 'Cormorant Garant', Georgia, serif);
+            font-size: var(--font-size-2xl);
+            color: var(--color-dark);
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 2px solid var(--color-primary);
+            display: flex;
+            align-items: baseline;
+            gap: var(--spacing-md);
+        }
+
+        .legal-section h2 .section-num {
+            font-size: var(--font-size-base);
+            font-family: var(--font-body, 'DM Sans', sans-serif);
+            color: var(--color-primary);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .legal-section h3 {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--color-dark-gray);
+            margin-top: var(--spacing-lg);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .legal-section p {
+            color: var(--color-dark-gray);
+            line-height: var(--line-height-relaxed);
+        }
+
+        .legal-section ul,
+        .legal-section ol {
+            padding-left: var(--spacing-xl);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .legal-section li {
+            color: var(--color-dark-gray);
+            line-height: var(--line-height-relaxed);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .legal-section a {
+            color: var(--color-primary);
+        }
+
+        .compliance-badge {
+            display: inline-block;
+            background-color: var(--color-primary);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: var(--radius-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            vertical-align: middle;
+            margin-left: var(--spacing-sm);
+        }
+
+        .legal-highlight {
+            background-color: #fff8e1;
+            border-left: 4px solid var(--color-warning);
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
+            margin: var(--spacing-lg) 0;
+        }
+
+        .legal-highlight p {
+            margin-bottom: 0;
+        }
+
+        .contact-card {
+            background-color: var(--color-lightest-gray);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            margin-top: var(--spacing-lg);
+        }
+
+        .contact-card p {
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .contact-card p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Responsive: collapse TOC on small screens */
+        @media (max-width: 800px) {
+            .legal-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .legal-toc {
+                position: static;
+            }
+
+            .legal-hero h1 {
+                font-size: var(--font-size-3xl);
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <!-- Navigation Header -->
+    <header class="navbar" role="banner">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="logo" aria-label="Silent Auction Gallery Home">
+                    <img src="/images/logo/SAGLive.png" alt="Silent Auction Gallery Logo" class="logo-img">
+                    <span class="logo-text">SAG</span>
+                </a>
+            </div>
+            <nav class="navbar-nav" role="navigation" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="/auctions.html" class="nav-link">Auctions</a></li>
+                    <li><a href="/#about" class="nav-link">About</a></li>
+                    <li><a href="/#help" class="nav-link">Help</a></li>
+                </ul>
+            </nav>
+            <div class="navbar-auth">
+                <a href="/login.html" class="btn btn-secondary">Login</a>
+                <a href="/register.html" class="btn btn-primary">Sign Up</a>
+            </div>
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Page Hero -->
+    <div class="legal-hero" role="banner" aria-label="Page header">
+        <div class="container">
+            <h1>Terms of Service</h1>
+            <p class="effective-date">Effective Date: March 20, 2026 &nbsp;·&nbsp; Last Updated: March 20, 2026</p>
+        </div>
+    </div>
+
+    <!-- Back Navigation Bar -->
+    <div class="legal-back-bar" role="navigation" aria-label="Breadcrumb">
+        <div class="container">
+            <button onclick="history.back()" aria-label="Go back to previous page">← Back</button>
+            <span class="separator" aria-hidden="true">/</span>
+            <a href="/">Home</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <a href="/privacy.html">Privacy Policy</a>
+        </div>
+    </div>
+
+    <main id="main-content" class="main-content" style="padding-top:0;">
+        <div class="container">
+            <div class="legal-layout">
+
+                <!-- Table of Contents -->
+                <aside class="legal-toc" aria-label="Table of contents">
+                    <h2>Contents</h2>
+                    <ol>
+                        <li><a href="#acceptance">Acceptance of Terms</a></li>
+                        <li><a href="#definitions">Definitions</a></li>
+                        <li><a href="#accounts">Account Registration</a></li>
+                        <li><a href="#conduct">User Conduct</a></li>
+                        <li><a href="#auctions">Auctions &amp; Bidding</a></li>
+                        <li><a href="#artwork">Artwork Submissions</a></li>
+                        <li><a href="#payments">Payments &amp; Fees</a></li>
+                        <li><a href="#minors">Minors &amp; COPPA</a></li>
+                        <li><a href="#ip">Intellectual Property</a></li>
+                        <li><a href="#privacy-ref">Privacy</a></li>
+                        <li><a href="#disclaimers">Disclaimers</a></li>
+                        <li><a href="#liability">Limitation of Liability</a></li>
+                        <li><a href="#termination">Termination</a></li>
+                        <li><a href="#governing-law">Governing Law</a></li>
+                        <li><a href="#changes">Changes to Terms</a></li>
+                        <li><a href="#contact-tos">Contact</a></li>
+                    </ol>
+                </aside>
+
+                <!-- Terms Body -->
+                <article class="legal-body" aria-label="Terms of Service content">
+
+                    <section id="acceptance" class="legal-section">
+                        <h2><span class="section-num">1.</span> Acceptance of Terms</h2>
+                        <p>By accessing or using the Silent Auction Gallery platform at <strong>SAG.live</strong> (the "Platform"), you agree to be bound by these Terms of Service ("Terms") and all applicable laws and regulations. If you do not agree with any part of these Terms, you may not use the Platform.</p>
+                        <p>These Terms constitute a legally binding agreement between you and <strong>Silent Auction Gallery</strong> ("SAG," "we," "us," or "our"). Your continued use of the Platform after any changes to these Terms constitutes acceptance of those changes.</p>
+                    </section>
+
+                    <section id="definitions" class="legal-section">
+                        <h2><span class="section-num">2.</span> Definitions</h2>
+                        <ul>
+                            <li><strong>"Platform"</strong> means the SAG.live website, application, and all related services.</li>
+                            <li><strong>"User"</strong> means any individual who accesses or uses the Platform, including students, teachers, school administrators, bidders, and site administrators.</li>
+                            <li><strong>"School"</strong> means an educational institution registered on the Platform.</li>
+                            <li><strong>"Student"</strong> means a user registered as a student under a School.</li>
+                            <li><strong>"Teacher"</strong> means a user registered as a teacher affiliated with a School who may manage auction events and student participation.</li>
+                            <li><strong>"Bidder"</strong> means a user who has added a verified payment method and participates in auction bidding.</li>
+                            <li><strong>"Artwork"</strong> means any image, file, or creative work submitted by a Student through the Platform.</li>
+                            <li><strong>"Auction"</strong> means a timed bidding event on the Platform featuring Artwork submitted by Students.</li>
+                        </ul>
+                    </section>
+
+                    <section id="accounts" class="legal-section">
+                        <h2><span class="section-num">3.</span> Account Registration</h2>
+                        <h3>3.1 Eligibility</h3>
+                        <p>You must be at least 13 years of age to create an account and use the Platform. Users under 13 require verifiable parental consent in accordance with COPPA (see Section 8).</p>
+
+                        <h3>3.2 Account Types</h3>
+                        <p>The Platform supports five account roles with distinct privileges:</p>
+                        <ul>
+                            <li><strong>Site Administrator</strong> — full platform management</li>
+                            <li><strong>School Administrator</strong> — manages a registered School and its Teachers</li>
+                            <li><strong>Teacher</strong> — creates Auctions, invites Students, and approves Artwork</li>
+                            <li><strong>Student</strong> — submits Artwork and, if payment is verified, may also bid</li>
+                            <li><strong>Bidder</strong> — places bids on Artwork at Auctions</li>
+                        </ul>
+
+                        <h3>3.3 Accurate Information</h3>
+                        <p>You agree to provide accurate, complete, and current information during registration and to keep your account information up to date. Providing false information, including misrepresenting your affiliation with a School, is grounds for immediate account termination.</p>
+
+                        <h3>3.4 Account Security</h3>
+                        <p>You are responsible for maintaining the confidentiality of your credentials. The Platform enforces multi-factor authentication (2FA) via TOTP for added security. You must notify us immediately at <a href="mailto:SilentAuctionGallery@gmail.com">SilentAuctionGallery@gmail.com</a> if you suspect unauthorized access.</p>
+
+                        <h3>3.5 One Account Per Person</h3>
+                        <p>Each person may maintain only one account. Creating multiple accounts to circumvent restrictions or gain an unfair bidding advantage is prohibited.</p>
+                    </section>
+
+                    <section id="conduct" class="legal-section">
+                        <h2><span class="section-num">4.</span> User Conduct</h2>
+                        <p>You agree not to:</p>
+                        <ul>
+                            <li>Use the Platform for any unlawful purpose or in violation of any applicable law or regulation.</li>
+                            <li>Submit, post, or transmit content that is fraudulent, deceptive, defamatory, obscene, or infringes on any third-party rights.</li>
+                            <li>Attempt to gain unauthorized access to any account, system, or network connected to the Platform.</li>
+                            <li>Use automated scripts, bots, scrapers, or other tools to access or interact with the Platform without prior written consent.</li>
+                            <li>Interfere with or disrupt the integrity or performance of the Platform or its infrastructure.</li>
+                            <li>Engage in bid manipulation, shill bidding, bid shielding, or any other auction fraud.</li>
+                            <li>Harass, abuse, or harm another user, Student, or School.</li>
+                            <li>Collect or harvest personal information of other users without their consent.</li>
+                        </ul>
+                    </section>
+
+                    <section id="auctions" class="legal-section">
+                        <h2><span class="section-num">5.</span> Auctions &amp; Bidding</h2>
+                        <h3>5.1 Auction Creation</h3>
+                        <p>Only Teachers and School Administrators may create Auctions. All Auctions are associated with a registered School and are subject to School Administrator approval before going live.</p>
+
+                        <h3>5.2 Bidding Rules</h3>
+                        <ul>
+                            <li>Bids are legally binding offers. Placing a bid constitutes a commitment to purchase the Artwork if you are the winning bidder.</li>
+                            <li>All bids are final once placed. You may not retract a bid except where required by law.</li>
+                            <li>The highest bid at auction close wins. In the event of a tie, the earliest bid prevails.</li>
+                            <li>Real-time bid updates are delivered via WebSocket. SAG is not responsible for network delays.</li>
+                            <li>SAG reserves the right to cancel or void any bid placed in violation of these Terms or as a result of technical error.</li>
+                        </ul>
+
+                        <h3>5.3 Reserve Prices</h3>
+                        <p>Teachers may set reserve (minimum) prices on Artwork. If no bid meets or exceeds the reserve price, no sale occurs and no payment is charged.</p>
+
+                        <h3>5.4 Auction Cancellation</h3>
+                        <p>SAG and School Administrators reserve the right to cancel an Auction at any time. If an Auction is cancelled after bids have been placed, all bidders will be notified and no payments will be processed.</p>
+                    </section>
+
+                    <section id="artwork" class="legal-section">
+                        <h2><span class="section-num">6.</span> Artwork Submissions</h2>
+                        <h3>6.1 Student Submissions</h3>
+                        <p>Students may submit original Artwork for inclusion in School Auctions. All submissions are subject to Teacher review and approval before being displayed publicly on the Platform.</p>
+
+                        <h3>6.2 Content Standards</h3>
+                        <p>Submitted Artwork must:</p>
+                        <ul>
+                            <li>Be the original creation of the submitting Student (or used with explicit rights/permission).</li>
+                            <li>Not contain offensive, adult, violent, or otherwise inappropriate content.</li>
+                            <li>Not infringe any third-party copyright, trademark, or other intellectual property rights.</li>
+                            <li>Meet any additional content requirements set by the Student's School.</li>
+                        </ul>
+
+                        <h3>6.3 License to SAG</h3>
+                        <p>By submitting Artwork, you grant SAG a non-exclusive, royalty-free, worldwide license to display, reproduce, and promote the Artwork solely for the purpose of operating the Platform and associated fundraising activities. This license ends when the Artwork is removed from the Platform.</p>
+
+                        <h3>6.4 Removal of Artwork</h3>
+                        <p>SAG reserves the right to remove any Artwork that violates these Terms, applicable law, or the content standards of the associated School, without prior notice.</p>
+                    </section>
+
+                    <section id="payments" class="legal-section">
+                        <h2><span class="section-num">7.</span> Payments &amp; Fees</h2>
+
+                        <div class="legal-highlight">
+                            <p><strong>Artwork submission is always free.</strong> Fees apply only when a Bidder wins an Auction.</p>
+                        </div>
+
+                        <h3>7.1 Payment Processing <span class="compliance-badge">PCI-DSS</span></h3>
+                        <p>All payment processing is handled by third-party PCI-DSS compliant payment processors (including Stripe, Square, PayPal, and Authorize.net). SAG never stores raw payment card data. Only tokenized references are retained in our system in accordance with PCI-DSS 3.2.1 standards.</p>
+
+                        <h3>7.2 Winning Bid Obligations</h3>
+                        <p>If you are the winning bidder at the close of an Auction, your payment method on file will be charged the winning bid amount plus any applicable fees. You authorize SAG to process this payment on your behalf.</p>
+
+                        <h3>7.3 Platform Fees</h3>
+                        <p>SAG may deduct a platform service fee from auction proceeds. Any applicable fees will be disclosed clearly before an Auction goes live. Proceeds net of fees are remitted to the associated School for educational purposes.</p>
+
+                        <h3>7.4 Refunds</h3>
+                        <p>All sales are final unless the Artwork is materially misrepresented, the Auction is cancelled by SAG, or a chargeback or dispute is required by your payment provider. Refund requests must be submitted within 14 days of the auction close date.</p>
+
+                        <h3>7.5 Chargebacks</h3>
+                        <p>Initiating an unjustified chargeback may result in account suspension and recovery of the disputed amount plus associated fees.</p>
+                    </section>
+
+                    <section id="minors" class="legal-section">
+                        <h2><span class="section-num">8.</span> Minors &amp; COPPA <span class="compliance-badge">COPPA</span> <span class="compliance-badge">FERPA</span></h2>
+                        <h3>8.1 Age Requirements</h3>
+                        <p>Users must be 13 or older to register independently. Users under the age of 13 ("Children") may only participate with verifiable parental or guardian consent, which must be obtained through the School's enrollment process.</p>
+
+                        <h3>8.2 Limited Data Collection for Children</h3>
+                        <p>SAG collects only the minimum data necessary for Children to participate in the Platform (name, school affiliation, artwork). We do not collect payment information directly from Children. Bidding by Children is not permitted.</p>
+
+                        <h3>8.3 Parental Rights</h3>
+                        <p>Parents and legal guardians of Children have the right to:</p>
+                        <ul>
+                            <li>Review all personal information collected about their Child.</li>
+                            <li>Request correction or deletion of their Child's personal information.</li>
+                            <li>Revoke consent and request removal of their Child's account and data.</li>
+                        </ul>
+                        <p>To exercise these rights, contact us at <a href="mailto:SilentAuctionGallery@gmail.com">SilentAuctionGallery@gmail.com</a>.</p>
+
+                        <h3>8.4 Student Education Records (FERPA)</h3>
+                        <p>Student data collected through School participation is treated as an education record under FERPA. This data is accessible only to the Student, their parent or guardian (where applicable), their Teacher, and authorized School Administrators. No student education records are disclosed to third parties without consent, except as required by law or as necessary to operate the Platform under FERPA's "school official" exception.</p>
+                    </section>
+
+                    <section id="ip" class="legal-section">
+                        <h2><span class="section-num">9.</span> Intellectual Property</h2>
+                        <h3>9.1 SAG Platform</h3>
+                        <p>The Platform, including its design, code, text, graphics, logos, and other content created by SAG, is the intellectual property of Silent Auction Gallery and is protected by applicable copyright, trademark, and other intellectual property laws. You may not reproduce, distribute, or create derivative works from SAG's intellectual property without express written permission.</p>
+
+                        <h3>9.2 User Content</h3>
+                        <p>You retain ownership of content you submit to the Platform (including Artwork). By submitting content, you represent that you have the rights to grant SAG the license described in Section 6.3 and that your content does not violate any third-party rights.</p>
+
+                        <h3>9.3 Reporting Infringement</h3>
+                        <p>If you believe content on the Platform infringes your copyright or other intellectual property rights, please contact us at <a href="mailto:SilentAuctionGallery@gmail.com">SilentAuctionGallery@gmail.com</a> with a detailed description of the alleged infringement.</p>
+                    </section>
+
+                    <section id="privacy-ref" class="legal-section">
+                        <h2><span class="section-num">10.</span> Privacy</h2>
+                        <p>Your use of the Platform is also governed by our <a href="/privacy.html">Privacy Policy</a>, which is incorporated into these Terms by reference. Our Privacy Policy describes how we collect, use, and protect your personal information in compliance with GDPR, CCPA, COPPA, and FERPA.</p>
+                    </section>
+
+                    <section id="disclaimers" class="legal-section">
+                        <h2><span class="section-num">11.</span> Disclaimers</h2>
+                        <p>THE PLATFORM IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT.</p>
+                        <p>SAG does not warrant that:</p>
+                        <ul>
+                            <li>The Platform will be uninterrupted, timely, secure, or error-free.</li>
+                            <li>Any defects or errors in the Platform will be corrected.</li>
+                            <li>The Platform or its servers are free of viruses or other harmful components.</li>
+                            <li>Results obtained from use of the Platform will be accurate or reliable.</li>
+                        </ul>
+                        <p>SAG is not responsible for the accuracy, completeness, or appropriateness of content submitted by users, including Artwork or auction descriptions.</p>
+                    </section>
+
+                    <section id="liability" class="legal-section">
+                        <h2><span class="section-num">12.</span> Limitation of Liability</h2>
+                        <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, SAG AND ITS OFFICERS, DIRECTORS, EMPLOYEES, AND AGENTS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOST PROFITS, LOSS OF DATA, OR LOSS OF GOODWILL, ARISING FROM YOUR USE OF OR INABILITY TO USE THE PLATFORM, EVEN IF SAG HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.</p>
+                        <p>IN NO EVENT SHALL SAG'S TOTAL LIABILITY TO YOU EXCEED THE GREATER OF (A) THE AMOUNT PAID BY YOU TO SAG IN THE 12 MONTHS PRECEDING THE CLAIM, OR (B) $100.</p>
+                        <p>Some jurisdictions do not allow the exclusion of certain warranties or limitation of liability for consequential or incidental damages. In such jurisdictions, SAG's liability is limited to the maximum extent permitted by law.</p>
+                    </section>
+
+                    <section id="termination" class="legal-section">
+                        <h2><span class="section-num">13.</span> Termination</h2>
+                        <p>SAG reserves the right to suspend or terminate your account and access to the Platform at any time, with or without cause or notice, including for violation of these Terms. Upon termination:</p>
+                        <ul>
+                            <li>Your right to access the Platform immediately ceases.</li>
+                            <li>Any pending bids at the time of termination are void.</li>
+                            <li>Completed auction obligations (e.g., payment for a won item) remain in effect.</li>
+                            <li>You may request deletion of your personal data pursuant to our Privacy Policy.</li>
+                        </ul>
+                        <p>You may delete your account at any time from your dashboard settings. Deleting your account does not automatically delete data required for legal compliance, fraud prevention, or completed transaction records.</p>
+                    </section>
+
+                    <section id="governing-law" class="legal-section">
+                        <h2><span class="section-num">14.</span> Governing Law</h2>
+                        <p>These Terms are governed by the laws of the State of Georgia, United States, without regard to conflict of law principles. Any disputes arising under these Terms shall be resolved exclusively in the state or federal courts located in Georgia, and you consent to personal jurisdiction in those courts.</p>
+                        <p>Users in the European Union may also have rights under applicable EU law, including GDPR. Nothing in these Terms limits any rights you have under mandatory local law.</p>
+                    </section>
+
+                    <section id="changes" class="legal-section">
+                        <h2><span class="section-num">15.</span> Changes to Terms</h2>
+                        <p>SAG may update these Terms at any time. When we make material changes, we will notify you by:</p>
+                        <ul>
+                            <li>Sending an email to the address associated with your account, and/or</li>
+                            <li>Displaying a prominent notice on the Platform.</li>
+                        </ul>
+                        <p>Your continued use of the Platform after the effective date of any change constitutes your acceptance of the revised Terms. The "Last Updated" date at the top of this page reflects the most recent revision.</p>
+                    </section>
+
+                    <section id="contact-tos" class="legal-section">
+                        <h2><span class="section-num">16.</span> Contact</h2>
+                        <p>If you have questions or concerns about these Terms, please contact us:</p>
+                        <div class="contact-card">
+                            <p><strong>Silent Auction Gallery</strong></p>
+                            <p>Email: <a href="mailto:SilentAuctionGallery@gmail.com">SilentAuctionGallery@gmail.com</a></p>
+                            <p>Website: <a href="https://sag.live">https://sag.live</a></p>
+                        </div>
+                        <p style="margin-top: var(--spacing-lg);">For privacy-specific requests (data access, deletion, opt-out), see our <a href="/privacy.html">Privacy Policy</a> or email us directly at the address above.</p>
+                    </section>
+
+                </article>
+            </div><!-- /.legal-layout -->
+        </div><!-- /.container -->
+    </main>
+
+    <!-- Alert Messages -->
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About SAG</h3>
+                    <p>Silent Auction Gallery supports education through art.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="/auctions.html">Auctions</a></li>
+                        <li><a href="/#about">About Us</a></li>
+                        <li><a href="/#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Legal</h3>
+                    <ul>
+                        <li><a href="/privacy.html">Privacy Policy</a></li>
+                        <li><a href="/terms.html" aria-current="page">Terms of Service</a></li>
+                        <li><a href="/#accessibility">Accessibility</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Follow Us</h3>
+                    <div class="social-links">
+                        <a href="#facebook" aria-label="Facebook">f</a>
+                        <a href="#twitter" aria-label="Twitter">𝕏</a>
+                        <a href="#instagram" aria-label="Instagram">📷</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/theme-manager.js"></script>
+    <script src="/js/accessibility.js"></script>
+    <script src="/js/auth-manager.js"></script>
+
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
+    <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png">
+    <link rel="manifest" href="/favicon/site.webmanifest">
+    <meta name="msapplication-config" content="/favicon/browserconfig.xml">
+    <meta name="msapplication-TileColor" content="#2c3e50">
+</body>
+</html>

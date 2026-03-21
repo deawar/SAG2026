@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Silent Auction Gallery Privacy Policy — how we collect, use, and protect your personal data under GDPR, CCPA, COPPA, FERPA, and PCI-DSS.">
+    <title>Privacy Policy | Silent Auction Gallery</title>
+
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <!-- Google Fonts: Cormorant Garant (headings) + DM Sans (body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,500;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+
+    <style>
+        /* ===== Legal Page Styles ===== */
+        .legal-hero {
+            background: linear-gradient(135deg, var(--color-dark) 0%, var(--color-dark-gray) 100%);
+            color: white;
+            padding: var(--spacing-2xl) 0;
+            text-align: center;
+        }
+
+        .legal-hero h1 {
+            font-family: var(--font-heading, 'Cormorant Garant', Georgia, serif);
+            font-size: var(--font-size-4xl);
+            color: white;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .legal-hero .effective-date {
+            color: var(--color-light-gray);
+            font-size: var(--font-size-sm);
+            margin-bottom: 0;
+        }
+
+        .legal-back-bar {
+            background-color: var(--color-lightest-gray);
+            border-bottom: 1px solid var(--color-lighter-gray);
+            padding: var(--spacing-md) 0;
+        }
+
+        .legal-back-bar .container {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-lg);
+        }
+
+        .legal-back-bar a,
+        .legal-back-bar button {
+            color: var(--color-primary);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            text-decoration: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            transition: color var(--transition-fast);
+        }
+
+        .legal-back-bar a:hover,
+        .legal-back-bar button:hover {
+            color: var(--color-primary-dark);
+            text-decoration: underline;
+        }
+
+        .legal-back-bar .separator {
+            color: var(--color-light-gray);
+            font-size: var(--font-size-sm);
+        }
+
+        .legal-layout {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: var(--spacing-2xl);
+            padding: var(--spacing-2xl) 0;
+            align-items: start;
+        }
+
+        /* Sticky table of contents */
+        .legal-toc {
+            position: sticky;
+            top: 90px;
+            background-color: var(--color-lightest-gray);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            font-size: var(--font-size-sm);
+        }
+
+        .legal-toc h2 {
+            font-size: var(--font-size-base);
+            font-weight: 700;
+            margin-bottom: var(--spacing-md);
+            color: var(--color-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .legal-toc ol {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            counter-reset: toc-counter;
+        }
+
+        .legal-toc li {
+            counter-increment: toc-counter;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .legal-toc a {
+            color: var(--color-gray);
+            text-decoration: none;
+            display: flex;
+            gap: var(--spacing-sm);
+            line-height: 1.4;
+            transition: color var(--transition-fast);
+        }
+
+        .legal-toc a::before {
+            content: counter(toc-counter) ".";
+            color: var(--color-primary);
+            font-weight: 600;
+            flex-shrink: 0;
+            width: 1.4em;
+        }
+
+        .legal-toc a:hover {
+            color: var(--color-primary);
+        }
+
+        /* Compliance badges strip */
+        .compliance-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-lg);
+        }
+
+        .compliance-chip {
+            background-color: var(--color-dark);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        /* Legal content area */
+        .legal-body {
+            min-width: 0;
+        }
+
+        .legal-section {
+            margin-bottom: var(--spacing-2xl);
+            padding-bottom: var(--spacing-2xl);
+            border-bottom: 1px solid var(--color-lighter-gray);
+        }
+
+        .legal-section:last-child {
+            border-bottom: none;
+        }
+
+        .legal-section h2 {
+            font-family: var(--font-heading, 'Cormorant Garant', Georgia, serif);
+            font-size: var(--font-size-2xl);
+            color: var(--color-dark);
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 2px solid var(--color-primary);
+            display: flex;
+            align-items: baseline;
+            gap: var(--spacing-md);
+        }
+
+        .legal-section h2 .section-num {
+            font-size: var(--font-size-base);
+            font-family: var(--font-body, 'DM Sans', sans-serif);
+            color: var(--color-primary);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .legal-section h3 {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--color-dark-gray);
+            margin-top: var(--spacing-lg);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .legal-section p {
+            color: var(--color-dark-gray);
+            line-height: var(--line-height-relaxed);
+        }
+
+        .legal-section ul,
+        .legal-section ol {
+            padding-left: var(--spacing-xl);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .legal-section li {
+            color: var(--color-dark-gray);
+            line-height: var(--line-height-relaxed);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .legal-section a {
+            color: var(--color-primary);
+        }
+
+        .compliance-badge {
+            display: inline-block;
+            background-color: var(--color-primary);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: var(--radius-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            vertical-align: middle;
+            margin-left: var(--spacing-sm);
+        }
+
+        .legal-highlight {
+            background-color: #e3f2fd;
+            border-left: 4px solid var(--color-primary);
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
+            margin: var(--spacing-lg) 0;
+        }
+
+        .legal-highlight p {
+            margin-bottom: 0;
+            color: #1565c0;
+        }
+
+        /* Data table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: var(--spacing-lg) 0;
+            font-size: var(--font-size-sm);
+        }
+
+        .data-table th {
+            background-color: var(--color-dark);
+            color: white;
+            padding: var(--spacing-sm) var(--spacing-md);
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .data-table td {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-bottom: 1px solid var(--color-lighter-gray);
+            color: var(--color-dark-gray);
+            vertical-align: top;
+        }
+
+        .data-table tr:nth-child(even) td {
+            background-color: var(--color-lightest-gray);
+        }
+
+        /* Rights cards grid */
+        .rights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin: var(--spacing-lg) 0;
+        }
+
+        .right-card {
+            background-color: var(--color-lightest-gray);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            border-top: 3px solid var(--color-primary);
+        }
+
+        .right-card h4 {
+            font-size: var(--font-size-base);
+            font-weight: 700;
+            margin-bottom: var(--spacing-sm);
+            color: var(--color-dark);
+        }
+
+        .right-card p {
+            font-size: var(--font-size-sm);
+            margin-bottom: 0;
+            color: var(--color-gray);
+            line-height: 1.5;
+        }
+
+        .contact-card {
+            background-color: var(--color-lightest-gray);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            margin-top: var(--spacing-lg);
+        }
+
+        .contact-card p {
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .contact-card p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 800px) {
+            .legal-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .legal-toc {
+                position: static;
+            }
+
+            .legal-hero h1 {
+                font-size: var(--font-size-3xl);
+            }
+
+            .rights-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .data-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .rights-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <!-- Navigation Header -->
+    <header class="navbar" role="banner">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="logo" aria-label="Silent Auction Gallery Home">
+                    <img src="/images/logo/SAGLive.png" alt="Silent Auction Gallery Logo" class="logo-img">
+                    <span class="logo-text">SAG</span>
+                </a>
+            </div>
+            <nav class="navbar-nav" role="navigation" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="/auctions.html" class="nav-link">Auctions</a></li>
+                    <li><a href="/#about" class="nav-link">About</a></li>
+                    <li><a href="/#help" class="nav-link">Help</a></li>
+                </ul>
+            </nav>
+            <div class="navbar-auth">
+                <a href="/login.html" class="btn btn-secondary">Login</a>
+                <a href="/register.html" class="btn btn-primary">Sign Up</a>
+            </div>
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Page Hero -->
+    <div class="legal-hero" role="banner" aria-label="Page header">
+        <div class="container">
+            <h1>Privacy Policy</h1>
+            <p class="effective-date">Effective Date: March 20, 2026 &nbsp;·&nbsp; Last Updated: March 20, 2026</p>
+            <div class="compliance-strip" style="justify-content:center; margin-top:var(--spacing-lg);">
+                <span class="compliance-chip">GDPR</span>
+                <span class="compliance-chip">CCPA</span>
+                <span class="compliance-chip">COPPA</span>
+                <span class="compliance-chip">FERPA</span>
+                <span class="compliance-chip">PCI-DSS 3.2.1</span>
+                <span class="compliance-chip">WCAG 2.1 AA</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back Navigation Bar -->
+    <div class="legal-back-bar" role="navigation" aria-label="Breadcrumb">
+        <div class="container">
+            <button onclick="history.back()" aria-label="Go back to previous page">← Back</button>
+            <span class="separator" aria-hidden="true">/</span>
+            <a href="/">Home</a>
+            <span class="separator" aria-hidden="true">/</span>
+            <a href="/terms.html">Terms of Service</a>
+        </div>
+    </div>
+
+    <main id="main-content" class="main-content" style="padding-top:0;">
+        <div class="container">
+            <div class="legal-layout">
+
+                <!-- Table of Contents -->
+                <aside class="legal-toc" aria-label="Table of contents">
+                    <h2>Contents</h2>
+                    <ol>
+                        <li><a href="#overview">Overview</a></li>
+                        <li><a href="#data-controller">Data Controller</a></li>
+                        <li><a href="#data-collected">Data We Collect</a></li>
+                        <li><a href="#how-we-use">How We Use Data</a></li>
+                        <li><a href="#legal-bases">Legal Bases (GDPR)</a></li>
+                        <li><a href="#coppa-priv">Children (COPPA)</a></li>
+                        <li><a href="#ferpa-priv">Student Records (FERPA)</a></li>
+                        <li><a href="#sharing">Data Sharing</a></li>
+                        <li><a href="#retention">Data Retention</a></li>
+                        <li><a href="#pci">Payment Data (PCI-DSS)</a></li>
+                        <li><a href="#gdpr-rights">Your Rights — GDPR</a></li>
+                        <li><a href="#ccpa-rights">Your Rights — CCPA</a></li>
+                        <li><a href="#cookies">Cookies</a></li>
+                        <li><a href="#security-priv">Security</a></li>
+                        <li><a href="#international">International Transfers</a></li>
+                        <li><a href="#changes-priv">Policy Changes</a></li>
+                        <li><a href="#contact-priv">Contact / DPO</a></li>
+                    </ol>
+                </aside>
+
+                <!-- Privacy Body -->
+                <article class="legal-body" aria-label="Privacy Policy content">
+
+                    <section id="overview" class="legal-section">
+                        <h2><span class="section-num">1.</span> Overview</h2>
+                        <p>Silent Auction Gallery ("SAG," "we," "us," or "our") is committed to protecting the privacy and security of your personal information. This Privacy Policy explains what data we collect, why we collect it, how we use and protect it, and what rights you have over your data.</p>
+                        <p>This policy applies to all users of the Platform at <strong>SAG.live</strong>, including students, teachers, school administrators, bidders, and visitors. It is designed to comply with:</p>
+                        <ul>
+                            <li><strong>GDPR</strong> — General Data Protection Regulation (EU/UK)</li>
+                            <li><strong>CCPA</strong> — California Consumer Privacy Act</li>
+                            <li><strong>COPPA</strong> — Children's Online Privacy Protection Act</li>
+                            <li><strong>FERPA</strong> — Family Educational Rights and Privacy Act</li>
+                            <li><strong>PCI-DSS 3.2.1</strong> — Payment Card Industry Data Security Standard</li>
+                        </ul>
+                        <div class="legal-highlight">
+                            <p>By using the Platform, you consent to the data practices described in this Privacy Policy. If you do not agree, please do not use the Platform.</p>
+                        </div>
+                    </section>
+
+                    <section id="data-controller" class="legal-section">
+                        <h2><span class="section-num">2.</span> Data Controller</h2>
+                        <p>For the purposes of GDPR and other applicable privacy laws, the data controller is:</p>
+                        <div class="contact-card">
+                            <p><strong>Silent Auction Gallery</strong></p>
+                            <p>Website: <a href="https://sag.live">https://sag.live</a></p>
+                            <p>Email: <a href="mailto:SilentAuctionGallery@gmail.com">SilentAuctionGallery@gmail.com</a></p>
+                        </div>
+                        <p style="margin-top: var(--spacing-md);">For data subject requests (access, deletion, portability, correction), contact us at the email above with the subject line "Privacy Request."</p>
+                    </section>
+
+                    <section id="data-collected" class="legal-section">
+                        <h2><span class="section-num">3.</span> Data We Collect</h2>
+                        <p>We collect data in three ways: information you provide directly, information collected automatically, and information from third parties.</p>
+
+                        <h3>3.1 Information You Provide</h3>
+                        <table class="data-table" aria-label="Personal data collected directly from users">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Data Elements</th>
+                                    <th>Who Provides</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Identity</td>
+                                    <td>First name, last name, date of birth</td>
+                                    <td>All users</td>
+                                </tr>
+                                <tr>
+                                    <td>Contact</td>
+                                    <td>Email address, mobile phone number</td>
+                                    <td>All users</td>
+                                </tr>
+                                <tr>
+                                    <td>Authentication</td>
+                                    <td>Hashed password, TOTP secret (2FA), backup codes</td>
+                                    <td>All users</td>
+                                </tr>
+                                <tr>
+                                    <td>School Affiliation</td>
+                                    <td>School name, school ID, teacher/student role</td>
+                                    <td>Students, Teachers, School Admins</td>
+                                </tr>
+                                <tr>
+                                    <td>Artwork</td>
+                                    <td>Uploaded images, artwork title, artwork description</td>
+                                    <td>Students</td>
+                                </tr>
+                                <tr>
+                                    <td>Payment</td>
+                                    <td>Payment token (not raw card data — see Section 10)</td>
+                                    <td>Bidders</td>
+                                </tr>
+                                <tr>
+                                    <td>Consent Records</td>
+                                    <td>Date/time of Terms acceptance, GDPR consent flags</td>
+                                    <td>All users</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h3>3.2 Information Collected Automatically</h3>
+                        <ul>
+                            <li><strong>Session data</strong> — JWT tokens, session identifiers, login timestamps, IP address at login.</li>
+                            <li><strong>Audit logs</strong> — critical actions (bids placed, account changes, admin actions) logged for compliance.</li>
+                            <li><strong>Device/browser data</strong> — browser type, operating system, referrer URL (collected via server logs).</li>
+                            <li><strong>Real-time activity</strong> — WebSocket connection metadata for live bid delivery.</li>
+                        </ul>
+
+                        <h3>3.3 Information from Third Parties</h3>
+                        <ul>
+                            <li><strong>Payment processors</strong> (Stripe, Square, PayPal, Authorize.net) — payment status confirmations and fraud signals. We never receive raw card numbers.</li>
+                            <li><strong>School enrollment data</strong> — where Teachers invite Students by email, the Teacher provides the Student's email address on the Student's behalf.</li>
+                            <li><strong>NCES API</strong> — public school directory data (school names, districts) used to populate the school selection during registration. No personal data is sourced from NCES.</li>
+                        </ul>
+                    </section>
+
+                    <section id="how-we-use" class="legal-section">
+                        <h2><span class="section-num">4.</span> How We Use Data</h2>
+                        <p>We use your data only for the purposes described below:</p>
+                        <ul>
+                            <li><strong>Account creation and management</strong> — to register, authenticate, and maintain your account.</li>
+                            <li><strong>Platform operation</strong> — to display auctions, process bids, manage artwork submissions, and deliver real-time updates.</li>
+                            <li><strong>Payment processing</strong> — to charge winning bidders and remit proceeds to schools.</li>
+                            <li><strong>Communications</strong> — to send registration confirmations, bid notifications, auction results, and support responses via email and SMS.</li>
+                            <li><strong>Security</strong> — to detect fraud, enforce account lockout policies, and protect the integrity of auctions.</li>
+                            <li><strong>Compliance</strong> — to maintain audit logs and consent records as required by GDPR, FERPA, COPPA, and PCI-DSS.</li>
+                            <li><strong>Platform improvement</strong> — aggregate, anonymized analytics to understand usage patterns (no personal identifiers retained).</li>
+                        </ul>
+                        <p>We do <strong>not</strong> sell, rent, or trade your personal information to third parties for marketing purposes.</p>
+                    </section>
+
+                    <section id="legal-bases" class="legal-section">
+                        <h2><span class="section-num">5.</span> Legal Bases for Processing <span class="compliance-badge">GDPR</span></h2>
+                        <p>For users in the European Union or United Kingdom, we process your personal data under the following legal bases (Article 6 GDPR):</p>
+                        <table class="data-table" aria-label="GDPR legal bases for data processing">
+                            <thead>
+                                <tr>
+                                    <th>Processing Purpose</th>
+                                    <th>Legal Basis</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Account creation and login</td>
+                                    <td>Contract (Art. 6(1)(b)) — necessary to provide the service</td>
+                                </tr>
+                                <tr>
+                                    <td>Bid processing and payment</td>
+                                    <td>Contract (Art. 6(1)(b))</td>
+                                </tr>
+                                <tr>
+                                    <td>Email/SMS notifications</td>
+                                    <td>Contract (Art. 6(1)(b)) / Consent (Art. 6(1)(a)) for marketing</td>
+                                </tr>
+                                <tr>
+                                    <td>Fraud detection and security</td>
+                                    <td>Legitimate interests (Art. 6(1)(f))</td>
+                                </tr>
+                                <tr>
+                                    <td>Audit and compliance logs</td>
+                                    <td>Legal obligation (Art. 6(1)(c))</td>
+                                </tr>
+                                <tr>
+                                    <td>Children's data (COPPA)</td>
+                                    <td>Consent of parent/guardian (Art. 6(1)(a) + Art. 8)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </section>
+
+                    <section id="coppa-priv" class="legal-section">
+                        <h2><span class="section-num">6.</span> Children's Privacy <span class="compliance-badge">COPPA</span></h2>
+                        <p>The Platform supports school-based participation by students who may be under 13 years of age. We take children's privacy seriously and comply fully with the Children's Online Privacy Protection Act (COPPA).</p>
+
+                        <h3>6.1 Data Minimization for Children</h3>
+                        <p>For users under 13, we collect only the minimum data necessary:</p>
+                        <ul>
+                            <li>First name and last name</li>
+                            <li>School and teacher affiliation</li>
+                            <li>Email address (used only for login and critical notifications)</li>
+                            <li>Artwork submissions</li>
+                        </ul>
+                        <p>We do <strong>not</strong> collect phone numbers, payment information, or location data from users under 13. We do not permit children under 13 to bid.</p>
+
+                        <h3>6.2 Parental Consent</h3>
+                        <p>Children under 13 may only use the Platform after a Teacher has confirmed that verifiable parental consent has been obtained through the School's enrollment process. SAG relies on Schools and Teachers to obtain this consent as part of their educational programs.</p>
+
+                        <h3>6.3 Parental Rights</h3>
+                        <p>Parents and legal guardians may at any time:</p>
+                        <ul>
+                            <li>Request to review all personal information collected about their child.</li>
+                            <li>Request correction of inaccurate information.</li>
+                            <li>Request deletion of their child's account and all associated personal data.</li>
+                            <li>Revoke consent to any future collection.</li>
+                        </ul>
+                        <p>Submit requests to <a href="mailto:SilentAuctionGallery@gmail.com">SilentAuctionGallery@gmail.com</a> with the subject "COPPA Parental Request." We will respond within 5 business days.</p>
+                    </section>
+
+                    <section id="ferpa-priv" class="legal-section">
+                        <h2><span class="section-num">7.</span> Student Education Records <span class="compliance-badge">FERPA</span></h2>
+                        <p>Information collected from students in connection with their school's use of the Platform is treated as an education record under the Family Educational Rights and Privacy Act (FERPA).</p>
+
+                        <h3>7.1 Access Controls</h3>
+                        <p>Student education records on the Platform are accessible only to:</p>
+                        <ul>
+                            <li>The student themselves (if 18+ or an eligible student under FERPA)</li>
+                            <li>The student's parent or legal guardian (for students under 18)</li>
+                            <li>The student's Teacher and School Administrator</li>
+                            <li>SAG platform staff with a legitimate educational interest</li>
+                        </ul>
+
+                        <h3>7.2 No Third-Party Disclosure</h3>
+                        <p>SAG does not disclose student education records to any third party without prior written consent from the eligible student or their parent/guardian, except:</p>
+                        <ul>
+                            <li>As permitted under FERPA's "school official" exception (to operate the Platform).</li>
+                            <li>As required by a court order or applicable law.</li>
+                            <li>In a genuine health or safety emergency.</li>
+                        </ul>
+
+                        <h3>7.3 Audit Logging</h3>
+                        <p>All access to student education records is logged. Schools may request access logs for their students at any time.</p>
+
+                        <h3>7.4 Data Retention</h3>
+                        <p>Student education records are retained for 3 years from the date of the student's last activity on the Platform, then permanently deleted or anonymized in accordance with FERPA guidelines.</p>
+                    </section>
+
+                    <section id="sharing" class="legal-section">
+                        <h2><span class="section-num">8.</span> Data Sharing</h2>
+                        <p>We share your personal data only in the following limited circumstances:</p>
+
+                        <h3>8.1 Service Providers</h3>
+                        <p>We engage the following categories of service providers who process data on our behalf under strict data processing agreements:</p>
+                        <ul>
+                            <li><strong>Payment processors</strong> — Stripe, Square, PayPal, Authorize.net (payment tokenization and processing)</li>
+                            <li><strong>Email delivery</strong> — Gmail SMTP / other SMTP providers (transactional email)</li>
+                            <li><strong>SMS provider</strong> — Twilio (two-factor authentication and notifications)</li>
+                            <li><strong>Hosting</strong> — Linux VPS / Docker infrastructure (application and database hosting)</li>
+                        </ul>
+                        <p>These providers are contractually prohibited from using your data for their own purposes beyond the services they provide to us.</p>
+
+                        <h3>8.2 Legal Requirements</h3>
+                        <p>We may disclose personal data if required by law, subpoena, court order, or if we reasonably believe disclosure is necessary to protect the rights, property, or safety of SAG, our users, or the public.</p>
+
+                        <h3>8.3 Business Transfers</h3>
+                        <p>If SAG is involved in a merger, acquisition, or sale of assets, your personal data may be transferred. We will provide notice and, where required by law, seek your consent before any such transfer.</p>
+
+                        <h3>8.4 No Sale of Personal Data</h3>
+                        <p>SAG does not sell, rent, trade, or lease personal data to any third party for commercial or marketing purposes.</p>
+                    </section>
+
+                    <section id="retention" class="legal-section">
+                        <h2><span class="section-num">9.</span> Data Retention</h2>
+                        <p>We retain personal data for as long as necessary to provide the Platform and comply with our legal obligations. Specific retention periods:</p>
+                        <table class="data-table" aria-label="Data retention periods">
+                            <thead>
+                                <tr>
+                                    <th>Data Category</th>
+                                    <th>Retention Period</th>
+                                    <th>Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Account data</td>
+                                    <td>Duration of account + 30 days after deletion request</td>
+                                    <td>Service operation</td>
+                                </tr>
+                                <tr>
+                                    <td>Student education records</td>
+                                    <td>3 years from last activity</td>
+                                    <td>FERPA compliance</td>
+                                </tr>
+                                <tr>
+                                    <td>Transaction records</td>
+                                    <td>7 years</td>
+                                    <td>Financial/tax compliance</td>
+                                </tr>
+                                <tr>
+                                    <td>Audit logs</td>
+                                    <td>3 years</td>
+                                    <td>Security and compliance</td>
+                                </tr>
+                                <tr>
+                                    <td>Consent records</td>
+                                    <td>Duration of relationship + 5 years</td>
+                                    <td>GDPR accountability</td>
+                                </tr>
+                                <tr>
+                                    <td>Payment tokens</td>
+                                    <td>Duration of account (then deleted)</td>
+                                    <td>PCI-DSS</td>
+                                </tr>
+                                <tr>
+                                    <td>Server logs (IP, device)</td>
+                                    <td>90 days</td>
+                                    <td>Security monitoring</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p>After the applicable retention period, data is permanently deleted or irreversibly anonymized.</p>
+                    </section>
+
+                    <section id="pci" class="legal-section">
+                        <h2><span class="section-num">10.</span> Payment Data <span class="compliance-badge">PCI-DSS 3.2.1</span></h2>
+                        <p>The Platform processes payments in full compliance with PCI-DSS 3.2.1. Key principles:</p>
+                        <ul>
+                            <li><strong>No raw card data stored.</strong> SAG never receives or stores full payment card numbers, CVVs, or PINs. All card entry occurs on the payment processor's secure page or via their hosted JavaScript element.</li>
+                            <li><strong>Tokenization only.</strong> After a card is submitted to the processor, we receive only a non-reversible payment token. This token is stored in an encrypted vault and used solely for future charges related to auction wins.</li>
+                            <li><strong>HTTPS/TLS everywhere.</strong> All data transmitted between your browser and our servers is encrypted via TLS 1.2 or higher.</li>
+                            <li><strong>No card data in logs.</strong> Our application and server logs are configured to mask or exclude any payment data.</li>
+                        </ul>
+                        <p>Our payment partners (Stripe, Square, PayPal, Authorize.net) are independently PCI-DSS certified. Their respective privacy policies govern how they handle payment data on their systems.</p>
+                    </section>
+
+                    <section id="gdpr-rights" class="legal-section">
+                        <h2><span class="section-num">11.</span> Your Rights — GDPR <span class="compliance-badge">GDPR</span></h2>
+                        <p>If you are located in the European Union, European Economic Area, or United Kingdom, you have the following rights under the GDPR:</p>
+                        <div class="rights-grid">
+                            <div class="right-card">
+                                <h4>Access</h4>
+                                <p>Request a copy of all personal data we hold about you.</p>
+                            </div>
+                            <div class="right-card">
+                                <h4>Correction</h4>
+                                <p>Request correction of inaccurate or incomplete data.</p>
+                            </div>
+                            <div class="right-card">
+                                <h4>Erasure</h4>
+                                <p>Request deletion of your data ("right to be forgotten") subject to legal retention requirements.</p>
+                            </div>
+                            <div class="right-card">
+                                <h4>Portability</h4>
+                                <p>Receive your data in a structured, machine-readable format.</p>
+                            </div>
+                            <div class="right-card">
+                                <h4>Restriction</h4>
+                                <p>Request that we restrict processing of your data in certain circumstances.</p>
+                            </div>
+                            <div class="right-card">
+                                <h4>Objection</h4>
+                                <p>Object to processing based on legitimate interests.</p>
+                            </div>
+                            <div class="right-card">
+                                <h4>Withdraw Consent</h4>
+                                <p>Withdraw any consent given at any time, without affecting prior lawful processing.</p>
+                            </div>
+                            <div class="right-card">
+                                <h4>Complaint</h4>
+                                <p>Lodge a complaint with your national data protection authority (e.g., ICO in the UK).</p>
+                            </div>
+                        </div>
+                        <p>To exercise any GDPR right, email <a href="mailto:SilentAuctionGallery@gmail.com">SilentAuctionGallery@gmail.com</a> with the subject "GDPR Data Request." We will respond within 30 days. Identity verification may be required.</p>
+                    </section>
+
+                    <section id="ccpa-rights" class="legal-section">
+                        <h2><span class="section-num">12.</span> Your Rights — CCPA <span class="compliance-badge">CCPA</span></h2>
+                        <p>If you are a California resident, the California Consumer Privacy Act (CCPA) grants you additional rights:</p>
+                        <ul>
+                            <li><strong>Right to Know</strong> — request disclosure of the categories and specific pieces of personal information we have collected about you in the past 12 months.</li>
+                            <li><strong>Right to Delete</strong> — request deletion of personal information we have collected, subject to certain exceptions (e.g., legal compliance, security).</li>
+                            <li><strong>Right to Opt-Out of Sale</strong> — SAG does not sell personal information, so this right is not currently applicable. If this changes, we will notify you and provide an opt-out mechanism.</li>
+                            <li><strong>Right to Non-Discrimination</strong> — we will not deny you service, charge different prices, or provide a different quality of service because you exercise your CCPA rights.</li>
+                        </ul>
+                        <p>To exercise CCPA rights, email <a href="mailto:SilentAuctionGallery@gmail.com">SilentAuctionGallery@gmail.com</a> with the subject "CCPA Privacy Request." We will respond within 45 days.</p>
+                    </section>
+
+                    <section id="cookies" class="legal-section">
+                        <h2><span class="section-num">13.</span> Cookies &amp; Local Storage</h2>
+                        <p>The Platform uses the following storage mechanisms:</p>
+                        <table class="data-table" aria-label="Cookies and local storage usage">
+                            <thead>
+                                <tr>
+                                    <th>Name / Type</th>
+                                    <th>Purpose</th>
+                                    <th>Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>JWT Access Token (localStorage)</td>
+                                    <td>Authentication — keeps you logged in</td>
+                                    <td>15 minutes</td>
+                                </tr>
+                                <tr>
+                                    <td>JWT Refresh Token (httpOnly cookie)</td>
+                                    <td>Session renewal without re-login</td>
+                                    <td>7 days</td>
+                                </tr>
+                                <tr>
+                                    <td>schoolTheme (localStorage)</td>
+                                    <td>Remembers your school's visual theme preference</td>
+                                    <td>Persistent (until cleared)</td>
+                                </tr>
+                                <tr>
+                                    <td>CSRF Token (session cookie)</td>
+                                    <td>Cross-site request forgery protection</td>
+                                    <td>Session</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p>We do not use third-party advertising or analytics cookies. The Platform does not track you across other websites.</p>
+                        <p>You can clear localStorage and cookies through your browser settings at any time. Doing so will log you out of the Platform.</p>
+                    </section>
+
+                    <section id="security-priv" class="legal-section">
+                        <h2><span class="section-num">14.</span> Security</h2>
+                        <p>We implement industry-standard technical and organizational security measures to protect your personal data:</p>
+                        <ul>
+                            <li><strong>Encryption in transit</strong> — TLS 1.2+ for all data between your browser and our servers.</li>
+                            <li><strong>Password hashing</strong> — bcrypt with 12 salt rounds. We never store plaintext passwords.</li>
+                            <li><strong>Multi-factor authentication</strong> — TOTP-based 2FA available to all users.</li>
+                            <li><strong>Account lockout</strong> — accounts are locked for 30 minutes after 5 consecutive failed login attempts.</li>
+                            <li><strong>SQL injection prevention</strong> — all database queries use parameterized statements.</li>
+                            <li><strong>XSS prevention</strong> — all user-generated content is encoded on output.</li>
+                            <li><strong>CSRF protection</strong> — SameSite cookie attributes and CSRF tokens on state-changing requests.</li>
+                            <li><strong>Security headers</strong> — HSTS, CSP, X-Frame-Options: DENY, X-Content-Type-Options: nosniff via Helmet.js.</li>
+                            <li><strong>Fraud detection</strong> — velocity checks, duplicate detection, and geographic anomaly alerts on payments.</li>
+                        </ul>
+                        <p>Despite these measures, no system is completely secure. In the event of a data breach that poses a risk to your rights and freedoms, we will notify affected users and relevant authorities as required by applicable law.</p>
+                    </section>
+
+                    <section id="international" class="legal-section">
+                        <h2><span class="section-num">15.</span> International Data Transfers</h2>
+                        <p>The Platform is hosted on servers in the United States. If you access the Platform from the EU, EEA, or UK, your personal data may be transferred to and processed in the United States, which may not provide the same level of data protection as your home jurisdiction.</p>
+                        <p>Where such transfers occur, we ensure appropriate safeguards are in place, such as:</p>
+                        <ul>
+                            <li>Standard Contractual Clauses (SCCs) with our service providers, or</li>
+                            <li>Transfers to processors that participate in a recognized adequacy framework.</li>
+                        </ul>
+                        <p>For more information about our international transfer mechanisms, contact us at <a href="mailto:SilentAuctionGallery@gmail.com">SilentAuctionGallery@gmail.com</a>.</p>
+                    </section>
+
+                    <section id="changes-priv" class="legal-section">
+                        <h2><span class="section-num">16.</span> Policy Changes</h2>
+                        <p>We may update this Privacy Policy from time to time to reflect changes in our data practices, the Platform, or applicable law. When we make material changes, we will:</p>
+                        <ul>
+                            <li>Update the "Last Updated" date at the top of this page.</li>
+                            <li>Send a notification email to registered users.</li>
+                            <li>Display a banner on the Platform for 30 days after the change.</li>
+                        </ul>
+                        <p>Where required by law (e.g., material changes to how we use children's data), we will seek fresh consent before the change takes effect.</p>
+                    </section>
+
+                    <section id="contact-priv" class="legal-section">
+                        <h2><span class="section-num">17.</span> Contact &amp; Data Protection Officer</h2>
+                        <p>For any questions, concerns, or requests regarding this Privacy Policy or your personal data, please contact us:</p>
+                        <div class="contact-card">
+                            <p><strong>Silent Auction Gallery — Privacy Team</strong></p>
+                            <p>Email: <a href="mailto:SilentAuctionGallery@gmail.com">SilentAuctionGallery@gmail.com</a></p>
+                            <p>Subject line: <em>"Privacy Request"</em></p>
+                            <p>Website: <a href="https://sag.live">https://sag.live</a></p>
+                        </div>
+                        <p style="margin-top: var(--spacing-lg);">If you are in the EU/EEA and are unsatisfied with our response, you have the right to lodge a complaint with your local data protection authority. A list of EU supervisory authorities is available at <strong>edpb.europa.eu</strong>.</p>
+                        <p>Also see our <a href="/terms.html">Terms of Service</a> for the full legal framework governing your use of the Platform.</p>
+                    </section>
+
+                </article>
+            </div><!-- /.legal-layout -->
+        </div><!-- /.container -->
+    </main>
+
+    <!-- Alert Messages -->
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About SAG</h3>
+                    <p>Silent Auction Gallery supports education through art.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="/auctions.html">Auctions</a></li>
+                        <li><a href="/#about">About Us</a></li>
+                        <li><a href="/#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Legal</h3>
+                    <ul>
+                        <li><a href="/privacy.html" aria-current="page">Privacy Policy</a></li>
+                        <li><a href="/terms.html">Terms of Service</a></li>
+                        <li><a href="/#accessibility">Accessibility</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Follow Us</h3>
+                    <div class="social-links">
+                        <a href="#facebook" aria-label="Facebook">f</a>
+                        <a href="#twitter" aria-label="Twitter">𝕏</a>
+                        <a href="#instagram" aria-label="Instagram">📷</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/theme-manager.js"></script>
+    <script src="/js/accessibility.js"></script>
+    <script src="/js/auth-manager.js"></script>
+
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
+    <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png">
+    <link rel="manifest" href="/favicon/site.webmanifest">
+    <meta name="msapplication-config" content="/favicon/browserconfig.xml">
+    <meta name="msapplication-TileColor" content="#2c3e50">
+</body>
+</html>
