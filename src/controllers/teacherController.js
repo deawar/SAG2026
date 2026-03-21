@@ -555,28 +555,45 @@ class TeacherController {
     static async deleteStudent(req, res) {
         try {
             const { userId: targetUserId } = req.params;
+            const teacherId = req.user.id;
 
-            const result = await pool.query(
-                `UPDATE users
-                 SET deleted_at = NOW()
-                 WHERE id = $1
-                   AND role = 'STUDENT'
-                   AND deleted_at IS NULL
-                   AND LOWER(email) IN (
-                       SELECT LOWER(student_email) FROM registration_tokens WHERE teacher_id = $2
-                   )
-                 RETURNING id`,
-                [targetUserId, req.user.id]
+            // Diagnostic: check what exists for this user + teacher combo
+            const diagResult = await pool.query(
+                `SELECT u.id, u.email, u.role, u.deleted_at,
+                        (SELECT COUNT(*) FROM registration_tokens
+                         WHERE teacher_id = $2 AND LOWER(student_email) = LOWER(u.email)) AS token_count
+                 FROM users u
+                 WHERE u.id = $1`,
+                [targetUserId, teacherId]
             );
 
-            if (result.rows.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Student not found or not invited by you'
-                });
+            if (diagResult.rows.length === 0) {
+                logger.warn('deleteStudent: user not found', { targetUserId, teacherId });
+                return res.status(404).json({ success: false, message: 'Student not found' });
             }
 
-            logger.info('Student deleted', { targetUserId, teacherId: req.user.id });
+            const student = diagResult.rows[0];
+            logger.info('deleteStudent diagnostic', {
+                targetUserId,
+                teacherId,
+                studentRole: student.role,
+                studentDeletedAt: student.deleted_at,
+                tokenCount: student.token_count
+            });
+
+            if (student.deleted_at) {
+                return res.status(404).json({ success: false, message: 'Student already removed' });
+            }
+            if (Number.parseInt(student.token_count) === 0) {
+                return res.status(403).json({ success: false, message: 'Student was not invited by you' });
+            }
+
+            await pool.query(
+                `UPDATE users SET deleted_at = NOW() WHERE id = $1`,
+                [targetUserId]
+            );
+
+            logger.info('Student deleted', { targetUserId, teacherId });
             return res.json({ success: true, message: 'Student removed' });
 
         } catch (error) {
