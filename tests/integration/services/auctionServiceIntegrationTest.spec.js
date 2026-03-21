@@ -3,5 +3,7 @@
  */
 
 describe('Auction Service Integration Tests', () => {
-  // Integration tests for Auction service
+  test.todo('should create auction with valid data');
+  test.todo('should update auction status');
+  test.todo('should close expired auctions');
 });

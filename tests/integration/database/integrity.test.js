@@ -19,7 +19,9 @@ require('dotenv').config();
 const { Pool } = require('pg');
 const { v4: uuidv4 } = require('uuid');
 
-describe('Data Integrity', () => {
+// Requires a running PostgreSQL instance — skip when no DB credentials are configured
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+(runDbTests ? describe : describe.skip)('Data Integrity', () => {
   let db;
   let testSchoolId, testUserId, testAuctionId, testGatewayId, testArtworkId;
 

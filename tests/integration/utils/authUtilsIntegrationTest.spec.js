@@ -3,5 +3,7 @@
  */
 
 describe('Auth Utils Integration Tests', () => {
-  // Integration tests for authentication utilities
+  test.todo('should generate valid JWT');
+  test.todo('should reject expired token');
+  test.todo('should reject tampered token');
 });

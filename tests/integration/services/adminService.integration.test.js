@@ -7,10 +7,12 @@
 
 const request = require('supertest');
 const express = require('express');
-const adminRoutes = require('../src/routes/adminRoutes');
-const { verifyToken, verifyRole } = require('../src/middleware/authMiddleware');
+const adminRoutes = require('../../../src/routes/adminRoutes');
+const { verifyToken, verifyRole } = require('../../../src/middleware/authMiddleware');
 
-describe('Admin API Integration Tests', () => {
+// Requires a running PostgreSQL instance — skip when no DB credentials are configured
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+(runDbTests ? describe : describe.skip)('Admin API Integration Tests', () => {
   let app;
   let server;
 

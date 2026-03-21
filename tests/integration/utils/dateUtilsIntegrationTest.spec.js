@@ -3,5 +3,7 @@
  */
 
 describe('Date Utils Integration Tests', () => {
-  // Integration tests for date utilities
+  test.todo('should format date for display');
+  test.todo('should calculate auction duration');
+  test.todo('should detect expired auctions');
 });

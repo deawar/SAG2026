@@ -3,5 +3,7 @@
  */
 
 describe('Auction Model Integration Tests', () => {
-  // Integration tests for Auction model
+  test.todo('should create auction record');
+  test.todo('should retrieve auction by id');
+  test.todo('should soft-delete auction');
 });
