@@ -3,5 +3,7 @@
  */
 
 describe('User Routes Integration Tests', () => {
-  // Integration tests for user routes
+  test.todo('POST /api/auth/register creates user');
+  test.todo('POST /api/auth/login returns token');
+  test.todo('GET /api/user/profile requires auth');
 });

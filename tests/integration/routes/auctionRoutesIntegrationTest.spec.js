@@ -3,5 +3,7 @@
  */
 
 describe('Auction Routes Integration Tests', () => {
-  // Integration tests for auction routes
+  test.todo('GET /api/auctions returns list');
+  test.todo('POST /api/auctions requires auth');
+  test.todo('GET /api/auctions/:id returns detail');
 });

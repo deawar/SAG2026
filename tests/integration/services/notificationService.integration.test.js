@@ -7,7 +7,9 @@
 
 const request = require('supertest');
 
-describe('Notification Service Integration Tests', () => {
+// Requires a running PostgreSQL instance — skip when no DB credentials are configured
+const runDbTests = process.env.RUN_DB_TESTS === 'true';
+(runDbTests ? describe : describe.skip)('Notification Service Integration Tests', () => {
   let app;
   let db;
   let userId;
@@ -15,8 +17,8 @@ describe('Notification Service Integration Tests', () => {
 
   beforeAll(async () => {
     // Initialize test database
-    app = require('../../src/app');
-    db = require('../../src/index'); // Database connection
+    app = require('../../../src/app');
+    db = require('../../../src/models/index').pool; // Database connection
 
     // Create test user
     const userResult = await db.query(
