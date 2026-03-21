@@ -58,6 +58,9 @@ class TeacherDashboard {
         // Load teacher name + school for email attribution
         await this.loadTeacherInfo();
 
+        // Load registered students + pending invite tokens from the database
+        await this.loadStudents();
+
         // Initialise theme tab now that schoolId is known
         await this.initThemeTab();
 
@@ -260,15 +263,14 @@ class TeacherDashboard {
             });
 
             if (response.success) {
-                this.students = students;
-                this.tokens = response.tokens || [];
-                this.displayStudentTokens();
-
                 statusDiv.className = 'alert alert-success';
-                statusDiv.textContent = `Successfully created registration links for ${this.tokens.length} students`;
+                statusDiv.textContent = `Successfully created registration links for ${(response.tokens || []).length} students`;
 
                 // Clear file input
                 document.getElementById('csv-file').value = '';
+
+                // Reload full student list from DB so new + existing tokens all appear
+                await this.loadStudents();
             } else {
                 statusDiv.className = 'alert alert-error';
                 statusDiv.textContent = response.message || 'Error uploading students';
@@ -324,6 +326,62 @@ class TeacherDashboard {
         // Reset select-all checkbox
         const selectAll = document.getElementById('select-all-students');
         if (selectAll) selectAll.checked = false;
+    }
+
+    /**
+     * Load registered students and pending invite tokens from the API.
+     * Populates both the Registered Students panel and the pending-invites table.
+     */
+    async loadStudents() {
+        try {
+            const response = await this.apiClient.get('/api/teacher/students');
+            if (!response.success) return;
+
+            const { registered = [], pending = [] } = response.data || {};
+
+            // Show registered students panel
+            this.displayRegisteredStudents(registered);
+
+            // Restore pending tokens into this.tokens so the invite table persists across reloads
+            if (pending.length > 0) {
+                this.tokens = pending;
+                this.displayStudentTokens();
+            }
+        } catch (error) {
+            console.error('Failed to load students:', error);
+        }
+    }
+
+    /**
+     * Render registered students in the Registered Students card.
+     * @param {Array} students
+     */
+    displayRegisteredStudents(students) {
+        const card  = document.getElementById('registered-students-card');
+        const tbody = document.getElementById('registered-students-tbody');
+        if (!card || !tbody) return;
+
+        if (!students || students.length === 0) {
+            card.style.display = 'none';
+            return;
+        }
+
+        const fmtDate = (iso) => {
+            if (!iso) return '—';
+            try { return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
+            catch { return '—'; }
+        };
+
+        tbody.innerHTML = students.map(s => `
+            <tr>
+                <td>${this.escapeHtml(s.studentName || '—')}</td>
+                <td>${this.escapeHtml(s.studentEmail || '—')}</td>
+                <td>${fmtDate(s.invitedAt)}</td>
+                <td><span class="badge badge-success">${fmtDate(s.registeredAt)}</span></td>
+            </tr>
+        `).join('');
+
+        card.style.display = 'block';
     }
 
     /**

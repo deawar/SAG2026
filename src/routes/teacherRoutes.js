@@ -80,6 +80,20 @@ router.delete('/tokens/:tokenId', async (req, res, next) => {
 });
 
 /**
+ * GET /api/teacher/students
+ * Returns { registered: [...], pending: [...] } for the logged-in teacher.
+ * registered = students who completed registration via invite link.
+ * pending    = tokens that have been created but not yet used.
+ */
+router.get('/students', async (req, res, next) => {
+    try {
+        return await TeacherController.getStudents(req, res);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
  * GET /api/teacher/teacher-info
  * Get teacher's display name and school name for email attribution
  */
