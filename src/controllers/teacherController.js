@@ -511,7 +511,6 @@ class TeacherController {
         try {
             const { userId: targetUserId } = req.params;
             const { firstName, lastName } = req.body;
-            const teacherSchoolId = req.user.schoolId;
 
             if (!firstName || typeof firstName !== 'string' || firstName.trim().length === 0) {
                 return res.status(400).json({ success: false, message: 'First name is required' });
@@ -519,25 +518,24 @@ class TeacherController {
             if (!lastName || typeof lastName !== 'string' || lastName.trim().length === 0) {
                 return res.status(400).json({ success: false, message: 'Last name is required' });
             }
-            if (!teacherSchoolId) {
-                return res.status(403).json({ success: false, message: 'No school associated with your account' });
-            }
 
             const result = await pool.query(
                 `UPDATE users
                  SET first_name = $1, last_name = $2
                  WHERE id = $3
-                   AND school_id = $4
                    AND role = 'STUDENT'
                    AND deleted_at IS NULL
+                   AND LOWER(email) IN (
+                       SELECT LOWER(student_email) FROM registration_tokens WHERE teacher_id = $4
+                   )
                  RETURNING id`,
-                [firstName.trim(), lastName.trim(), targetUserId, teacherSchoolId]
+                [firstName.trim(), lastName.trim(), targetUserId, req.user.id]
             );
 
             if (result.rows.length === 0) {
                 return res.status(404).json({
                     success: false,
-                    message: 'Student not found or not in your school'
+                    message: 'Student not found or not invited by you'
                 });
             }
 
@@ -557,27 +555,24 @@ class TeacherController {
     static async deleteStudent(req, res) {
         try {
             const { userId: targetUserId } = req.params;
-            const teacherSchoolId = req.user.schoolId;
-
-            if (!teacherSchoolId) {
-                return res.status(403).json({ success: false, message: 'No school associated with your account' });
-            }
 
             const result = await pool.query(
                 `UPDATE users
                  SET deleted_at = NOW()
                  WHERE id = $1
-                   AND school_id = $2
                    AND role = 'STUDENT'
                    AND deleted_at IS NULL
+                   AND LOWER(email) IN (
+                       SELECT LOWER(student_email) FROM registration_tokens WHERE teacher_id = $2
+                   )
                  RETURNING id`,
-                [targetUserId, teacherSchoolId]
+                [targetUserId, req.user.id]
             );
 
             if (result.rows.length === 0) {
                 return res.status(404).json({
                     success: false,
-                    message: 'Student not found or not in your school'
+                    message: 'Student not found or not invited by you'
                 });
             }
 
