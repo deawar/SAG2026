@@ -468,9 +468,8 @@ class TeacherController {
     }
 
     /**
-     * Revoke a registration token
-     * @param {Request} req - Express request
-     * @param {Response} res - Express response
+     * Revoke (delete) a pending registration token.
+     * Only the owning teacher may delete their own tokens.
      */
     static async revokeToken(req, res) {
         try {
@@ -478,41 +477,116 @@ class TeacherController {
             const userId = req.user.id;
 
             if (!tokenId) {
-                return res.status(400).json({
+                return res.status(400).json({ success: false, message: 'Token ID required' });
+            }
+
+            const result = await pool.query(
+                `DELETE FROM registration_tokens
+                 WHERE id = $1 AND teacher_id = $2 AND used_at IS NULL
+                 RETURNING id`,
+                [tokenId, userId]
+            );
+
+            if (result.rows.length === 0) {
+                return res.status(404).json({
                     success: false,
-                    message: 'Token ID required',
-                    errors: ['tokenId parameter missing']
+                    message: 'Token not found, already used, or not yours'
                 });
             }
 
-            // In production, soft delete from database
-            // const token = await RegistrationTokenModel.getById(tokenId);
-            // Verify teacher owns this token
-            // if (token.teacher_id !== userId) throw new Error('Unauthorized');
-            // await RegistrationTokenModel.revoke(tokenId);
-
-            logger.info('Token revoked', {
-                tokenId: tokenId,
-                userId: userId,
-                timestamp: new Date()
-            });
-
-            return res.json({
-                success: true,
-                message: 'Registration token has been revoked'
-            });
+            logger.info('Token revoked', { tokenId, userId });
+            return res.json({ success: true, message: 'Invite removed' });
 
         } catch (error) {
-            logger.error('Revoke token error', {
-                error: error.message,
-                userId: req.user?.id
-            });
+            logger.error('Revoke token error', { error: error.message, userId: req.user?.id });
+            return res.status(500).json({ success: false, message: 'Error removing invite' });
+        }
+    }
 
-            return res.status(500).json({
-                success: false,
-                message: 'Error revoking token',
-                errors: [error.message]
-            });
+    /**
+     * Update a registered student's name.
+     * Teachers may only edit students belonging to their own school.
+     */
+    static async updateStudent(req, res) {
+        try {
+            const { userId: targetUserId } = req.params;
+            const { firstName, lastName } = req.body;
+            const teacherSchoolId = req.user.schoolId;
+
+            if (!firstName || typeof firstName !== 'string' || firstName.trim().length === 0) {
+                return res.status(400).json({ success: false, message: 'First name is required' });
+            }
+            if (!lastName || typeof lastName !== 'string' || lastName.trim().length === 0) {
+                return res.status(400).json({ success: false, message: 'Last name is required' });
+            }
+            if (!teacherSchoolId) {
+                return res.status(403).json({ success: false, message: 'No school associated with your account' });
+            }
+
+            const result = await pool.query(
+                `UPDATE users
+                 SET first_name = $1, last_name = $2
+                 WHERE id = $3
+                   AND school_id = $4
+                   AND account_type = 'student'
+                   AND deleted_at IS NULL
+                 RETURNING id`,
+                [firstName.trim(), lastName.trim(), targetUserId, teacherSchoolId]
+            );
+
+            if (result.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Student not found or not in your school'
+                });
+            }
+
+            logger.info('Student updated', { targetUserId, teacherId: req.user.id });
+            return res.json({ success: true, message: 'Student updated' });
+
+        } catch (error) {
+            logger.error('Update student error', { error: error.message, userId: req.user?.id });
+            return res.status(500).json({ success: false, message: 'Error updating student' });
+        }
+    }
+
+    /**
+     * Soft-delete a registered student.
+     * Teachers may only delete students belonging to their own school.
+     */
+    static async deleteStudent(req, res) {
+        try {
+            const { userId: targetUserId } = req.params;
+            const teacherSchoolId = req.user.schoolId;
+
+            if (!teacherSchoolId) {
+                return res.status(403).json({ success: false, message: 'No school associated with your account' });
+            }
+
+            const result = await pool.query(
+                `UPDATE users
+                 SET deleted_at = NOW()
+                 WHERE id = $1
+                   AND school_id = $2
+                   AND account_type = 'student'
+                   AND deleted_at IS NULL
+                 RETURNING id`,
+                [targetUserId, teacherSchoolId]
+            );
+
+            if (result.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Student not found or not in your school'
+                });
+            }
+
+            logger.info('Student deleted', { targetUserId, teacherId: req.user.id });
+            return res.json({ success: true, message: 'Student removed' });
+
+        } catch (error) {
+            logger.error('Delete student error', { error: error.message, userId: req.user?.id });
+            return res.status(500).json({ success: false, message: 'Error removing student' });
         }
     }
 }

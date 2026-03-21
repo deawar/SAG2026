@@ -119,6 +119,31 @@ router.put('/tokens/:tokenId', async (req, res, next) => {
 });
 
 /**
+ * PUT /api/teacher/students/:userId
+ * Update a registered student's name (school-scoped, student accounts only).
+ * Body: { firstName, lastName }
+ */
+router.put('/students/:userId', async (req, res, next) => {
+    try {
+        return await TeacherController.updateStudent(req, res);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * DELETE /api/teacher/students/:userId
+ * Soft-delete a registered student (school-scoped, student accounts only).
+ */
+router.delete('/students/:userId', async (req, res, next) => {
+    try {
+        return await TeacherController.deleteStudent(req, res);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
  * POST /api/teacher/send-invites
  * Send registration invite emails to selected students
  * Body: { tokenIds: [...] }
