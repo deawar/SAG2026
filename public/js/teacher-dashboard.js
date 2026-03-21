@@ -94,10 +94,13 @@ class TeacherDashboard {
             link.addEventListener('click', (e) => this.handleSectionChange(e));
         });
 
-        // Copy to clipboard buttons
+        // Copy to clipboard and revoke-token buttons (delegated)
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('copy-link-btn')) {
                 this.copyLinkToClipboard(e.target);
+            }
+            if (e.target.classList.contains('revoke-token-btn')) {
+                this._revokeToken(e.target.dataset.tokenId, e.target.dataset.studentName);
             }
         });
 
@@ -312,9 +315,17 @@ class TeacherDashboard {
                 </td>
                 <td><span class="badge badge-${token.used ? 'success' : 'pending'}">${token.used ? 'Registered' : 'Pending'}</span></td>
                 <td>
-                    <button class="copy-link-btn" data-link="${registrationLink}"
+                    <button class="copy-link-btn btn btn-sm btn-secondary" data-link="${registrationLink}"
                             aria-label="Copy registration link for ${this.escapeHtml(token.studentName)}">
                         Copy
+                    </button>
+                </td>
+                <td>
+                    <button class="revoke-token-btn btn btn-sm btn-danger"
+                            data-token-id="${this.escapeHtml(token.id)}"
+                            data-student-name="${this.escapeHtml(token.studentName)}"
+                            aria-label="Remove invite for ${this.escapeHtml(token.studentName)}">
+                        Remove
                     </button>
                 </td>
             `;
@@ -354,6 +365,7 @@ class TeacherDashboard {
 
     /**
      * Render registered students in the Registered Students card.
+     * Each row has inline Edit (name only) and Delete actions.
      * @param {Array} students
      */
     displayRegisteredStudents(students) {
@@ -372,16 +384,152 @@ class TeacherDashboard {
             catch { return '—'; }
         };
 
-        tbody.innerHTML = students.map(s => `
-            <tr>
-                <td>${this.escapeHtml(s.studentName || '—')}</td>
+        tbody.innerHTML = students.map(s => {
+            const [firstName, ...rest] = (s.studentName || '').split(' ');
+            const lastName = rest.join(' ');
+            const uid = this.escapeHtml(s.userId || '');
+            return `
+            <tr data-user-id="${uid}">
+                <td class="student-name-cell">
+                    <span class="student-name-display">${this.escapeHtml(s.studentName || '—')}</span>
+                    <span class="student-name-edit" style="display:none;">
+                        <input type="text" class="edit-first-name" value="${this.escapeHtml(firstName)}"
+                               aria-label="First name" style="width:6rem;">
+                        <input type="text" class="edit-last-name" value="${this.escapeHtml(lastName)}"
+                               aria-label="Last name" style="width:7rem;">
+                    </span>
+                </td>
                 <td>${this.escapeHtml(s.studentEmail || '—')}</td>
                 <td>${fmtDate(s.invitedAt)}</td>
                 <td><span class="badge badge-success">${fmtDate(s.registeredAt)}</span></td>
-            </tr>
-        `).join('');
+                <td style="white-space:nowrap;">
+                    <button class="btn btn-sm btn-secondary edit-student-btn"
+                            data-user-id="${uid}"
+                            aria-label="Edit ${this.escapeHtml(s.studentName)}">Edit</button>
+                    <button class="btn btn-sm btn-primary save-student-btn"
+                            data-user-id="${uid}"
+                            style="display:none;"
+                            aria-label="Save changes">Save</button>
+                    <button class="btn btn-sm btn-secondary cancel-student-btn"
+                            data-user-id="${uid}"
+                            style="display:none;"
+                            aria-label="Cancel edit">Cancel</button>
+                    <button class="btn btn-sm btn-danger delete-student-btn"
+                            data-user-id="${uid}"
+                            aria-label="Remove ${this.escapeHtml(s.studentName)}">Remove</button>
+                </td>
+            </tr>`;
+        }).join('');
 
         card.style.display = 'block';
+
+        // Wire edit/save/cancel/delete for each row
+        tbody.querySelectorAll('.edit-student-btn').forEach(btn =>
+            btn.addEventListener('click', () => this._enterStudentEditMode(btn.dataset.userId)));
+        tbody.querySelectorAll('.save-student-btn').forEach(btn =>
+            btn.addEventListener('click', () => this._saveStudentEdit(btn.dataset.userId)));
+        tbody.querySelectorAll('.cancel-student-btn').forEach(btn =>
+            btn.addEventListener('click', () => this._cancelStudentEdit(btn.dataset.userId)));
+        tbody.querySelectorAll('.delete-student-btn').forEach(btn =>
+            btn.addEventListener('click', () => this._deleteStudent(btn.dataset.userId)));
+    }
+
+    /** Switch a registered-student row into edit mode */
+    _enterStudentEditMode(userId) {
+        const row = document.querySelector(`#registered-students-tbody tr[data-user-id="${userId}"]`);
+        if (!row) return;
+        row.querySelector('.student-name-display').style.display = 'none';
+        row.querySelector('.student-name-edit').style.display = 'inline';
+        row.querySelector('.edit-student-btn').style.display = 'none';
+        row.querySelector('.save-student-btn').style.display = 'inline-flex';
+        row.querySelector('.cancel-student-btn').style.display = 'inline-flex';
+        row.querySelector('.delete-student-btn').style.display = 'none';
+        row.querySelector('.edit-first-name').focus();
+    }
+
+    /** Exit edit mode without saving */
+    _cancelStudentEdit(userId) {
+        const row = document.querySelector(`#registered-students-tbody tr[data-user-id="${userId}"]`);
+        if (!row) return;
+        row.querySelector('.student-name-display').style.display = '';
+        row.querySelector('.student-name-edit').style.display = 'none';
+        row.querySelector('.edit-student-btn').style.display = 'inline-flex';
+        row.querySelector('.save-student-btn').style.display = 'none';
+        row.querySelector('.cancel-student-btn').style.display = 'none';
+        row.querySelector('.delete-student-btn').style.display = 'inline-flex';
+    }
+
+    /** Save edited first/last name for a registered student */
+    async _saveStudentEdit(userId) {
+        const row = document.querySelector(`#registered-students-tbody tr[data-user-id="${userId}"]`);
+        if (!row) return;
+        const firstName = row.querySelector('.edit-first-name').value.trim();
+        const lastName  = row.querySelector('.edit-last-name').value.trim();
+
+        if (!firstName || !lastName) {
+            this.showMessage('First and last name are required.', 'error');
+            return;
+        }
+
+        try {
+            const response = await this.apiClient.put(`/api/teacher/students/${userId}`, { firstName, lastName });
+            if (response.success) {
+                row.querySelector('.student-name-display').textContent = `${firstName} ${lastName}`;
+                this._cancelStudentEdit(userId);
+                this.showMessage('Student updated.', 'success');
+            } else {
+                this.showMessage(response.message || 'Failed to update student.', 'error');
+            }
+        } catch (err) {
+            this.showMessage('Error updating student: ' + err.message, 'error');
+        }
+    }
+
+    /** Soft-delete a registered student after confirmation */
+    async _deleteStudent(userId) {
+        const row = document.querySelector(`#registered-students-tbody tr[data-user-id="${userId}"]`);
+        const name = row?.querySelector('.student-name-display')?.textContent || 'this student';
+
+        if (!globalThis.confirm(`Remove ${name} from your school? This will disable their account.`)) return;
+
+        try {
+            const response = await this.apiClient.delete(`/api/teacher/students/${userId}`);
+            if (response.success) {
+                row?.remove();
+                this.showMessage('Student removed.', 'success');
+                // Hide card if no rows remain
+                const tbody = document.getElementById('registered-students-tbody');
+                if (tbody && tbody.querySelectorAll('tr').length === 0) {
+                    document.getElementById('registered-students-card').style.display = 'none';
+                }
+            } else {
+                this.showMessage(response.message || 'Failed to remove student.', 'error');
+            }
+        } catch (err) {
+            this.showMessage('Error removing student: ' + err.message, 'error');
+        }
+    }
+
+    /** Delete a pending invite token after confirmation */
+    async _revokeToken(tokenId, studentName) {
+        if (!globalThis.confirm(`Remove the pending invite for ${studentName}?`)) return;
+
+        try {
+            const response = await this.apiClient.delete(`/api/teacher/tokens/${tokenId}`);
+            if (response.success) {
+                const row = document.querySelector(`#student-links-tbody tr[data-token-id="${tokenId}"]`);
+                row?.remove();
+                this.tokens = this.tokens.filter(t => String(t.id) !== String(tokenId));
+                this.showMessage('Invite removed.', 'success');
+                if (this.tokens.length === 0) {
+                    document.getElementById('student-links-card').style.display = 'none';
+                }
+            } else {
+                this.showMessage(response.message || 'Failed to remove invite.', 'error');
+            }
+        } catch (err) {
+            this.showMessage('Error removing invite: ' + err.message, 'error');
+        }
     }
 
     /**
