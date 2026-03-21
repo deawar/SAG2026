@@ -35,7 +35,6 @@
                 <ul class="nav-list">
                     <li><a href="/auctions.html" class="nav-link">Auctions</a></li>
                     <li><a href="/" class="nav-link">Home</a></li>
-                    <li><a href="#help" class="nav-link">Help</a></li>
                 </ul>
             </nav>
             <div class="navbar-auth">
@@ -96,6 +95,27 @@
                         <div class="section-header">
                             <h2>Student Management</h2>
                             <p>Upload a CSV file with student names and emails to generate registration links</p>
+                        </div>
+
+                        <!-- Registered Students Panel -->
+                        <div class="card" id="registered-students-card" style="display:none;">
+                            <h3>Registered Students</h3>
+                            <p>Students who have completed registration via their invite link.</p>
+                            <div class="table-wrapper">
+                                <table class="data-table" role="table" aria-label="Registered students">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Name</th>
+                                            <th scope="col">Email</th>
+                                            <th scope="col">Invited</th>
+                                            <th scope="col">Registered</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="registered-students-tbody">
+                                        <!-- Populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
                         <!-- CSV Upload Form -->

@@ -402,6 +402,72 @@ class TeacherController {
     }
 
     /**
+     * Get all students for the teacher — split into registered and pending-invite lists.
+     * Registered: user has completed sign-up (used_at is set OR a users row exists with matching email).
+     * Pending:    token exists but student has not yet registered.
+     */
+    static async getStudents(req, res) {
+        try {
+            const userId = req.user.id;
+
+            const result = await pool.query(
+                `SELECT
+                    rt.id            AS token_id,
+                    rt.token,
+                    rt.student_email,
+                    rt.student_name,
+                    rt.used_at,
+                    rt.created_at    AS invited_at,
+                    u.id             AS user_id,
+                    u.first_name,
+                    u.last_name,
+                    u.created_at     AS registered_at
+                 FROM registration_tokens rt
+                 LEFT JOIN users u ON LOWER(u.email) = LOWER(rt.student_email)
+                 WHERE rt.teacher_id = $1
+                 ORDER BY rt.used_at DESC NULLS LAST, rt.created_at DESC`,
+                [userId]
+            );
+
+            const registered = [];
+            const pending    = [];
+
+            for (const row of result.rows) {
+                if (row.used_at || row.user_id) {
+                    registered.push({
+                        tokenId:      row.token_id,
+                        studentName:  row.first_name
+                            ? `${row.first_name} ${row.last_name || ''}`.trim()
+                            : row.student_name,
+                        studentEmail: row.student_email,
+                        invitedAt:    row.invited_at,
+                        registeredAt: row.registered_at || row.used_at,
+                        userId:       row.user_id,
+                    });
+                } else {
+                    pending.push({
+                        id:           row.token_id,
+                        token:        row.token,
+                        studentName:  row.student_name,
+                        studentEmail: row.student_email,
+                        used:         false,
+                        invitedAt:    row.invited_at,
+                    });
+                }
+            }
+
+            return res.json({
+                success: true,
+                data: { registered, pending },
+            });
+
+        } catch (error) {
+            logger.error('Get students error', { error: error.message, userId: req.user?.id });
+            return res.status(500).json({ success: false, message: 'Error fetching students' });
+        }
+    }
+
+    /**
      * Revoke a registration token
      * @param {Request} req - Express request
      * @param {Response} res - Express response
