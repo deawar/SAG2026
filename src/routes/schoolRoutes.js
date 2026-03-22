@@ -66,9 +66,9 @@ module.exports = (db) => {
   router.get('/', async (req, res, next) => {
     try {
       const { state, city, search } = req.query;
-      
+
       // Build query - don't filter by status, get all schools
-      let query = 'SELECT id, name, city, state_province, address_line1, postal_code FROM schools WHERE 1=1';
+      let query = 'SELECT id, ceeb_code, name, city, state_province, address_line1, postal_code, country FROM schools WHERE 1=1';
       const params = [];
 
       // Add filters if provided
@@ -115,12 +115,12 @@ module.exports = (db) => {
    * Get list of all states that have schools
    * MUST be defined before /search/:query to avoid being caught by :query parameter
    */
-  router.get('/states', async (req, res, next) => {
+  router.get('/states', async (_req, res, next) => {
     try {
       const result = await db.query(
-        `SELECT DISTINCT state_province 
-         FROM schools 
-         ORDER BY state_province ASC`
+        `SELECT DISTINCT state_province, country
+         FROM schools
+         ORDER BY country ASC, state_province ASC`
       );
       
       const states = result.rows.map(row => row.state_province);
@@ -152,8 +152,8 @@ module.exports = (db) => {
       const { state } = req.params;
       
       const result = await db.query(
-        `SELECT id, name, city, state_province, address_line1, postal_code 
-         FROM schools 
+        `SELECT id, ceeb_code, name, city, state_province, address_line1, postal_code, country
+         FROM schools
          WHERE state_province = $1
          ORDER BY city ASC, name ASC
          LIMIT 500`,
@@ -179,36 +179,63 @@ module.exports = (db) => {
 
   /**
    * GET /api/schools/search/:query
-   * Search schools by name, city, or state
-   * MUST be defined after /states to avoid catching /states in :query
-   * 
-   * Example: /api/schools/search/Lincoln
+   * Registration typeahead — search schools by name (primary) or city.
+   * Uses pg_trgm GIN index for fast ILIKE across 50K+ rows.
+   * MUST be defined after /states to avoid catching /states in :query.
+   *
+   * Query params:
+   *   country  Filter by country code (US or CA). Default: both.
+   *   state    Filter by state/province code (e.g. GA, ON).
+   *   limit    Max results, 1–100. Default: 25.
+   *
+   * Example: /api/schools/search/Lincoln?country=US&state=IL&limit=10
+   *
+   * Response fields:
+   *   ceeb_code, name, address_line1, city, state_province, postal_code, country
    */
   router.get('/search/:query', async (req, res, next) => {
     try {
-      const { query } = req.params;
-      const searchTerm = `%${query}%`;
-      
-      const result = await db.query(
-        `SELECT id, name, city, state_province, address_line1, postal_code 
-         FROM schools 
-         WHERE (name ILIKE $1 OR city ILIKE $1 OR state_province ILIKE $1)
-         ORDER BY name ASC
-         LIMIT 100`,
-        [searchTerm]
-      );
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[SCHOOLS API] /search/${query} returned ${result.rows.length} schools`);
+      const { query }   = req.params;
+      const { country, state } = req.query;
+      const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 25, 1), 100);
+
+      if (!query || query.trim().length < 2) {
+        return res.status(400).json({ success: false, message: 'Search query must be at least 2 characters' });
       }
-      
-      res.json({
+
+      const searchTerm = `%${query.trim()}%`;
+      const params     = [searchTerm];
+      let   where      = 'WHERE name ILIKE $1';
+      let   p          = 2;
+
+      if (country) {
+        where += ` AND country = $${p++}`;
+        params.push(country.toUpperCase().slice(0, 2));
+      }
+      if (state) {
+        where += ` AND state_province = $${p++}`;
+        params.push(state.toUpperCase());
+      }
+
+      params.push(limit);
+
+      // ORDER BY: exact prefix matches first, then alphabetical
+      const result = await db.query(
+        `SELECT ceeb_code, name, address_line1, city, state_province, postal_code, country
+         FROM schools
+         ${where}
+         ORDER BY
+           CASE WHEN name ILIKE $1 THEN 0 ELSE 1 END,
+           name ASC
+         LIMIT $${p}`,
+        params
+      );
+
+      return res.json({
         success: true,
-        message: `Search results for "${query}"`,
-        data: result.rows,
-        count: result.rows.length,
-        query: query,
-        timestamp: new Date().toISOString()
+        data:    result.rows,
+        count:   result.rows.length,
+        query,
       });
     } catch (error) {
       next(error);
