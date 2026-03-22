@@ -7,6 +7,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "citext";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";  -- trigram similarity for fast school name search
 
 -- ============================================================================
 -- 1. Core Entity Tables (ordered by dependencies)
@@ -15,6 +16,7 @@ CREATE EXTENSION IF NOT EXISTS "citext";
 -- Schools Table (created first - no dependencies)
 CREATE TABLE schools (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  ceeb_code VARCHAR(10) UNIQUE,
   name VARCHAR(255) NOT NULL,
   district VARCHAR(255),
   address_line1 VARCHAR(255) NOT NULL,
@@ -38,6 +40,10 @@ CREATE TABLE schools (
 
 CREATE INDEX idx_schools_name ON schools(name);
 CREATE INDEX idx_schools_status ON schools(account_status);
+CREATE INDEX idx_schools_ceeb ON schools(ceeb_code);
+-- GIN trigram index enables fast ILIKE / similarity searches across 50K+ rows
+CREATE INDEX idx_schools_name_trgm ON schools USING GIN (name gin_trgm_ops);
+CREATE INDEX idx_schools_city_trgm ON schools USING GIN (city gin_trgm_ops);
 
 -- School Data Cache Table (for NCES API sync tracking)
 CREATE TABLE school_data_cache (
