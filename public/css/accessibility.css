@@ -79,7 +79,7 @@ a[href^="#"] {
     position: relative;
 }
 
-a[href^="#"]:after {
+a[href^="#"]:not(nav a):not([role="tab"]):not(.nav-link):after {
     content: " (jumps to section)";
     font-size: 0.75em;
     color: var(--color-gray);
@@ -87,7 +87,7 @@ a[href^="#"]:after {
 
 /* Hide jump text on small screens */
 @media (max-width: 640px) {
-    a[href^="#"]:after {
+    a[href^="#"]:not(nav a):not([role="tab"]):not(.nav-link):after {
         content: "";
     }
 }
