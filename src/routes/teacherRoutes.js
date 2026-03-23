@@ -156,4 +156,29 @@ router.post('/send-invites', async (req, res, next) => {
     }
 });
 
+/**
+ * PUT /api/teacher/submissions/:id/approve
+ * Approve a student artwork submission (school-scoped)
+ */
+router.put('/submissions/:id/approve', async (req, res, next) => {
+    try {
+        return await TeacherController.approveSubmission(req, res);
+    } catch (error) {
+        next(error);
+    }
+});
+
+/**
+ * PUT /api/teacher/submissions/:id/reject
+ * Reject a student artwork submission
+ * Body: { reason }
+ */
+router.put('/submissions/:id/reject', async (req, res, next) => {
+    try {
+        return await TeacherController.rejectSubmission(req, res);
+    } catch (error) {
+        next(error);
+    }
+});
+
 module.exports = router;

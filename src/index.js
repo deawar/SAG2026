@@ -37,6 +37,10 @@ let db = null;
  */
 async function startServer() {
   try {
+    // Ensure artwork upload directory exists
+    const uploadsDir = require('node:path').join(__dirname, '..', 'public', 'uploads', 'artwork');
+    require('node:fs').mkdirSync(uploadsDir, { recursive: true });
+
     console.log('============================================================');
     console.log('Silent Auction Gallery - Server Starting');
     console.log('============================================================');
