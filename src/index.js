@@ -72,6 +72,28 @@ async function startServer() {
     }
 
     /**
+     * Run lightweight startup migrations (idempotent — safe to run every boot).
+     * Adds columns/indexes that may be missing on existing deployments.
+     */
+    if (db) {
+      console.log('\nRunning startup migrations...');
+      try {
+        // pg_trgm must be created before the GIN indexes that depend on it
+        await db.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
+        await db.query(`ALTER TABLE schools ADD COLUMN IF NOT EXISTS ceeb_code VARCHAR(10)`);
+        await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_schools_ceeb
+                        ON schools (ceeb_code) WHERE ceeb_code IS NOT NULL`);
+        await db.query(`CREATE INDEX IF NOT EXISTS idx_schools_name_trgm
+                        ON schools USING GIN (name gin_trgm_ops)`);
+        await db.query(`CREATE INDEX IF NOT EXISTS idx_schools_city_trgm
+                        ON schools USING GIN (city gin_trgm_ops)`);
+        console.log('✅ Startup migrations complete');
+      } catch (migErr) {
+        console.warn('⚠️  Startup migration warning:', migErr.message);
+      }
+    }
+
+    /**
      * Mount Authentication Routes (requires database)
      */
     if (db) {
