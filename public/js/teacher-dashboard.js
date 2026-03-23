@@ -929,44 +929,94 @@ class TeacherDashboard {
     }
 
     /**
-     * Display artwork submissions
-     * @param {Array} submissions - Array of submission objects
+     * Display artwork submissions with real approve/reject actions.
+     * @param {Array} submissions - Array of submission objects from the API
      */
     displaySubmissions(submissions) {
         const grid = document.getElementById('submissions-grid');
+        if (!grid) return;
 
         if (!submissions || submissions.length === 0) {
-            grid.innerHTML = '<p>No submissions yet. Student artwork will appear here.</p>';
+            grid.innerHTML = '<p>No submissions yet. Student artwork will appear here once students upload their work.</p>';
             return;
         }
 
-        grid.innerHTML = submissions.map(submission => `
-            <div class="submission-card">
-                <div class="submission-image">
-                    <img src="${this.escapeHtml(submission.imageUrl)}" 
-                         alt="${this.escapeHtml(submission.title)}">
-                </div>
-                <div class="submission-info">
-                    <h4>${this.escapeHtml(submission.title)}</h4>
-                    <p class="student-name">By ${this.escapeHtml(submission.studentName)}</p>
-                    <p class="status">
-                        <span class="badge badge-${submission.status.toLowerCase()}">
-                            ${submission.status}
-                        </span>
+        const statusLabel = {
+            SUBMITTED:        'Pending Review',
+            PENDING_APPROVAL: 'Pending Review',
+            APPROVED:         'Approved',
+            REJECTED:         'Rejected',
+        };
+
+        grid.innerHTML = submissions.map(s => {
+            const isPending = s.status === 'SUBMITTED' || s.status === 'PENDING_APPROVAL';
+            const thumb = s.imageUrl
+                ? `<img src="${this.escapeHtml(s.imageUrl)}" alt="${this.escapeHtml(s.title)}" style="width:100%;height:160px;object-fit:cover;">`
+                : `<div style="width:100%;height:160px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:3rem;">🎨</div>`;
+
+            return `
+            <div class="submission-card" style="background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;">
+                <div class="submission-image">${thumb}</div>
+                <div class="submission-info" style="padding:1rem;flex:1;display:flex;flex-direction:column;gap:0.25rem;">
+                    <h4 style="margin:0;">${this.escapeHtml(s.title)}</h4>
+                    <p style="margin:0;font-size:0.85rem;color:#666;">By ${this.escapeHtml(s.studentName)} &middot; ${this.escapeHtml(s.auctionTitle)}</p>
+                    ${s.medium ? `<p style="margin:0;font-size:0.8rem;color:#888;">${this.escapeHtml(s.medium)}</p>` : ''}
+                    <p style="margin:0;font-size:0.85rem;">Starting bid: <strong>$${Number(s.startingBid).toFixed(2)}</strong></p>
+                    <p class="status" style="margin:0.25rem 0;">
+                        <span class="badge badge-${s.status.toLowerCase()}" style="font-size:0.78rem;">${statusLabel[s.status] || s.status}</span>
                     </p>
-                    <div class="submission-actions">
-                        <button class="btn btn-sm btn-primary" data-id="${submission.id}" 
-                                aria-label="Approve ${submission.title}">
-                            Approve
-                        </button>
-                        <button class="btn btn-sm btn-secondary" data-id="${submission.id}" 
-                                aria-label="Reject ${submission.title}">
-                            Reject
-                        </button>
-                    </div>
+                    ${s.rejectionReason ? `<p style="font-size:0.8rem;color:#c0392b;margin:0;">Reason: ${this.escapeHtml(s.rejectionReason)}</p>` : ''}
+                    ${isPending ? `
+                    <div class="submission-actions" style="display:flex;gap:0.5rem;margin-top:auto;padding-top:0.75rem;">
+                        <button class="btn btn-primary" style="flex:1;font-size:0.85rem;"
+                                data-approve-id="${s.id}"
+                                aria-label="Approve ${this.escapeHtml(s.title)}">Approve</button>
+                        <button class="btn btn-secondary" style="flex:1;font-size:0.85rem;"
+                                data-reject-id="${s.id}"
+                                aria-label="Reject ${this.escapeHtml(s.title)}">Reject</button>
+                    </div>` : ''}
                 </div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
+
+        // Attach approve/reject handlers via delegation
+        grid.querySelectorAll('[data-approve-id]').forEach(btn => {
+            btn.addEventListener('click', () => this.approveSubmission(btn.dataset.approveId));
+        });
+        grid.querySelectorAll('[data-reject-id]').forEach(btn => {
+            btn.addEventListener('click', () => this.rejectSubmission(btn.dataset.rejectId));
+        });
+    }
+
+    async approveSubmission(id) {
+        try {
+            const response = await this.apiClient.request('PUT', `/api/teacher/submissions/${id}/approve`);
+            if (response.success) {
+                this.uiComponents.createToast({ message: 'Artwork approved.', type: 'success' });
+                const data = await this.apiClient.request('GET', '/api/teacher/submissions');
+                if (data.success) this.displaySubmissions(data.data);
+            } else {
+                this.uiComponents.showAlert(response.message || 'Could not approve submission.', 'error');
+            }
+        } catch (err) {
+            console.error('Approve submission error:', err);
+        }
+    }
+
+    async rejectSubmission(id) {
+        const reason = prompt('Optional: Enter a reason for rejection (shown to the student):') ?? '';
+        try {
+            const response = await this.apiClient.request('PUT', `/api/teacher/submissions/${id}/reject`, { body: { reason } });
+            if (response.success) {
+                this.uiComponents.createToast({ message: 'Artwork rejected.', type: 'success' });
+                const data = await this.apiClient.request('GET', '/api/teacher/submissions');
+                if (data.success) this.displaySubmissions(data.data);
+            } else {
+                this.uiComponents.showAlert(response.message || 'Could not reject submission.', 'error');
+            }
+        } catch (err) {
+            console.error('Reject submission error:', err);
+        }
     }
 
     /**

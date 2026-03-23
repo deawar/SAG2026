@@ -6,9 +6,41 @@
 
 const express  = require('express');
 const bcrypt   = require('bcrypt');
+const fs       = require('node:fs');
+const path     = require('node:path');
+const { v4: uuidv4 } = require('uuid');
 const { UserModel } = require('../models');
 const authenticationService = require('../services/authenticationService');
 const UserController = require('../controllers/userController');
+
+// Directory where artwork images are saved on disk
+const UPLOADS_DIR = path.join(__dirname, '..', '..', 'public', 'uploads', 'artwork');
+
+/** Ensure the upload directory exists (idempotent). */
+function ensureUploadsDir() {
+  if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  }
+}
+
+/**
+ * Save a base64 data URL to disk and return the public URL path.
+ * Returns null if no imageData provided.
+ */
+function saveBase64Image(imageData) {
+  if (!imageData) return null;
+
+  const match = imageData.match(/^data:(image\/(jpeg|png|gif|webp));base64,(.+)$/);
+  if (!match) return null;
+
+  const ext  = match[2] === 'jpeg' ? 'jpg' : match[2];
+  const data = match[3];
+  const filename = `${uuidv4()}.${ext}`;
+
+  ensureUploadsDir();
+  fs.writeFileSync(path.join(UPLOADS_DIR, filename), Buffer.from(data, 'base64'));
+  return `/uploads/artwork/${filename}`;
+}
 
 module.exports = (db) => {
   const router = express.Router();
@@ -229,8 +261,9 @@ module.exports = (db) => {
         if (result.rows[0]?.notification_prefs) {
           prefs = { ...prefs, ...result.rows[0].notification_prefs };
         }
-      } catch (_) {
-        // Column may not exist yet — return defaults
+      } catch (colErr) {
+        // Column may not exist yet on older deployments — return defaults
+        if (colErr.code !== '42703') throw colErr;
       }
 
       return res.json({ success: true, notifications: prefs });
@@ -253,8 +286,9 @@ module.exports = (db) => {
           `UPDATE users SET notification_prefs = $1::jsonb, updated_at = NOW() WHERE id = $2`,
           [JSON.stringify(prefs), userId]
         );
-      } catch (_) {
-        // Column may not exist yet — return success gracefully
+      } catch (colErr) {
+        // Column may not exist yet on older deployments — ignore gracefully
+        if (colErr.code !== '42703') throw colErr;
       }
 
       return res.json({ success: true, message: 'Notification preferences saved' });
@@ -279,6 +313,151 @@ module.exports = (db) => {
         success: true,
         twoFactorEnabled: !!result.rows[0]?.totp_enabled,
       });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /api/user/artwork  — list student's own artwork submissions
+  // ---------------------------------------------------------------------------
+  router.get('/artwork', async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+
+      const result = await db.query(
+        `SELECT aw.id, aw.title, aw.artist_name, aw.medium,
+                aw.dimensions_width_cm, aw.dimensions_height_cm,
+                aw.starting_bid_amount, aw.description,
+                aw.image_url, aw.artwork_status, aw.rejection_reason,
+                aw.created_at, aw.updated_at,
+                a.id AS "auctionId", a.title AS "auctionTitle"
+         FROM   artwork aw
+         JOIN   auctions a ON a.id = aw.auction_id
+         WHERE  aw.created_by_user_id = $1
+           AND  aw.deleted_at IS NULL
+         ORDER  BY aw.created_at DESC`,
+        [userId]
+      );
+
+      return res.json({ success: true, artwork: result.rows });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /api/user/artwork/auctions  — auctions the student can submit to
+  //   (school-scoped, status DRAFT or APPROVED)
+  // ---------------------------------------------------------------------------
+  router.get('/artwork/auctions', async (req, res, next) => {
+    try {
+      const schoolId = req.user?.schoolId;
+
+      if (!schoolId) {
+        return res.json({ success: true, auctions: [] });
+      }
+
+      const result = await db.query(
+        `SELECT id, title, starts_at, ends_at, auction_status
+         FROM   auctions
+         WHERE  school_id  = $1
+           AND  auction_status IN ('DRAFT', 'APPROVED', 'LIVE')
+           AND  deleted_at IS NULL
+         ORDER  BY starts_at ASC`,
+        [schoolId]
+      );
+
+      return res.json({ success: true, auctions: result.rows });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /api/user/artwork  — student submits artwork
+  //   Body: { auctionId, title, artistName, medium, width, height,
+  //           startingBid, description, imageData (base64 data URL) }
+  // ---------------------------------------------------------------------------
+  router.post('/artwork', async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      const {
+        auctionId, title, artistName, medium,
+        width, height, startingBid, description, imageData,
+      } = req.body;
+
+      if (!auctionId || !title || !artistName || startingBid === undefined) {
+        return res.status(400).json({
+          success: false,
+          message: 'auctionId, title, artistName, and startingBid are required',
+        });
+      }
+
+      // Verify the auction belongs to the student's school
+      const schoolId = req.user?.schoolId;
+      const auctionCheck = await db.query(
+        `SELECT id FROM auctions
+         WHERE id = $1 AND school_id = $2 AND deleted_at IS NULL
+           AND auction_status IN ('DRAFT', 'APPROVED', 'LIVE')`,
+        [auctionId, schoolId]
+      );
+      if (auctionCheck.rowCount === 0) {
+        return res.status(403).json({ success: false, message: 'Auction not found or not open for submissions' });
+      }
+
+      // Save image to disk if provided
+      const imageUrl = saveBase64Image(imageData);
+
+      const result = await db.query(
+        `INSERT INTO artwork
+           (auction_id, created_by_user_id, title, artist_name, medium,
+            dimensions_width_cm, dimensions_height_cm, starting_bid_amount,
+            description, image_url, artwork_status)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'SUBMITTED')
+         RETURNING id, title, artwork_status, created_at`,
+        [
+          auctionId, userId,
+          title.trim(), artistName.trim(),
+          medium || null,
+          width  ? Number.parseFloat(width)  : null,
+          height ? Number.parseFloat(height) : null,
+          Number.parseFloat(startingBid),
+          description || null,
+          imageUrl,
+        ]
+      );
+
+      return res.status(201).json({ success: true, artwork: result.rows[0] });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // DELETE /api/user/artwork/:id  — withdraw a submission (own artwork only)
+  // ---------------------------------------------------------------------------
+  router.delete('/artwork/:id', async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      const { id } = req.params;
+
+      const result = await db.query(
+        `UPDATE artwork
+         SET artwork_status = 'WITHDRAWN', deleted_at = NOW(), updated_at = NOW()
+         WHERE id = $1
+           AND created_by_user_id = $2
+           AND artwork_status IN ('SUBMITTED', 'PENDING_APPROVAL', 'REJECTED')
+           AND deleted_at IS NULL
+         RETURNING id`,
+        [id, userId]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ success: false, message: 'Artwork not found or cannot be withdrawn' });
+      }
+
+      return res.json({ success: true, message: 'Submission withdrawn' });
     } catch (err) {
       next(err);
     }

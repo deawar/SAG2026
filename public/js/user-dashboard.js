@@ -83,6 +83,15 @@ class UserDashboard {
         // Update security settings
         this.load2FAStatus();
 
+        // Show artwork tab and load data for students
+        if (this.user.role === 'STUDENT') {
+            const artworkTab = document.getElementById('tab-artwork');
+            if (artworkTab) artworkTab.style.display = '';
+            this.loadArtworkAuctions();
+            this.loadArtworkSubmissions();
+            this.setupArtworkForm();
+        }
+
         // Load bid data
         this.loadActiveBids();
         this.loadBidHistory();
@@ -198,6 +207,8 @@ class UserDashboard {
                 this.loadBidHistory();
             } else if (tabName === 'wins') {
                 this.loadWins();
+            } else if (tabName === 'my-artwork') {
+                this.loadArtworkSubmissions();
             }
         }
 
@@ -731,6 +742,214 @@ class UserDashboard {
         });
 
         setTimeout(() => window.location.href = '/index.html', 1000);
+    }
+
+    // -------------------------------------------------------------------------
+    // Artwork (student only)
+    // -------------------------------------------------------------------------
+
+    /** Populate the auction dropdown in the submit form. */
+    async loadArtworkAuctions() {
+        try {
+            const response = await fetch('/api/user/artwork/auctions', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
+            });
+            const data = await response.json();
+            const select = document.getElementById('artwork-auction');
+            if (!select) return;
+
+            const auctions = data.auctions || [];
+            if (auctions.length === 0) {
+                select.innerHTML = '<option value="">No open auctions for your school</option>';
+                return;
+            }
+            select.innerHTML = '<option value="">— Select an auction —</option>' +
+                auctions.map(a => `<option value="${a.id}">${this.escapeHtml(a.title)}</option>`).join('');
+        } catch (err) {
+            console.error('Load artwork auctions error:', err);
+        }
+    }
+
+    /** Load and render the student's existing submissions. */
+    async loadArtworkSubmissions() {
+        const list = document.getElementById('artwork-submissions-list');
+        if (!list) return;
+
+        try {
+            const response = await fetch('/api/user/artwork', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
+            });
+            const data = await response.json();
+            const submissions = data.artwork || [];
+
+            // Update tab badge
+            const badge = document.getElementById('artwork-count');
+            if (badge) badge.textContent = submissions.length;
+
+            if (submissions.length === 0) {
+                list.innerHTML = '<li style="color:var(--color-gray);padding:1rem 0;">No submissions yet. Use the form above to submit your artwork.</li>';
+                return;
+            }
+
+            const statusLabel = {
+                SUBMITTED:        { text: 'Pending Review', cls: 'status-pending' },
+                PENDING_APPROVAL: { text: 'Pending Review', cls: 'status-pending' },
+                APPROVED:         { text: 'Approved',       cls: 'status-approved' },
+                REJECTED:         { text: 'Rejected',       cls: 'status-rejected' },
+                WITHDRAWN:        { text: 'Withdrawn',      cls: 'status-withdrawn' },
+            };
+
+            list.innerHTML = submissions.map(aw => {
+                const s = statusLabel[aw.artwork_status] || { text: aw.artwork_status, cls: '' };
+                const canWithdraw = ['SUBMITTED', 'PENDING_APPROVAL', 'REJECTED'].includes(aw.artwork_status);
+                const thumb = aw.image_url
+                    ? `<img src="${this.escapeHtml(aw.image_url)}" alt="Artwork thumbnail" style="width:60px;height:60px;object-fit:cover;border-radius:4px;flex-shrink:0;">`
+                    : `<div style="width:60px;height:60px;background:#eee;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎨</div>`;
+                return `<li class="bid-item" style="display:flex;gap:1rem;align-items:flex-start;padding:1rem 0;border-bottom:1px solid #eee;">
+                    ${thumb}
+                    <div style="flex:1;min-width:0;">
+                        <strong>${this.escapeHtml(aw.title)}</strong>
+                        <p style="margin:0.25rem 0 0;font-size:0.85rem;color:var(--color-gray);">
+                            ${this.escapeHtml(aw.auctionTitle)} &middot;
+                            Starting bid: $${Number(aw.starting_bid_amount).toFixed(2)}
+                        </p>
+                        ${aw.rejection_reason ? `<p style="margin:0.25rem 0 0;font-size:0.85rem;color:var(--color-error);">Reason: ${this.escapeHtml(aw.rejection_reason)}</p>` : ''}
+                    </div>
+                    <div style="text-align:right;flex-shrink:0;">
+                        <span class="status-badge ${s.cls}" style="display:block;margin-bottom:0.5rem;">${s.text}</span>
+                        ${canWithdraw ? `<button class="btn btn-secondary" style="font-size:0.8rem;padding:0.25rem 0.75rem;" data-withdraw-id="${aw.id}">Withdraw</button>` : ''}
+                    </div>
+                </li>`;
+            }).join('');
+
+            // Delegate withdraw button clicks
+            list.querySelectorAll('[data-withdraw-id]').forEach(btn => {
+                btn.addEventListener('click', () => this.withdrawArtwork(btn.dataset.withdrawId));
+            });
+        } catch (err) {
+            console.error('Load artwork submissions error:', err);
+            if (list) list.innerHTML = '<li>Error loading submissions.</li>';
+        }
+    }
+
+    /** Wire up the artwork upload form (image preview + submit). */
+    setupArtworkForm() {
+        const form = document.getElementById('artwork-upload-form');
+        if (!form) return;
+
+        // Image preview
+        const imageInput = document.getElementById('artwork-image');
+        imageInput?.addEventListener('change', () => {
+            const file = imageInput.files[0];
+            const preview = document.getElementById('artwork-image-preview');
+            const img = document.getElementById('artwork-preview-img');
+            if (!file || !preview || !img) return;
+
+            if (file.size > 8 * 1024 * 1024) {
+                UIComponents.showAlert('Image must be under 8 MB.', 'error');
+                imageInput.value = '';
+                preview.style.display = 'none';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                img.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        form.addEventListener('submit', (e) => this.handleArtworkSubmit(e));
+    }
+
+    /** Read image file as base64 data URL. */
+    readFileAsDataURL(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload  = (e) => resolve(e.target.result);
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    /** Handle artwork form submission. */
+    async handleArtworkSubmit(e) {
+        e.preventDefault();
+
+        const auctionId     = document.getElementById('artwork-auction')?.value;
+        const title         = document.getElementById('artwork-title')?.value?.trim();
+        const artistName    = document.getElementById('artwork-artist')?.value?.trim();
+        const medium        = document.getElementById('artwork-medium')?.value?.trim();
+        const startingBid   = document.getElementById('artwork-bid')?.value;
+        const width         = document.getElementById('artwork-width')?.value;
+        const height        = document.getElementById('artwork-height')?.value;
+        const description   = document.getElementById('artwork-description')?.value?.trim();
+        const imageFile     = document.getElementById('artwork-image')?.files[0];
+
+        if (!auctionId || !title || !artistName || !startingBid) {
+            UIComponents.showAlert('Please fill in all required fields.', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('artwork-submit-btn');
+        if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
+
+        try {
+            let imageData = null;
+            if (imageFile) {
+                imageData = await this.readFileAsDataURL(imageFile);
+            }
+
+            const response = await fetch('/api/user/artwork', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                },
+                body: JSON.stringify({ auctionId, title, artistName, medium, startingBid, width, height, description, imageData }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                UIComponents.showAlert(data.message || 'Submission failed', 'error');
+                return;
+            }
+
+            UIComponents.createToast({ message: 'Artwork submitted for review!', type: 'success' });
+            e.target.reset();
+            document.getElementById('artwork-image-preview').style.display = 'none';
+            await this.loadArtworkSubmissions();
+        } catch (err) {
+            console.error('Artwork submit error:', err);
+            UIComponents.showAlert('Connection error. Please try again.', 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Submit Artwork'; }
+        }
+    }
+
+    /** Withdraw an artwork submission. */
+    async withdrawArtwork(artworkId) {
+        if (!confirm('Withdraw this submission? This cannot be undone.')) return;
+
+        try {
+            const response = await fetch(`/api/user/artwork/${artworkId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` },
+            });
+
+            if (response.ok) {
+                UIComponents.createToast({ message: 'Submission withdrawn.', type: 'success' });
+                await this.loadArtworkSubmissions();
+            } else {
+                const data = await response.json();
+                UIComponents.showAlert(data.message || 'Could not withdraw submission.', 'error');
+            }
+        } catch (err) {
+            console.error('Withdraw artwork error:', err);
+            UIComponents.showAlert('Connection error.', 'error');
+        }
     }
 
     /**

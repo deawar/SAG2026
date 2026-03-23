@@ -10,7 +10,7 @@ const ValidationUtils = require('../utils/validationUtils');
 const { pool } = require('../models/index');
 const { EmailProvider, EmailTemplateService } = require('../services/notificationService');
 
-const _smtpPort = parseInt(process.env.SMTP_PORT) || 587;
+const _smtpPort = Number.parseInt(process.env.SMTP_PORT, 10) || 587;
 const emailProvider = new EmailProvider({
     provider: 'smtp',
     host: process.env.SMTP_HOST,
@@ -149,38 +149,109 @@ class TeacherController {
      */
     static async getSubmissions(req, res) {
         try {
-            const _userId = req.user.id;
-            const _schoolId = req.user.schoolId;
+            const schoolId = req.user.schoolId;
 
-            // In production, fetch from database
-            // const submissions = await ArtworkModel.getSubmissionsBySchool(_schoolId);
+            const result = await pool.query(
+                `SELECT aw.id, aw.title, aw.artist_name AS "artistName",
+                        aw.medium, aw.image_url AS "imageUrl",
+                        aw.artwork_status AS status,
+                        aw.rejection_reason AS "rejectionReason",
+                        aw.starting_bid_amount AS "startingBid",
+                        aw.description, aw.created_at AS "submittedAt",
+                        aw.dimensions_width_cm AS width,
+                        aw.dimensions_height_cm AS height,
+                        u.first_name || ' ' || COALESCE(u.last_name, '') AS "studentName",
+                        u.email AS "studentEmail",
+                        a.id AS "auctionId", a.title AS "auctionTitle"
+                 FROM   artwork aw
+                 JOIN   auctions a ON a.id = aw.auction_id
+                 JOIN   users    u ON u.id = aw.created_by_user_id
+                 WHERE  a.school_id = $1
+                   AND  aw.deleted_at IS NULL
+                   AND  aw.artwork_status IN ('SUBMITTED','PENDING_APPROVAL','APPROVED','REJECTED')
+                 ORDER  BY aw.created_at DESC`,
+                [schoolId]
+            );
 
-            const submissions = [
-                {
-                    id: 'sub_1',
-                    title: 'Sample Submission',
-                    studentName: 'John Doe',
-                    imageUrl: '/images/auction-items/placeholder.svg',
-                    status: 'PENDING'
-                }
-            ];
-
-            return res.json({
-                success: true,
-                data: submissions
-            });
+            return res.json({ success: true, data: result.rows });
 
         } catch (error) {
-            logger.error('Get submissions error', {
-                error: error.message,
-                userId: req.user?.id
-            });
+            logger.error('Get submissions error', { error: error.message, userId: req.user?.id });
+            return res.status(500).json({ success: false, message: 'Error fetching submissions', errors: [error.message] });
+        }
+    }
 
-            return res.status(500).json({
-                success: false,
-                message: 'Error fetching submissions',
-                errors: [error.message]
-            });
+    /**
+     * Approve an artwork submission.
+     * PUT /api/teacher/submissions/:id/approve
+     */
+    static async approveSubmission(req, res) {
+        try {
+            const { id } = req.params;
+            const teacherId = req.user.id;
+            const schoolId  = req.user.schoolId;
+
+            const result = await pool.query(
+                `UPDATE artwork aw
+                 SET artwork_status      = 'APPROVED',
+                     approved_at         = NOW(),
+                     approved_by_user_id = $1,
+                     updated_at          = NOW()
+                 FROM auctions a
+                 WHERE aw.auction_id = a.id
+                   AND aw.id = $2
+                   AND a.school_id = $3
+                   AND aw.deleted_at IS NULL
+                   AND aw.artwork_status IN ('SUBMITTED','PENDING_APPROVAL')
+                 RETURNING aw.id`,
+                [teacherId, id, schoolId]
+            );
+
+            if (result.rowCount === 0) {
+                return res.status(404).json({ success: false, message: 'Submission not found or already reviewed' });
+            }
+
+            return res.json({ success: true, message: 'Artwork approved' });
+        } catch (error) {
+            logger.error('Approve submission error', { error: error.message, userId: req.user?.id });
+            return res.status(500).json({ success: false, message: 'Error approving submission' });
+        }
+    }
+
+    /**
+     * Reject an artwork submission.
+     * PUT /api/teacher/submissions/:id/reject
+     * Body: { reason }
+     */
+    static async rejectSubmission(req, res) {
+        try {
+            const { id } = req.params;
+            const schoolId = req.user.schoolId;
+            const reason   = (req.body.reason || '').trim() || null;
+
+            const result = await pool.query(
+                `UPDATE artwork aw
+                 SET artwork_status  = 'REJECTED',
+                     rejection_reason = $1,
+                     updated_at       = NOW()
+                 FROM auctions a
+                 WHERE aw.auction_id = a.id
+                   AND aw.id = $2
+                   AND a.school_id = $3
+                   AND aw.deleted_at IS NULL
+                   AND aw.artwork_status IN ('SUBMITTED','PENDING_APPROVAL')
+                 RETURNING aw.id`,
+                [reason, id, schoolId]
+            );
+
+            if (result.rowCount === 0) {
+                return res.status(404).json({ success: false, message: 'Submission not found or already reviewed' });
+            }
+
+            return res.json({ success: true, message: 'Artwork rejected' });
+        } catch (error) {
+            logger.error('Reject submission error', { error: error.message, userId: req.user?.id });
+            return res.status(500).json({ success: false, message: 'Error rejecting submission' });
         }
     }
 
@@ -236,7 +307,6 @@ class TeacherController {
     static async getTokenDetails(req, res) {
         try {
             const { tokenId } = req.params;
-            const _userId = req.user.id;
 
             if (!tokenId) {
                 return res.status(400).json({
@@ -392,7 +462,7 @@ class TeacherController {
 
             return res.json({
                 success: true,
-                message: `Sent ${sent} invite${sent !== 1 ? 's' : ''}${errors.length ? ` (${errors.length} failed)` : ''}`,
+                message: `Sent ${sent} invite${sent === 1 ? '' : 's'}${errors.length === 0 ? '' : ' (' + errors.length + ' failed)'}`,
                 data: { sent, failed: errors.length, errors: errors.length ? errors : undefined }
             });
         } catch (error) {
