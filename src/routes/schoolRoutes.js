@@ -221,7 +221,7 @@ module.exports = (db) => {
 
       // ORDER BY: exact prefix matches first, then alphabetical
       const result = await db.query(
-        `SELECT ceeb_code, name, address_line1, city, state_province, postal_code, country
+        `SELECT id, ceeb_code, name, address_line1, city, state_province, postal_code, country
          FROM schools
          ${where}
          ORDER BY
