@@ -207,29 +207,26 @@ class AuthPages {
             this.nextRegisterStep(form);
         });
 
-        // Load schools on page init
-        if (schoolSelect) {
-          this.loadSchools(schoolSelect);
-        }
-        
-        // Set up school search functionality
+        // Set up school search functionality — type-to-search, no pre-load
         if (schoolSearch && schoolSelect) {
-          // Debounce search input
+          // Show prompt on init
+          schoolSelect.innerHTML = '<option value="">Type above to search schools</option>';
+
           let searchTimeout;
           schoolSearch.addEventListener('input', (e) => {
             clearTimeout(searchTimeout);
             const query = e.target.value.trim();
-            
+
             if (query.length >= 2) {
+              schoolSelect.innerHTML = '<option value="">Searching...</option>';
               searchTimeout = setTimeout(() => {
                 this.searchSchools(query, schoolSelect);
               }, 300);
-            } else if (query.length === 0) {
-              // Reload all schools
-              this.loadSchools(schoolSelect);
+            } else {
+              schoolSelect.innerHTML = '<option value="">Type above to search schools</option>';
             }
           });
-          
+
           // Allow selection by pressing Enter
           schoolSearch.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -325,20 +322,26 @@ class AuthPages {
         const data = await response.json();
 
         if (!data.success || !data.data) {
+          selectElement.innerHTML = '<option value="">No schools found — try a different search</option>';
           return;
         }
 
-        // Clear and repopulate dropdown
-        selectElement.innerHTML = '<option value="">Select your school</option>';
-        
+        if (data.data.length === 0) {
+          selectElement.innerHTML = '<option value="">No schools found — try a different search</option>';
+          return;
+        }
+
+        // Clear and repopulate dropdown with results
+        selectElement.innerHTML = '<option value="">-- Select your school --</option>';
         data.data.forEach(school => {
           const option = document.createElement('option');
           option.value = school.id;
-          option.textContent = `${school.name} - ${school.city}, ${school.state_province}`;
+          option.textContent = `${school.name} — ${school.city}, ${school.state_province}`;
           selectElement.appendChild(option);
         });
       } catch (error) {
         console.error('Error searching schools:', error);
+        selectElement.innerHTML = '<option value="">Search unavailable — please try again</option>';
       }
     }
 
