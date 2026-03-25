@@ -87,6 +87,11 @@ async function startServer() {
                         ON schools USING GIN (name gin_trgm_ops)`);
         await db.query(`CREATE INDEX IF NOT EXISTS idx_schools_city_trgm
                         ON schools USING GIN (city gin_trgm_ops)`);
+        // Replace column-level UNIQUE on email with a partial index so soft-deleted
+        // users don't block re-registration with the same email address.
+        await db.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_key`);
+        await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_active
+                        ON users(email) WHERE deleted_at IS NULL`);
         console.log('✅ Startup migrations complete');
       } catch (migErr) {
         console.warn('⚠️  Startup migration warning:', migErr.message);
