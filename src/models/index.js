@@ -118,9 +118,9 @@ class UserModel {
       schoolId,
     } = userData;
 
-    // Check if email already exists
+    // Check if email already exists (exclude soft-deleted users)
     const existingUser = await this.db.query(
-      'SELECT id FROM users WHERE email = $1',
+      'SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL',
       [email.toLowerCase()]
     );
 
