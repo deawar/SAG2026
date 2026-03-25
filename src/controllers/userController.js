@@ -121,6 +121,10 @@ class UserController {
       if (mapped) {
         return res.status(mapped.status).json({ success: false, message: mapped.message });
       }
+      // PostgreSQL unique constraint violation (e.g. email already exists at DB level)
+      if (error.code === '23505') {
+        return res.status(409).json({ success: false, message: 'Email already registered' });
+      }
       next(error);
     }
   }
