@@ -138,4 +138,51 @@ router.delete(
   (req, res) => auctionController.deleteAuction(req, res)
 );
 
+/**
+ * POST /api/auctions/:auctionId/watchlist
+ * Add auction to the authenticated user's watchlist
+ */
+router.post(
+  '/:auctionId/watchlist',
+  authMiddleware.verifyToken,
+  async (req, res) => {
+    try {
+      const { pool } = require('../models/index');
+      const { auctionId } = req.params;
+      const userId = req.user.id;
+      await pool.query(
+        `INSERT INTO auction_watchlist (user_id, auction_id)
+         VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        [userId, auctionId]
+      );
+      return res.json({ success: true });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+  }
+);
+
+/**
+ * DELETE /api/auctions/:auctionId/watchlist
+ * Remove auction from the authenticated user's watchlist
+ */
+router.delete(
+  '/:auctionId/watchlist',
+  authMiddleware.verifyToken,
+  async (req, res) => {
+    try {
+      const { pool } = require('../models/index');
+      const { auctionId } = req.params;
+      const userId = req.user.id;
+      await pool.query(
+        `DELETE FROM auction_watchlist WHERE user_id = $1 AND auction_id = $2`,
+        [userId, auctionId]
+      );
+      return res.json({ success: true });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: err.message });
+    }
+  }
+);
+
 module.exports = router;

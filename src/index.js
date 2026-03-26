@@ -92,6 +92,14 @@ async function startServer() {
         await db.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_key`);
         await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_active
                         ON users(email) WHERE deleted_at IS NULL`);
+        // Watchlist table for auction-detail page
+        await db.query(`
+          CREATE TABLE IF NOT EXISTS auction_watchlist (
+            user_id    UUID NOT NULL REFERENCES users(id)    ON DELETE CASCADE,
+            auction_id UUID NOT NULL REFERENCES auctions(id) ON DELETE CASCADE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (user_id, auction_id)
+          )`);
         console.log('✅ Startup migrations complete');
       } catch (migErr) {
         console.warn('⚠️  Startup migration warning:', migErr.message);
