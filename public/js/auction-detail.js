@@ -304,6 +304,24 @@ class AuctionDetail {
             fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
         }
 
+        // Artwork image — click to open detail modal
+        const artworkWrapper = document.querySelector('.artwork-image-wrapper');
+        if (artworkWrapper) {
+            artworkWrapper.style.cursor = 'pointer';
+            artworkWrapper.addEventListener('click', () => {
+                if (this.currentPiece) this.showArtworkModal(this.currentPiece);
+            });
+        }
+
+        // Artwork modal — close button and backdrop
+        const artworkModal = document.getElementById('artwork-modal');
+        document.getElementById('artwork-modal-close')?.addEventListener('click', () => {
+            if (artworkModal) artworkModal.style.display = 'none';
+        });
+        artworkModal?.addEventListener('click', (e) => {
+            if (e.target === artworkModal) artworkModal.style.display = 'none';
+        });
+
         // Auth required login button
         const loginBtn = document.getElementById('login-from-auction');
         if (loginBtn) {
@@ -567,6 +585,7 @@ class AuctionDetail {
      * Populate artwork-specific fields from the first artwork piece.
      */
     displayArtworkPiece(piece) {
+        this.currentPiece = piece;
         const imageEl = document.getElementById('artwork-image');
         if (imageEl && piece.imageUrl) {
             imageEl.src = piece.imageUrl;
@@ -605,6 +624,52 @@ class AuctionDetail {
             const current = piece.currentBid != null ? Number(piece.currentBid) : Number(piece.startingPrice ?? 0);
             minBidHelpEl.textContent = UIComponents.formatCurrency(current + 10);
         }
+    }
+
+    /**
+     * Open the artwork detail modal for a given piece.
+     */
+    showArtworkModal(piece) {
+        const modal = document.getElementById('artwork-modal');
+        if (!modal) return;
+
+        const img = document.getElementById('modal-artwork-img');
+        if (img) {
+            img.src = piece.imageUrl || '';
+            img.alt = piece.title || 'Artwork';
+            img.style.display = piece.imageUrl ? '' : 'none';
+        }
+        const set = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val || '-';
+        };
+        set('artwork-modal-title',       piece.title);
+        set('modal-artwork-artist',      piece.artistName);
+        set('modal-artwork-medium',      piece.medium);
+        set('modal-artwork-dimensions',  piece.dimensions);
+        const openingBid = piece.startingPrice == null ? '-' : UIComponents.formatCurrency(Number(piece.startingPrice));
+        set('modal-artwork-opening-bid', openingBid);
+        let currentBid = openingBid;
+        if (piece.currentBid != null) currentBid = UIComponents.formatCurrency(Number(piece.currentBid));
+        set('modal-artwork-current-bid', currentBid);
+
+        // QR code
+        const qrContainer = document.getElementById('modal-artwork-qr');
+        if (qrContainer) {
+            qrContainer.innerHTML = '';
+            const QRCodeLib = globalThis.QRCode;
+            if (QRCodeLib) {
+                this._artworkQr = new QRCodeLib(qrContainer, {
+                    text: globalThis.location.href,
+                    width: 160,
+                    height: 160,
+                });
+            } else {
+                qrContainer.textContent = globalThis.location.href;
+            }
+        }
+
+        modal.style.display = 'flex';
     }
 
     /**
