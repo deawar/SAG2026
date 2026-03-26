@@ -100,6 +100,9 @@ async function startServer() {
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (user_id, auction_id)
           )`);
+        // Ensure the artwork uploads directory exists and is writable
+        const uploadsDir = require('node:path').join(__dirname, '..', 'public', 'uploads', 'artwork');
+        require('node:fs').mkdirSync(uploadsDir, { recursive: true });
         console.log('✅ Startup migrations complete');
       } catch (migErr) {
         console.warn('⚠️  Startup migration warning:', migErr.message);
@@ -249,9 +252,7 @@ async function startServer() {
       });
 
       const statusCode = err.statusCode || err.status || 500;
-      let message = process.env.NODE_ENV === 'production'
-        ? (statusCode === 500 ? 'Internal Server Error' : err.message)
-        : err.message;
+      let message = err.message || 'Internal Server Error';
 
       // Encode HTML in error message to prevent XSS
       message = encodeHTML(message);
