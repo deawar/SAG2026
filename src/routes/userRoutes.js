@@ -6,40 +6,20 @@
 
 const express  = require('express');
 const bcrypt   = require('bcrypt');
-const fs       = require('node:fs');
-const path     = require('node:path');
-const { v4: uuidv4 } = require('uuid');
 const { UserModel } = require('../models');
 const authenticationService = require('../services/authenticationService');
 const UserController = require('../controllers/userController');
 
-// Directory where artwork images are saved on disk
-const UPLOADS_DIR = path.join(__dirname, '..', '..', 'public', 'uploads', 'artwork');
-
-/** Ensure the upload directory exists (idempotent). */
-function ensureUploadsDir() {
-  if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-  }
-}
-
 /**
- * Save a base64 data URL to disk and return the public URL path.
- * Returns null if no imageData provided.
+ * Validate and return a base64 image data URL for direct DB storage.
+ * Returns null if imageData is absent or not a recognised image type.
+ * Storing the data URL in the DB avoids filesystem permission issues
+ * in containerised deployments where the app root is read-only.
  */
 function saveBase64Image(imageData) {
   if (!imageData) return null;
-
-  const match = imageData.match(/^data:(image\/(jpeg|png|gif|webp));base64,(.+)$/);
-  if (!match) return null;
-
-  const ext  = match[2] === 'jpeg' ? 'jpg' : match[2];
-  const data = match[3];
-  const filename = `${uuidv4()}.${ext}`;
-
-  ensureUploadsDir();
-  fs.writeFileSync(path.join(UPLOADS_DIR, filename), Buffer.from(data, 'base64'));
-  return `/uploads/artwork/${filename}`;
+  const valid = /^data:image\/(jpeg|png|gif|webp);base64,[A-Za-z0-9+/]+=*$/.test(imageData);
+  return valid ? imageData : null;
 }
 
 module.exports = (db) => {
