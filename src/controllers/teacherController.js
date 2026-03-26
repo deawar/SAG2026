@@ -23,6 +23,16 @@ const emailProvider = new EmailProvider({
 
 class TeacherController {
     /**
+     * Fetch the teacher's current school_id from the database.
+     * The JWT value can be stale (e.g. school assigned after last login),
+     * so always prefer the live DB value.
+     */
+    static async _resolveSchoolId(userId) {
+        const r = await pool.query('SELECT school_id FROM users WHERE id = $1', [userId]);
+        return r.rows[0]?.school_id || null;
+    }
+
+    /**
      * Upload CSV with student list and generate registration tokens
      * @param {Request} req - Express request
      * @param {Response} res - Express response
@@ -31,7 +41,7 @@ class TeacherController {
         try {
             // Verify user is authenticated and is a teacher
             const userId = req.user.id;
-            const schoolId = req.user.schoolId;
+            const schoolId = await TeacherController._resolveSchoolId(userId);
 
             if (!req.user.role || !['TEACHER', 'SCHOOL_ADMIN', 'SITE_ADMIN'].includes(req.user.role)) {
                 return res.status(403).json({
@@ -149,7 +159,7 @@ class TeacherController {
      */
     static async getSubmissions(req, res) {
         try {
-            const schoolId = req.user.schoolId;
+            const schoolId = await TeacherController._resolveSchoolId(req.user.id);
 
             const result = await pool.query(
                 `SELECT aw.id, aw.title, aw.artist_name AS "artistName",
@@ -189,7 +199,7 @@ class TeacherController {
         try {
             const { id } = req.params;
             const teacherId = req.user.id;
-            const schoolId  = req.user.schoolId;
+            const schoolId  = await TeacherController._resolveSchoolId(req.user.id);
 
             const result = await pool.query(
                 `UPDATE artwork aw
@@ -226,7 +236,7 @@ class TeacherController {
     static async rejectSubmission(req, res) {
         try {
             const { id } = req.params;
-            const schoolId = req.user.schoolId;
+            const schoolId = await TeacherController._resolveSchoolId(req.user.id);
             const reason   = (req.body.reason || '').trim() || null;
 
             const result = await pool.query(
