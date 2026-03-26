@@ -390,11 +390,13 @@ class AuctionController {
       const { auctionId } = req.params;
 
       const result = await pool.query(
-        `SELECT a.*,
+        `SELECT a.*, au.school_id,
                 (SELECT MAX(bid_amount) FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE') as current_bid,
                 (SELECT COUNT(*) FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE') as bid_count
          FROM artwork a
+         JOIN auctions au ON au.id = a.auction_id
          WHERE a.auction_id = $1
+           AND a.deleted_at IS NULL
          ORDER BY a.created_at ASC`,
         [auctionId]
       );
