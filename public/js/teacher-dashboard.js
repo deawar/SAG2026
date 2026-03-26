@@ -161,6 +161,17 @@ class TeacherDashboard {
         if (saveThemeBtn)    saveThemeBtn.addEventListener('click',    () => this.saveTheme());
         if (previewThemeBtn) previewThemeBtn.addEventListener('click', () => this.previewTheme());
         if (resetThemeBtn)   resetThemeBtn.addEventListener('click',   () => this.resetTheme());
+
+        // Artwork detail modal close (registered once here)
+        const artworkModal = document.getElementById('artwork-modal');
+        document.getElementById('artwork-modal-close')?.addEventListener('click', () => {
+            if (artworkModal) artworkModal.style.display = 'none';
+        });
+        if (artworkModal) {
+            artworkModal.addEventListener('click', (e) => {
+                if (e.target === artworkModal) artworkModal.style.display = 'none';
+            });
+        }
     }
 
     /**
@@ -1002,14 +1013,6 @@ class TeacherDashboard {
             });
         });
 
-        // Wire up modal close (idempotent — safe to call on each render)
-        const modal = document.getElementById('artwork-modal');
-        document.getElementById('artwork-modal-close')?.addEventListener('click', () => {
-            if (modal) modal.style.display = 'none';
-        });
-        modal?.addEventListener('click', (e) => {
-            if (e.target === modal) modal.style.display = 'none';
-        });
     }
 
     /**
@@ -1020,11 +1023,21 @@ class TeacherDashboard {
         const modal = document.getElementById('artwork-modal');
         if (!modal) return;
 
+        document.getElementById('modal-img-placeholder')?.remove();
         const img = document.getElementById('modal-artwork-img');
         if (img) {
-            img.src   = s.imageUrl || '';
-            img.alt   = s.title   || 'Artwork';
-            img.style.display = s.imageUrl ? '' : 'none';
+            if (s.imageUrl) {
+                img.src = s.imageUrl;
+                img.alt = s.title || 'Artwork';
+                img.style.display = '';
+            } else {
+                img.src = '';
+                img.alt = '';
+                img.style.display = 'none';
+                img.insertAdjacentHTML('afterend',
+                    '<div id="modal-img-placeholder" style="width:100%;height:200px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:3rem;">🎨</div>'
+                );
+            }
         }
 
         const set = (id, val) => {
