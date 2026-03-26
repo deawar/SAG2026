@@ -100,9 +100,9 @@ async function startServer() {
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (user_id, auction_id)
           )`);
-        // Ensure the artwork uploads directory exists and is writable
-        const uploadsDir = require('node:path').join(__dirname, '..', 'public', 'uploads', 'artwork');
-        require('node:fs').mkdirSync(uploadsDir, { recursive: true });
+        // Widen image_url to TEXT so base64 data URLs can be stored directly
+        // (avoids filesystem permission issues in containerised deployments)
+        await db.query(`ALTER TABLE artwork ALTER COLUMN image_url TYPE TEXT`);
         console.log('✅ Startup migrations complete');
       } catch (migErr) {
         console.warn('⚠️  Startup migration warning:', migErr.message);
