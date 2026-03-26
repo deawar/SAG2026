@@ -57,6 +57,7 @@ class AuctionDetail {
 
             this.auction = data.auction;
             this.displayAuction();
+            this.loadArtwork();
             this.loadBidHistory();
         } catch (error) {
             console.error('Load auction error:', error);
@@ -383,30 +384,43 @@ class AuctionDetail {
      */
     startCountdown() {
         const countdownEl = document.getElementById('timer-value');
+        const labelEl = document.getElementById('timer-label');
         if (!countdownEl) return;
 
-        // Only count down for LIVE auctions
-        if (this.auction.status !== 'LIVE' || !this.auction.endTime) {
-            countdownEl.textContent = '--:--:--';
+        const now = Date.now();
+        const startTime = this.auction.startTime ? new Date(this.auction.startTime).getTime() : null;
+        const endTime = this.auction.endTime ? new Date(this.auction.endTime).getTime() : null;
+
+        // Upcoming auction — count down to start time
+        if (startTime && startTime > now) {
+            if (labelEl) labelEl.textContent = 'Starts In';
+            const update = () => {
+                const remaining = Math.max(0, startTime - Date.now());
+                countdownEl.textContent = UIComponents.formatTimeRemaining(remaining);
+                if (remaining === 0) clearInterval(this.countdownInterval);
+            };
+            update();
+            this.countdownInterval = setInterval(update, 1000);
             return;
         }
 
-        const updateCountdown = () => {
-            const now = Date.now();
-            const endTime = new Date(this.auction.endTime).getTime();
-            const remaining = Math.max(0, endTime - now);
+        // Live auction — count down to end time
+        if (this.auction.status === 'LIVE' && endTime) {
+            if (labelEl) labelEl.textContent = 'Time Remaining';
+            const update = () => {
+                const remaining = Math.max(0, endTime - Date.now());
+                countdownEl.textContent = UIComponents.formatTimeRemaining(remaining);
+                if (remaining === 0) {
+                    clearInterval(this.countdownInterval);
+                    this.disableBidding();
+                }
+            };
+            update();
+            this.countdownInterval = setInterval(update, 1000);
+            return;
+        }
 
-            const formatted = UIComponents.formatTimeRemaining(remaining);
-            countdownEl.textContent = formatted;
-
-            if (remaining === 0) {
-                clearInterval(this.countdownInterval);
-                this.disableBidding();
-            }
-        };
-
-        updateCountdown();
-        this.countdownInterval = setInterval(updateCountdown, 1000);
+        countdownEl.textContent = '--:--:--';
     }
 
     /**
@@ -504,16 +518,81 @@ class AuctionDetail {
     showQRCode() {
         UIComponents.showModal('qr-code-modal');
 
-        // Generate QR code if not already done
         const container = document.querySelector('#qr-code-modal .qr-code');
         if (container && container.innerHTML.trim() === '') {
-            // Placeholder: In production, use qrcode.js library with window.location.href
-            container.innerHTML = `
-                <div style="text-align: center; padding: 20px;">
-                    <p>📱 QR Code would be displayed here</p>
-                    <p style="font-size: 0.875rem; color: #666;">Scan with your phone to share</p>
-                </div>
-            `;
+            const QRCodeLib = globalThis.QRCode;
+            if (QRCodeLib) {
+                this._qrCode = new QRCodeLib(container, {
+                    text: globalThis.location.href,
+                    width: 200,
+                    height: 200,
+                });
+            } else {
+                container.innerHTML = `<p style="text-align:center;padding:1rem;word-break:break-all;">${globalThis.location.href}</p>`;
+            }
+        }
+    }
+
+    /**
+     * Load artwork items for this auction and populate the detail fields.
+     */
+    async loadArtwork() {
+        try {
+            const token = localStorage.getItem('auth_token');
+            const response = await fetch(`/api/auctions/${this.auctionId}/artwork`, {
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+            if (!response.ok) return;
+            const data = await response.json();
+            if (data.artwork && data.artwork.length > 0) {
+                this.displayArtworkPiece(data.artwork[0]);
+            }
+        } catch (err) {
+            console.warn('Could not load auction artwork:', err);
+        }
+    }
+
+    /**
+     * Populate artwork-specific fields from the first artwork piece.
+     */
+    displayArtworkPiece(piece) {
+        const imageEl = document.getElementById('artwork-image');
+        if (imageEl && piece.imageUrl) {
+            imageEl.src = piece.imageUrl;
+            imageEl.alt = piece.title || 'Artwork';
+        }
+
+        const artistEl = document.getElementById('artwork-artist');
+        if (artistEl) artistEl.textContent = piece.artistName || '';
+        const artistSmallEl = document.getElementById('artwork-artist-small');
+        if (artistSmallEl) artistSmallEl.textContent = piece.artistName || '';
+
+        const mediumEl = document.getElementById('artwork-medium');
+        if (mediumEl) mediumEl.textContent = piece.medium || '-';
+
+        const dimensionsEl = document.getElementById('artwork-dimensions');
+        if (dimensionsEl) dimensionsEl.textContent = piece.dimensions || '-';
+
+        // Opening bid from artwork starting price
+        const openingBidEl = document.getElementById('display-opening-bid');
+        if (openingBidEl && piece.startingPrice != null) {
+            openingBidEl.textContent = UIComponents.formatCurrency(Number(piece.startingPrice));
+        }
+
+        // Current bid (falls back to starting price if no bids yet)
+        const currentBidEl = document.getElementById('display-current-bid');
+        if (currentBidEl) {
+            const bid = piece.currentBid != null ? Number(piece.currentBid) : Number(piece.startingPrice ?? 0);
+            currentBidEl.textContent = UIComponents.formatCurrency(bid);
+        }
+
+        const bidCountEl = document.getElementById('display-bid-count');
+        if (bidCountEl) bidCountEl.textContent = piece.bidCount ?? 0;
+
+        const minBidHelpEl = document.getElementById('min-bid-amount');
+        if (minBidHelpEl) {
+            const current = piece.currentBid != null ? Number(piece.currentBid) : Number(piece.startingPrice ?? 0);
+            minBidHelpEl.textContent = UIComponents.formatCurrency(current + 10);
         }
     }
 
