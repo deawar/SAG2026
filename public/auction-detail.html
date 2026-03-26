@@ -285,6 +285,32 @@
         </div>
     </div>
 
+    <!-- Modal: Artwork Detail -->
+    <div id="artwork-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="artwork-modal-title" style="display:none;">
+        <div class="modal-content modal-large">
+            <button class="modal-close" id="artwork-modal-close" aria-label="Close artwork detail">&times;</button>
+            <div style="display:flex;gap:2rem;flex-wrap:wrap;align-items:flex-start;">
+                <div style="flex:1;min-width:200px;">
+                    <img id="modal-artwork-img" src="" alt="" style="width:100%;max-height:420px;object-fit:contain;border-radius:8px;background:#f5f5f5;">
+                </div>
+                <div style="flex:1;min-width:220px;">
+                    <h2 id="artwork-modal-title" style="margin:0 0 0.25rem;font-size:1.5rem;"></h2>
+                    <p id="modal-artwork-artist" class="artist-name" style="margin:0 0 1rem;"></p>
+                    <dl class="artwork-specs">
+                        <dt>Medium:</dt><dd id="modal-artwork-medium">-</dd>
+                        <dt>Dimensions:</dt><dd id="modal-artwork-dimensions">-</dd>
+                        <dt>Opening Bid:</dt><dd id="modal-artwork-opening-bid">-</dd>
+                        <dt>Current Bid:</dt><dd id="modal-artwork-current-bid">-</dd>
+                    </dl>
+                    <div style="margin-top:1.5rem;text-align:center;">
+                        <div id="modal-artwork-qr" style="display:inline-block;"></div>
+                        <p style="font-size:0.75rem;color:#888;margin-top:0.5rem;">Scan to view this auction</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Alert Container -->
     <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
 
