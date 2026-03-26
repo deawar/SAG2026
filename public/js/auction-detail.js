@@ -174,19 +174,22 @@ class AuctionDetail {
             this.disableBidding();
         } else if (status === 'APPROVED') {
             statusBadge.className = 'auction-status-badge status-approved';
-            statusBadge.textContent = '✅ Approved';
+            statusBadge.textContent = '✅ Approved — Coming Soon';
             this.disableBidding();
         } else if (status === 'ENDED' || status === 'CLOSED' || status === 'CANCELLED') {
             statusBadge.className = 'auction-status-badge status-ended';
             statusBadge.textContent = status === 'CANCELLED' ? '❌ Cancelled' : '⛔ Auction Ended';
-            this.disableBidding();
+            const msg = status === 'CANCELLED'
+                ? 'This auction was cancelled.'
+                : 'This auction has ended. Thank you for participating!';
+            this.disableBidding(msg);
         } else if (status === 'LIVE') {
             const now = Date.now();
             const endTime = new Date(this.auction.endTime).getTime();
             if (endTime < now) {
                 statusBadge.className = 'auction-status-badge status-ended';
                 statusBadge.textContent = '⛔ Auction Ended';
-                this.disableBidding();
+                this.disableBidding('This auction has ended. Thank you for participating!');
             } else if (endTime - now < 3600000) {
                 statusBadge.className = 'auction-status-badge status-ending-soon';
                 statusBadge.textContent = '⚠️ Ending Soon';
@@ -424,9 +427,11 @@ class AuctionDetail {
     }
 
     /**
-     * Disable bidding when auction ends
+     * Hide the bidding form. Pass a message to show the closed/info alert,
+     * or omit it to silently hide the form (e.g. for upcoming auctions).
+     * @param {string|null} message
      */
-    disableBidding() {
+    disableBidding(message = null) {
         const formContainer = document.getElementById('bidding-form-container');
         if (formContainer) {
             formContainer.style.display = 'none';
@@ -434,7 +439,13 @@ class AuctionDetail {
 
         const closedAlert = document.getElementById('auction-closed');
         if (closedAlert) {
-            closedAlert.style.display = 'block';
+            if (message) {
+                const msgEl = document.getElementById('closed-message');
+                if (msgEl) msgEl.textContent = message;
+                closedAlert.style.display = 'block';
+            } else {
+                closedAlert.style.display = 'none';
+            }
         }
     }
 
