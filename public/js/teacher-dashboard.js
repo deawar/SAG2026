@@ -955,7 +955,7 @@ class TeacherDashboard {
                 : `<div style="width:100%;height:160px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:3rem;">🎨</div>`;
 
             return `
-            <div class="submission-card" style="background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;">
+            <div class="submission-card" data-submission-id="${this.escapeHtml(s.id)}" style="background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;">
                 <div class="submission-image">${thumb}</div>
                 <div class="submission-info" style="padding:1rem;flex:1;display:flex;flex-direction:column;gap:0.25rem;">
                     <h4 style="margin:0;">${this.escapeHtml(s.title)}</h4>
@@ -981,11 +981,104 @@ class TeacherDashboard {
 
         // Attach approve/reject handlers via delegation
         grid.querySelectorAll('[data-approve-id]').forEach(btn => {
-            btn.addEventListener('click', () => this.approveSubmission(btn.dataset.approveId));
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.approveSubmission(btn.dataset.approveId);
+            });
         });
         grid.querySelectorAll('[data-reject-id]').forEach(btn => {
-            btn.addEventListener('click', () => this.rejectSubmission(btn.dataset.rejectId));
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.rejectSubmission(btn.dataset.rejectId);
+            });
         });
+
+        // Card click → artwork detail modal
+        grid.querySelectorAll('.submission-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const sid = card.dataset.submissionId;
+                const sub = submissions.find(s => s.id === sid);
+                if (sub) this.showArtworkModal(sub);
+            });
+        });
+
+        // Wire up modal close (idempotent — safe to call on each render)
+        const modal = document.getElementById('artwork-modal');
+        document.getElementById('artwork-modal-close')?.addEventListener('click', () => {
+            if (modal) modal.style.display = 'none';
+        });
+        modal?.addEventListener('click', (e) => {
+            if (e.target === modal) modal.style.display = 'none';
+        });
+    }
+
+    /**
+     * Open the artwork detail modal for a submission card.
+     * @param {object} s - submission object from displaySubmissions
+     */
+    showArtworkModal(s) {
+        const modal = document.getElementById('artwork-modal');
+        if (!modal) return;
+
+        const img = document.getElementById('modal-artwork-img');
+        if (img) {
+            img.src   = s.imageUrl || '';
+            img.alt   = s.title   || 'Artwork';
+            img.style.display = s.imageUrl ? '' : 'none';
+        }
+
+        const set = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val || '-';
+        };
+        set('artwork-modal-title',       s.title);
+        set('modal-artwork-artist',      s.studentName);
+        set('modal-artwork-auction',     s.auctionTitle);
+        set('modal-artwork-medium',      s.medium);
+        set('modal-artwork-dimensions',  (s.width && s.height) ? `${s.width} × ${s.height} cm` : null);
+        set('modal-artwork-starting-bid', s.startingBid == null
+            ? null : `$${Number(s.startingBid).toFixed(2)}`);
+        set('modal-artwork-status',      s.status);
+
+        // QR code pointing to the auction detail page
+        const qrContainer = document.getElementById('modal-artwork-qr');
+        if (qrContainer) {
+            qrContainer.innerHTML = '';
+            const auctionUrl = `${globalThis.location.origin}/auction-detail.html?id=${encodeURIComponent(s.auctionId)}`;
+            const QRCodeLib = globalThis.QRCode;
+            if (QRCodeLib) {
+                this._artworkQr = new QRCodeLib(qrContainer, {
+                    text: auctionUrl,
+                    width: 160,
+                    height: 160,
+                });
+            } else {
+                qrContainer.textContent = auctionUrl;
+            }
+        }
+
+        // Approve / Reject actions inside modal (pending only)
+        const actionsEl = document.getElementById('modal-artwork-actions');
+        if (actionsEl) {
+            const isPending = s.status === 'SUBMITTED' || s.status === 'PENDING_APPROVAL';
+            if (isPending) {
+                actionsEl.innerHTML = `
+                    <button class="btn btn-primary" id="modal-approve-btn" style="flex:1;">Approve</button>
+                    <button class="btn btn-secondary" id="modal-reject-btn" style="flex:1;">Reject</button>`;
+                document.getElementById('modal-approve-btn')?.addEventListener('click', async () => {
+                    modal.style.display = 'none';
+                    await this.approveSubmission(s.id);
+                });
+                document.getElementById('modal-reject-btn')?.addEventListener('click', async () => {
+                    modal.style.display = 'none';
+                    await this.rejectSubmission(s.id);
+                });
+            } else {
+                actionsEl.innerHTML = '';
+            }
+        }
+
+        modal.style.display = 'flex';
     }
 
     async approveSubmission(id) {
