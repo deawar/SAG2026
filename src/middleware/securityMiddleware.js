@@ -26,6 +26,9 @@ const sanitizeInput = (req, res, next) => {
     if (req.body) {
       Object.keys(req.body).forEach(key => {
         if (typeof req.body[key] === 'string') {
+          // Skip data URLs (base64 images) — validator.escape() corrupts them
+          // by escaping '/' in the MIME type and base64 payload
+          if (req.body[key].startsWith('data:')) return;
           // Remove HTML tags and dangerous characters
           req.body[key] = validator.trim(req.body[key]);
           req.body[key] = validator.escape(req.body[key]);
