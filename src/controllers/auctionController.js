@@ -426,6 +426,10 @@ class AuctionController {
           title: piece.title,
           description: piece.description,
           imageUrl: piece.image_url,
+          medium: piece.medium || null,
+          dimensions: (piece.dimensions_width_cm && piece.dimensions_height_cm)
+            ? `${piece.dimensions_width_cm} × ${piece.dimensions_height_cm} cm`
+            : null,
           startingPrice: piece.starting_bid_amount,
           currentBid: piece.current_bid,
           bidCount: parseInt(piece.bid_count),
