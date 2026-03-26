@@ -155,8 +155,9 @@ function canViewArtwork(user, artwork) {
     return false;
   }
 
-  const ownSubmission = user.id === artwork.submitted_by;
-  const sameSchool = user.schoolId === artwork.school_id;
+  const artworkStatus = artwork.artwork_status || artwork.status;
+  const ownSubmission = user.id === (artwork.created_by_user_id || artwork.submitted_by);
+  const sameSchool = artwork.school_id ? user.schoolId === artwork.school_id : true;
 
   switch (user.role) {
     case 'SITE_ADMIN':
@@ -167,15 +168,15 @@ function canViewArtwork(user, artwork) {
 
     case 'TEACHER':
       // Can see own submissions + approved artwork in school
-      return sameSchool && (ownSubmission || artwork.status === 'APPROVED');
+      return sameSchool && (ownSubmission || artworkStatus === 'APPROVED');
 
     case 'STUDENT':
       // Can see own draft submissions + approved artwork only
-      return sameSchool && (ownSubmission || artwork.status === 'APPROVED');
+      return sameSchool && (ownSubmission || artworkStatus === 'APPROVED');
 
     case 'BIDDER':
       // Can see approved artwork only
-      return sameSchool && artwork.status === 'APPROVED';
+      return sameSchool && artworkStatus === 'APPROVED';
 
     default:
       return false;
