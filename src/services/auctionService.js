@@ -128,13 +128,15 @@ class AuctionService {
    */
   async getAuction(auctionId) {
     const result = await pool.query(
-      `SELECT a.*, 
+      `SELECT a.*,
+              s.name AS school_name,
               (SELECT COUNT(*) FROM artwork WHERE auction_id = a.id) as artwork_count,
-              (SELECT COUNT(*) FROM bids b JOIN artwork aw ON b.artwork_id = aw.id 
+              (SELECT COUNT(*) FROM bids b JOIN artwork aw ON b.artwork_id = aw.id
                WHERE aw.auction_id = a.id AND b.bid_status = 'ACTIVE') as total_bids,
               (SELECT SUM(bid_amount) FROM bids b JOIN artwork aw ON b.artwork_id = aw.id
                WHERE aw.auction_id = a.id AND b.bid_status = 'ACTIVE') as total_current_value
        FROM auctions a
+       LEFT JOIN schools s ON s.id = a.school_id
        WHERE a.id = $1 AND a.deleted_at IS NULL`,
       [auctionId]
     );
@@ -153,6 +155,7 @@ class AuctionService {
       title: auction.title,
       description: auction.description,
       schoolId: auction.school_id,
+      schoolName: auction.school_name || null,
       status: auction.auction_status,
       startTime: auction.starts_at,
       endTime: auction.ends_at,

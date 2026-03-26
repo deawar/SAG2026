@@ -17,6 +17,8 @@
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+    <!-- QR Code generation -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
     <!-- Skip link -->
@@ -126,7 +128,7 @@
                             <!-- Timer -->
                             <div class="auction-timer">
                                 <div class="timer-display" id="timer-display" role="status" aria-live="polite" aria-atomic="true">
-                                    <div class="timer-label">Time Remaining</div>
+                                    <div class="timer-label" id="timer-label">Time Remaining</div>
                                     <div class="timer-value" id="timer-value" aria-label="Hours, minutes, and seconds remaining">--:--:--</div>
                                 </div>
                             </div>
