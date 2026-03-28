@@ -59,7 +59,7 @@ class StripeGateway extends PaymentGateway {
       cvc,
       cardholderName,
       billingEmail,
-      billingZip,
+      billingZip
     } = paymentData;
 
     try {
@@ -70,15 +70,15 @@ class StripeGateway extends PaymentGateway {
           number: cardNumber,
           exp_month: expiryMonth,
           exp_year: expiryYear,
-          cvc,
+          cvc
         },
         billing_details: {
           name: cardholderName,
           email: billingEmail,
           address: {
-            postal_code: billingZip,
-          },
-        },
+            postal_code: billingZip
+          }
+        }
       });
 
       return {
@@ -86,7 +86,7 @@ class StripeGateway extends PaymentGateway {
         brand: paymentMethod.card.brand,
         lastFour: paymentMethod.card.last4,
         expiryMonth: paymentMethod.card.exp_month,
-        expiryYear: paymentMethod.card.exp_year,
+        expiryYear: paymentMethod.card.exp_year
       };
     } catch (error) {
       throw new Error(`STRIPE_TOKENIZATION_FAILED: ${error.message}`);
@@ -101,7 +101,7 @@ class StripeGateway extends PaymentGateway {
       description,
       idempotencyKey,
       customerEmail,
-      metadata,
+      metadata
     } = chargeData;
 
     try {
@@ -116,11 +116,11 @@ class StripeGateway extends PaymentGateway {
           metadata: {
             ...metadata,
             auctionId: metadata.auctionId,
-            buyerId: metadata.buyerId,
-          },
+            buyerId: metadata.buyerId
+          }
         },
         {
-          idempotencyKey, // Prevent duplicate charges
+          idempotencyKey // Prevent duplicate charges
         }
       );
 
@@ -130,7 +130,7 @@ class StripeGateway extends PaymentGateway {
         amount: charge.amount / 100, // Convert back to dollars
         currency: charge.currency.toUpperCase(),
         timestamp: new Date(charge.created * 1000),
-        gatewayResponse: charge,
+        gatewayResponse: charge
       };
     } catch (error) {
       throw new Error(`STRIPE_CHARGE_FAILED: ${error.message}`);
@@ -145,14 +145,14 @@ class StripeGateway extends PaymentGateway {
         payment_intent: transactionId,
         amount: amount ? Math.round(amount * 100) : undefined,
         reason,
-        metadata,
+        metadata
       });
 
       return {
         refundId: refund.id,
         status: refund.status,
         amount: refund.amount / 100,
-        timestamp: new Date(refund.created * 1000),
+        timestamp: new Date(refund.created * 1000)
       };
     } catch (error) {
       throw new Error(`STRIPE_REFUND_FAILED: ${error.message}`);
@@ -168,7 +168,7 @@ class StripeGateway extends PaymentGateway {
         status: charge.status,
         amount: charge.amount / 100,
         currency: charge.currency.toUpperCase(),
-        timestamp: new Date(charge.created * 1000),
+        timestamp: new Date(charge.created * 1000)
       };
     } catch (error) {
       throw new Error(`STRIPE_STATUS_CHECK_FAILED: ${error.message}`);
@@ -186,7 +186,7 @@ class StripeGateway extends PaymentGateway {
       return {
         eventType: event.type,
         eventId: event.id,
-        data: event.data.object,
+        data: event.data.object
       };
     } catch (error) {
       throw new Error(`STRIPE_WEBHOOK_INVALID: ${error.message}`);
@@ -204,7 +204,7 @@ class SquareGateway extends PaymentGateway {
     const square = require('square');
     this.client = new square.Client({
       accessToken: config.apiKey,
-      environment: config.environment || 'production',
+      environment: config.environment || 'production'
     });
     this.paymentsApi = this.client.getPaymentsApi();
   }
@@ -215,7 +215,7 @@ class SquareGateway extends PaymentGateway {
     // Square uses nonce from frontend, not direct tokenization
     // This would be handled by Square Web Payments SDK on frontend
     return {
-      token: nonce,
+      token: nonce
       // Additional fields populated after charge
     };
   }
@@ -227,7 +227,7 @@ class SquareGateway extends PaymentGateway {
       token,
       idempotencyKey,
       customerEmail,
-      metadata,
+      metadata
     } = chargeData;
 
     try {
@@ -235,12 +235,12 @@ class SquareGateway extends PaymentGateway {
         sourceId: token,
         amountMoney: {
           amount: Math.round(amount * 100),
-          currency,
+          currency
         },
         idempotencyKey,
         receiptEmail: customerEmail,
         customerId: metadata.customerId,
-        note: `Auction: ${metadata.auctionId}`,
+        note: `Auction: ${metadata.auctionId}`
       });
 
       const payment = result.result.payment;
@@ -251,7 +251,7 @@ class SquareGateway extends PaymentGateway {
         amount: payment.amount_money.amount / 100,
         currency: payment.amount_money.currency,
         timestamp: new Date(payment.created_at),
-        gatewayResponse: payment,
+        gatewayResponse: payment
       };
     } catch (error) {
       throw new Error(`SQUARE_CHARGE_FAILED: ${error.message}`);
@@ -266,9 +266,9 @@ class SquareGateway extends PaymentGateway {
         paymentId: transactionId,
         amountMoney: {
           amount: Math.round(amount * 100),
-          currency: 'USD',
+          currency: 'USD'
         },
-        idempotencyKey: uuidv4(),
+        idempotencyKey: uuidv4()
       });
 
       const refund = result.result.refund;
@@ -277,7 +277,7 @@ class SquareGateway extends PaymentGateway {
         refundId: refund.id,
         status: refund.status,
         amount: refund.amount_money.amount / 100,
-        timestamp: new Date(refund.created_at),
+        timestamp: new Date(refund.created_at)
       };
     } catch (error) {
       throw new Error(`SQUARE_REFUND_FAILED: ${error.message}`);
@@ -294,7 +294,7 @@ class SquareGateway extends PaymentGateway {
         status: payment.status,
         amount: payment.amount_money.amount / 100,
         currency: payment.amount_money.currency,
-        timestamp: new Date(payment.created_at),
+        timestamp: new Date(payment.created_at)
       };
     } catch (error) {
       throw new Error(`SQUARE_STATUS_CHECK_FAILED: ${error.message}`);
@@ -316,7 +316,7 @@ class SquareGateway extends PaymentGateway {
       return {
         eventType: webhookData.type,
         eventId: webhookData.id,
-        data: webhookData.data,
+        data: webhookData.data
       };
     } catch (error) {
       throw new Error(`SQUARE_WEBHOOK_INVALID: ${error.message}`);
@@ -350,7 +350,7 @@ class PaymentService {
       currency,
       paymentMethodId,
       gatewayId,
-      metadata,
+      metadata
     } = paymentData;
 
     // Validate amount
@@ -369,7 +369,7 @@ class PaymentService {
       userId,
       amount,
       paymentMethod,
-      metadata,
+      metadata
     });
 
     // Create idempotency key for retry safety
@@ -392,8 +392,8 @@ class PaymentService {
         metadata: {
           auctionId,
           artworkId,
-          buyerId: userId,
-        },
+          buyerId: userId
+        }
       });
 
       // Calculate platform fee
@@ -412,7 +412,7 @@ class PaymentService {
         gatewayTransactionId: chargeResult.transactionId,
         transactionStatus: 'COMPLETED',
         gatewayResponse: chargeResult,
-        idempotencyKey,
+        idempotencyKey
       });
 
       // Record compliance audit
@@ -421,7 +421,7 @@ class PaymentService {
         userId,
         action: 'PAYMENT_PROCESSED',
         amount,
-        gatewayType: gatewayConfig.gateway_type,
+        gatewayType: gatewayConfig.gateway_type
       });
 
       return {
@@ -431,7 +431,7 @@ class PaymentService {
         amount: chargeResult.amount,
         platformFee: feeCalculation.platformFee,
         totalAmount: amount + feeCalculation.platformFee,
-        timestamp: chargeResult.timestamp,
+        timestamp: chargeResult.timestamp
       };
     } catch (error) {
       // Record failed transaction for auditing
@@ -443,7 +443,7 @@ class PaymentService {
         gatewayId,
         amount,
         errorMessage: error.message,
-        idempotencyKey,
+        idempotencyKey
       });
 
       throw error;
@@ -477,8 +477,8 @@ class PaymentService {
         amount: transaction.total_amount,
         reason,
         metadata: {
-          originalTransactionId: transaction.id,
-        },
+          originalTransactionId: transaction.id
+        }
       });
 
       // Record refund
@@ -487,7 +487,7 @@ class PaymentService {
         refundAmount: transaction.total_amount,
         refundReason: reason,
         gatewayRefundId: refundResult.refundId,
-        refundStatus: 'COMPLETED',
+        refundStatus: 'COMPLETED'
       });
 
       // Update transaction status
@@ -502,7 +502,7 @@ class PaymentService {
         transactionId,
         action: 'PAYMENT_REFUNDED',
         amount: refund.refund_amount,
-        reason,
+        reason
       });
 
       return {
@@ -510,7 +510,7 @@ class PaymentService {
         transactionId,
         status: 'COMPLETED',
         amount: refund.refund_amount,
-        timestamp: refundResult.timestamp,
+        timestamp: refundResult.timestamp
       };
     } catch (error) {
       // Record failed refund
@@ -518,7 +518,7 @@ class PaymentService {
         transactionId,
         refundAmount: transaction.total_amount,
         refundReason: reason,
-        errorMessage: error.message,
+        errorMessage: error.message
       });
 
       throw error;
@@ -555,7 +555,7 @@ class PaymentService {
         transactionId,
         status: transaction.transaction_status,
         amount: transaction.hammer_amount,
-        currency: 'USD',
+        currency: 'USD'
       };
     }
   }
@@ -569,7 +569,7 @@ class PaymentService {
   async _calculatePlatformFee(auctionId, hammerAmount) {
     // Get auction configuration
     const result = await this.db.query(
-      `SELECT platform_fee_percentage, platform_fee_minimum FROM auctions WHERE id = $1`,
+      'SELECT platform_fee_percentage, platform_fee_minimum FROM auctions WHERE id = $1',
       [auctionId]
     );
 
@@ -586,7 +586,7 @@ class PaymentService {
       platformFee,
       platformFeePercentage: auction.platform_fee_percentage,
       platformFeeMinimum: auction.platform_fee_minimum,
-      totalAmount: hammerAmount + platformFee,
+      totalAmount: hammerAmount + platformFee
     };
   }
 
@@ -610,7 +610,7 @@ class PaymentService {
 
   async _getGatewayConfig(gatewayId) {
     const result = await this.db.query(
-      `SELECT id, gateway_type, api_key_encrypted, api_secret_encrypted FROM payment_gateways WHERE id = $1`,
+      'SELECT id, gateway_type, api_key_encrypted, api_secret_encrypted FROM payment_gateways WHERE id = $1',
       [gatewayId]
     );
 
@@ -623,7 +623,7 @@ class PaymentService {
 
   async _getTransaction(transactionId) {
     const result = await this.db.query(
-      `SELECT * FROM transactions WHERE id = $1`,
+      'SELECT * FROM transactions WHERE id = $1',
       [transactionId]
     );
 
@@ -647,7 +647,7 @@ class PaymentService {
       gatewayTransactionId,
       transactionStatus,
       gatewayResponse,
-      idempotencyKey,
+      idempotencyKey
     } = transactionData;
 
     const result = await this.db.query(
@@ -669,7 +669,7 @@ class PaymentService {
         gatewayTransactionId,
         transactionStatus,
         JSON.stringify(gatewayResponse),
-        idempotencyKey,
+        idempotencyKey
       ]
     );
 
@@ -693,7 +693,7 @@ class PaymentService {
         transactionData.amount,
         transactionData.amount,
         JSON.stringify({ error: transactionData.errorMessage }),
-        transactionData.idempotencyKey,
+        transactionData.idempotencyKey
       ]
     );
 
@@ -710,7 +710,7 @@ class PaymentService {
         refundData.refundAmount,
         refundData.refundReason,
         refundData.gatewayRefundId,
-        refundData.refundStatus,
+        refundData.refundStatus
       ]
     );
 
@@ -725,7 +725,7 @@ class PaymentService {
       [
         refundData.transactionId,
         refundData.refundAmount,
-        refundData.refundReason,
+        refundData.refundReason
       ]
     );
 
@@ -799,7 +799,7 @@ class FraudDetectionService {
     return {
       approved: true,
       fraudScore: finalFraudScore,
-      flaggedRules,
+      flaggedRules
     };
   }
 
@@ -831,7 +831,7 @@ class FraudDetectionService {
 
   async _isNewPaymentMethod(userId, paymentMethodId) {
     const result = await this.db.query(
-      `SELECT created_at FROM payment_methods WHERE id = $1 AND user_id = $2`,
+      'SELECT created_at FROM payment_methods WHERE id = $1 AND user_id = $2',
       [paymentMethodId, userId]
     );
 
@@ -871,7 +871,7 @@ class FraudDetectionService {
       'DAILY_SPENDING_LIMIT_EXCEEDED': 20,
       'TRANSACTION_FREQUENCY_LIMIT_EXCEEDED': 15,
       'NEW_PAYMENT_METHOD': 10,
-      'GEOGRAPHIC_ANOMALY': 30,
+      'GEOGRAPHIC_ANOMALY': 30
     };
 
     let totalScore = 0;
@@ -892,5 +892,5 @@ module.exports = {
   StripeGateway,
   SquareGateway,
   PaymentService,
-  FraudDetectionService,
+  FraudDetectionService
 };

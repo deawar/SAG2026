@@ -119,7 +119,7 @@ class NotificationController {
         if (typeof preferences[key] !== 'boolean') {
           return res.status(400).json({
             success: false,
-            message: `Preference values must be boolean`,
+            message: 'Preference values must be boolean',
             errors: [`${key} must be true or false`]
           });
         }
@@ -247,13 +247,13 @@ const router = express.Router();
 /**
  * Routes require NotificationController instance
  * Usage in src/routes/index.js:
- * 
+ *
  * const { NotificationService } = require('../services/notificationService');
  * const NotificationController = require('../controllers/notificationController');
  * const notificationService = new NotificationService(db, emailConfig, smsConfig);
  * const notificationController = new NotificationController(notificationService);
- * 
- * router.post('/notifications', authMiddleware.verifyToken, 
+ *
+ * router.post('/notifications', authMiddleware.verifyToken,
  *   (req, res, next) => notificationController.queueNotification(req, res, next));
  */
 

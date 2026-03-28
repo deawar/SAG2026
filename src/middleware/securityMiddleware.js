@@ -28,7 +28,7 @@ const sanitizeInput = (req, res, next) => {
         if (typeof req.body[key] === 'string') {
           // Skip data URLs (base64 images) — validator.escape() corrupts them
           // by escaping '/' in the MIME type and base64 payload
-          if (req.body[key].startsWith('data:')) return;
+          if (req.body[key].startsWith('data:')) {return;}
           // Remove HTML tags and dangerous characters
           req.body[key] = validator.trim(req.body[key]);
           req.body[key] = validator.escape(req.body[key]);
@@ -102,7 +102,7 @@ const validateInput = (data, schema) => {
       continue;
     }
 
-    if (!value) continue;
+    if (!value) {continue;}
 
     // Check type
     if (rules.type && typeof value !== rules.type) {
@@ -227,7 +227,7 @@ const generateCSRFToken = (req, res, next) => {
  * CSRF error handler
  */
 const csrfErrorHandler = (err, req, res, next) => {
-  if (err.code !== 'EBADCSRFTOKEN') return next(err);
+  if (err.code !== 'EBADCSRFTOKEN') {return next(err);}
 
   res.status(403).json({
     success: false,
@@ -245,7 +245,7 @@ const csrfErrorHandler = (err, req, res, next) => {
  * Escape SQL dangerous characters
  */
 const escapeSQLSpecialChars = (str) => {
-  if (typeof str !== 'string') return str;
+  if (typeof str !== 'string') {return str;}
   return str
     .replace(/\\/g, '\\\\')
     .replace(/'/g, "\\'")
@@ -275,7 +275,7 @@ const validateSQLIdentifier = (identifier) => {
  * Encode HTML entities to prevent XSS
  */
 const encodeHTML = (str) => {
-  if (typeof str !== 'string') return str;
+  if (typeof str !== 'string') {return str;}
   const map = {
     '&': '&amp;',
     '<': '&lt;',
@@ -291,7 +291,7 @@ const encodeHTML = (str) => {
  * Sanitize HTML to allow only safe tags
  */
 const sanitizeHTML = (html) => {
-  if (typeof html !== 'string') return html;
+  if (typeof html !== 'string') {return html;}
   // Remove all HTML tags (basic XSS prevention)
   return html.replace(/<[^>]*>/g, '');
 };
@@ -359,7 +359,7 @@ const idempotencyMiddleware = (req, res, next) => {
 
   if (!idempotencyKey) {
     // For operations that require idempotency
-    if (['POST', 'PUT', 'DELETE'].includes(req.method) && 
+    if (['POST', 'PUT', 'DELETE'].includes(req.method) &&
         req.path.includes('/payments')) {
       return res.status(400).json({
         success: false,
@@ -415,8 +415,8 @@ const securityLogger = (req, res, next) => {
   const urlString = req.url;
 
   for (const pattern of suspiciousPatterns) {
-    if (pattern.test(queryString) || 
-        pattern.test(bodyString) || 
+    if (pattern.test(queryString) ||
+        pattern.test(bodyString) ||
         pattern.test(urlString)) {
       console.warn('[SECURITY] Suspicious request detected', {
         timestamp: new Date().toISOString(),
@@ -426,7 +426,7 @@ const securityLogger = (req, res, next) => {
         query: req.query,
         body: req.body
       });
-      
+
       // Don't block, just log for monitoring
       break;
     }
@@ -447,36 +447,36 @@ module.exports = {
   validateEmail,
   validatePasswordStrength,
   validateInput,
-  
+
   // Rate limiting
   apiLimiter,
   authLimiter,
   passwordResetLimiter,
   paymentLimiter,
-  
+
   // CSRF protection
   csrfProtection,
   csrfErrorHandler,
   generateCSRFToken,
-  
+
   // SQL injection prevention
   escapeSQLSpecialChars,
   validateSQLIdentifier,
-  
+
   // XSS prevention
   encodeHTML,
   sanitizeHTML,
-  
+
   // Security headers
   productionSecurityHeaders,
   developmentSecurityHeaders,
-  
+
   // Idempotency
   idempotencyMiddleware,
-  
+
   // Logging
   securityLogger,
-  
+
   // Utilities
   mongoSanitize,
   helmet

@@ -1,7 +1,7 @@
 /**
  * Admin Controller - Section 8
  * HTTP request handlers for admin dashboard endpoints
- * 
+ *
  * CRITICAL: All methods enforce RBAC via verifyToken + verifyRole middleware
  * CRITICAL: All responses follow consistent error/success format
  */
@@ -334,7 +334,7 @@ class AdminController {
         resetUrl: emailSent ? undefined : resetUrl,
         message: emailSent
           ? `Password reset email sent to ${result.userEmail}.`
-          : `Could not send email. Share this link with the user — expires in 24 hours.`
+          : 'Could not send email. Share this link with the user — expires in 24 hours.'
       });
     } catch (error) {
       return this.handleError(error, res);

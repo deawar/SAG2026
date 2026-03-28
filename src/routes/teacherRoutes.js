@@ -19,12 +19,12 @@ router.use(authMiddleware.verifyRole('TEACHER', 'SCHOOL_ADMIN', 'SITE_ADMIN'));
  * Body: { students: [ { name, email }, ... ] }
  */
 router.post('/csv-upload', async (req, res, next) => {
-    try {
-        const result = await TeacherController.uploadCSV(req, res);
-        return result;
-    } catch (error) {
-        next(error);
-    }
+  try {
+    const result = await TeacherController.uploadCSV(req, res);
+    return result;
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**
@@ -32,12 +32,12 @@ router.post('/csv-upload', async (req, res, next) => {
  * Get all artwork submissions for teacher's school
  */
 router.get('/submissions', async (req, res, next) => {
-    try {
-        const result = await TeacherController.getSubmissions(req, res);
-        return result;
-    } catch (error) {
-        next(error);
-    }
+  try {
+    const result = await TeacherController.getSubmissions(req, res);
+    return result;
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**
@@ -45,12 +45,12 @@ router.get('/submissions', async (req, res, next) => {
  * Get all auctions created by teacher
  */
 router.get('/auctions', async (req, res, next) => {
-    try {
-        const result = await TeacherController.getAuctions(req, res);
-        return result;
-    } catch (error) {
-        next(error);
-    }
+  try {
+    const result = await TeacherController.getAuctions(req, res);
+    return result;
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**
@@ -58,12 +58,12 @@ router.get('/auctions', async (req, res, next) => {
  * Get details of a specific registration token
  */
 router.get('/tokens/:tokenId', async (req, res, next) => {
-    try {
-        const result = await TeacherController.getTokenDetails(req, res);
-        return result;
-    } catch (error) {
-        next(error);
-    }
+  try {
+    const result = await TeacherController.getTokenDetails(req, res);
+    return result;
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**
@@ -71,12 +71,12 @@ router.get('/tokens/:tokenId', async (req, res, next) => {
  * Revoke a registration token
  */
 router.delete('/tokens/:tokenId', async (req, res, next) => {
-    try {
-        const result = await TeacherController.revokeToken(req, res);
-        return result;
-    } catch (error) {
-        next(error);
-    }
+  try {
+    const result = await TeacherController.revokeToken(req, res);
+    return result;
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**
@@ -86,11 +86,11 @@ router.delete('/tokens/:tokenId', async (req, res, next) => {
  * pending    = tokens that have been created but not yet used.
  */
 router.get('/students', async (req, res, next) => {
-    try {
-        return await TeacherController.getStudents(req, res);
-    } catch (error) {
-        next(error);
-    }
+  try {
+    return await TeacherController.getStudents(req, res);
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**
@@ -98,11 +98,11 @@ router.get('/students', async (req, res, next) => {
  * Get teacher's display name and school name for email attribution
  */
 router.get('/teacher-info', async (req, res, next) => {
-    try {
-        return await TeacherController.getTeacherInfo(req, res);
-    } catch (error) {
-        next(error);
-    }
+  try {
+    return await TeacherController.getTeacherInfo(req, res);
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**
@@ -111,11 +111,11 @@ router.get('/teacher-info', async (req, res, next) => {
  * Body: { studentName, studentEmail }
  */
 router.put('/tokens/:tokenId', async (req, res, next) => {
-    try {
-        return await TeacherController.updateToken(req, res);
-    } catch (error) {
-        next(error);
-    }
+  try {
+    return await TeacherController.updateToken(req, res);
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**
@@ -124,11 +124,11 @@ router.put('/tokens/:tokenId', async (req, res, next) => {
  * Body: { firstName, lastName }
  */
 router.put('/students/:userId', async (req, res, next) => {
-    try {
-        return await TeacherController.updateStudent(req, res);
-    } catch (error) {
-        next(error);
-    }
+  try {
+    return await TeacherController.updateStudent(req, res);
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**
@@ -136,11 +136,11 @@ router.put('/students/:userId', async (req, res, next) => {
  * Soft-delete a registered student (school-scoped, student accounts only).
  */
 router.delete('/students/:userId', async (req, res, next) => {
-    try {
-        return await TeacherController.deleteStudent(req, res);
-    } catch (error) {
-        next(error);
-    }
+  try {
+    return await TeacherController.deleteStudent(req, res);
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**
@@ -149,11 +149,11 @@ router.delete('/students/:userId', async (req, res, next) => {
  * Body: { tokenIds: [...] }
  */
 router.post('/send-invites', async (req, res, next) => {
-    try {
-        return await TeacherController.sendInvites(req, res);
-    } catch (error) {
-        next(error);
-    }
+  try {
+    return await TeacherController.sendInvites(req, res);
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**
@@ -161,11 +161,11 @@ router.post('/send-invites', async (req, res, next) => {
  * Approve a student artwork submission (school-scoped)
  */
 router.put('/submissions/:id/approve', async (req, res, next) => {
-    try {
-        return await TeacherController.approveSubmission(req, res);
-    } catch (error) {
-        next(error);
-    }
+  try {
+    return await TeacherController.approveSubmission(req, res);
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**
@@ -174,11 +174,11 @@ router.put('/submissions/:id/approve', async (req, res, next) => {
  * Body: { reason }
  */
 router.put('/submissions/:id/reject', async (req, res, next) => {
-    try {
-        return await TeacherController.rejectSubmission(req, res);
-    } catch (error) {
-        next(error);
-    }
+  try {
+    return await TeacherController.rejectSubmission(req, res);
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;

@@ -159,7 +159,7 @@ class AuctionService {
       status: auction.auction_status,
       startTime: auction.starts_at,
       endTime: auction.ends_at,
-      timeRemaining: timeRemaining,
+      timeRemaining,
       isActive: auction.auction_status === 'LIVE' && endTime > now,
       artworkCount: parseInt(auction.artwork_count),
       totalBids: parseInt(auction.total_bids) || 0,
@@ -315,7 +315,7 @@ class AuctionService {
 
       // Update auction status to LIVE
       await client.query(
-        `UPDATE auctions SET auction_status = $1, published_at = NOW() WHERE id = $2`,
+        'UPDATE auctions SET auction_status = $1, published_at = NOW() WHERE id = $2',
         ['LIVE', auctionId]
       );
 
@@ -330,7 +330,7 @@ class AuctionService {
 
       return {
         success: true,
-        auctionId: auctionId,
+        auctionId,
         status: 'LIVE',
         message: 'Auction started successfully'
       };
@@ -379,10 +379,10 @@ class AuctionService {
     // Map frontend status values to database values
     if (status) {
       let dbStatus = status.toUpperCase();
-      if (dbStatus === 'ACTIVE') dbStatus = 'LIVE';
-      if (dbStatus === 'PENDING') dbStatus = 'PENDING_APPROVAL';
-      if (dbStatus === 'DRAFT') dbStatus = 'DRAFT';
-      if (dbStatus === 'FINISHED' || dbStatus === 'ENDED') dbStatus = 'ENDED';
+      if (dbStatus === 'ACTIVE') {dbStatus = 'LIVE';}
+      if (dbStatus === 'PENDING') {dbStatus = 'PENDING_APPROVAL';}
+      if (dbStatus === 'DRAFT') {dbStatus = 'DRAFT';}
+      if (dbStatus === 'FINISHED' || dbStatus === 'ENDED') {dbStatus = 'ENDED';}
 
       query += ` AND a.auction_status = $${paramCount}`;
       params.push(dbStatus);
@@ -404,7 +404,7 @@ class AuctionService {
       'title',
       'ending_soon'  // Special case for sorting by time remaining
     ];
-    
+
     let sortField = 'created_at';
     if (validSortFields.includes(finalSort)) {
       if (finalSort === 'ending_soon') {
@@ -413,7 +413,7 @@ class AuctionService {
         sortField = finalSort;
       }
     }
-    
+
     const order = sortOrder && sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
     query += ` ORDER BY ${sortField} ${order} LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
@@ -427,11 +427,11 @@ class AuctionService {
     if (status) {
       let dbStatus = status.toUpperCase();
       // Map common status values
-      if (dbStatus === 'ACTIVE') dbStatus = 'LIVE';
-      if (dbStatus === 'PENDING') dbStatus = 'PENDING_APPROVAL';
-      if (dbStatus === 'DRAFT') dbStatus = 'DRAFT';
-      if (dbStatus === 'FINISHED' || dbStatus === 'ENDED') dbStatus = 'ENDED';
-      
+      if (dbStatus === 'ACTIVE') {dbStatus = 'LIVE';}
+      if (dbStatus === 'PENDING') {dbStatus = 'PENDING_APPROVAL';}
+      if (dbStatus === 'DRAFT') {dbStatus = 'DRAFT';}
+      if (dbStatus === 'FINISHED' || dbStatus === 'ENDED') {dbStatus = 'ENDED';}
+
       countQuery += ` AND auction_status = $${countParams.length + 1}`;
       countParams.push(dbStatus);
     }
@@ -576,7 +576,7 @@ class AuctionService {
 
       // Update auction status to ENDED
       await client.query(
-        `UPDATE auctions SET auction_status = $1 WHERE id = $2`,
+        'UPDATE auctions SET auction_status = $1 WHERE id = $2',
         ['ENDED', auctionId]
       );
 
@@ -601,13 +601,13 @@ class AuctionService {
 
       return {
         success: true,
-        auctionId: auctionId,
+        auctionId,
         status: 'ended',
-        totalRevenue: totalRevenue,
-        platformFee: platformFee,
+        totalRevenue,
+        platformFee,
         charityRevenue: totalRevenue - platformFee,
         winnersCount: winners.length,
-        winners: winners,
+        winners,
         message: `Auction ended with ${winners.length} winning bids`
       };
     } catch (error) {
@@ -632,7 +632,7 @@ class AuctionService {
 
       // Get auction
       const auctionResult = await client.query(
-        `SELECT * FROM auctions WHERE id = $1 FOR UPDATE`,
+        'SELECT * FROM auctions WHERE id = $1 FOR UPDATE',
         [auctionId]
       );
 
@@ -656,7 +656,7 @@ class AuctionService {
 
       // Update auction end time
       await client.query(
-        `UPDATE auctions SET ends_at = $1 WHERE id = $2`,
+        'UPDATE auctions SET ends_at = $1 WHERE id = $2',
         [newEndTime, auctionId]
       );
 
@@ -680,8 +680,8 @@ class AuctionService {
 
       return {
         success: true,
-        auctionId: auctionId,
-        newEndTime: newEndTime,
+        auctionId,
+        newEndTime,
         extendedByMinutes: extendMinutes,
         message: `Auction auto-extended by ${extendMinutes} minutes`
       };
@@ -740,7 +740,7 @@ class AuctionService {
 
       return {
         success: true,
-        auctionId: auctionId,
+        auctionId,
         message: 'Auction deleted successfully'
       };
     } catch (error) {
@@ -783,9 +783,9 @@ class AuctionService {
 
     return {
       success: true,
-      auctionId: auctionId,
+      auctionId,
       winnerCount: winners.length,
-      winners: winners,
+      winners,
       hasWinners: winners.length > 0
     };
   }

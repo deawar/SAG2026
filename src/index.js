@@ -79,8 +79,8 @@ async function startServer() {
       console.log('\nRunning startup migrations...');
       try {
         // pg_trgm must be created before the GIN indexes that depend on it
-        await db.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
-        await db.query(`ALTER TABLE schools ADD COLUMN IF NOT EXISTS ceeb_code VARCHAR(10)`);
+        await db.query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+        await db.query('ALTER TABLE schools ADD COLUMN IF NOT EXISTS ceeb_code VARCHAR(10)');
         await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_schools_ceeb
                         ON schools (ceeb_code) WHERE ceeb_code IS NOT NULL`);
         await db.query(`CREATE INDEX IF NOT EXISTS idx_schools_name_trgm
@@ -89,7 +89,7 @@ async function startServer() {
                         ON schools USING GIN (city gin_trgm_ops)`);
         // Replace column-level UNIQUE on email with a partial index so soft-deleted
         // users don't block re-registration with the same email address.
-        await db.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_key`);
+        await db.query('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_key');
         await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_active
                         ON users(email) WHERE deleted_at IS NULL`);
         // Watchlist table for auction-detail page
@@ -102,7 +102,17 @@ async function startServer() {
           )`);
         // Widen image_url to TEXT so base64 data URLs can be stored directly
         // (avoids filesystem permission issues in containerised deployments)
-        await db.query(`ALTER TABLE artwork ALTER COLUMN image_url TYPE TEXT`);
+        await db.query('ALTER TABLE artwork ALTER COLUMN image_url TYPE TEXT');
+        // JTI blacklist for token revocation on logout
+        await db.query(`
+          CREATE TABLE IF NOT EXISTS token_blacklist (
+            jti        TEXT        NOT NULL PRIMARY KEY,
+            expires_at TIMESTAMPTZ NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+          )`);
+        await db.query(`
+          CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires
+            ON token_blacklist (expires_at)`);
         console.log('✅ Startup migrations complete');
       } catch (migErr) {
         console.warn('⚠️  Startup migration warning:', migErr.message);
@@ -259,7 +269,7 @@ async function startServer() {
 
       res.status(statusCode).json({
         error: err.name || 'Error',
-        message: message,
+        message,
         ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
         timestamp: new Date().toISOString()
       });
@@ -304,7 +314,7 @@ async function startServer() {
       const os = require('os');
       const interfaces = os.networkInterfaces();
       let localIp = 'localhost';
-      
+
       // Find the local IP address
       for (const name of Object.keys(interfaces)) {
         for (const iface of interfaces[name]) {
@@ -313,7 +323,7 @@ async function startServer() {
             break;
           }
         }
-        if (localIp !== 'localhost') break;
+        if (localIp !== 'localhost') {break;}
       }
 
       const protocol = HTTPS_ENABLED ? 'https' : 'http';
@@ -341,16 +351,16 @@ async function startServer() {
      */
     const gracefulShutdown = (signal) => {
       console.log(`\n${signal} received. Shutting down gracefully...`);
-      
+
       // Close WebSocket connections
       realtimeService.shutdown();
-      
+
       // Close HTTP server
       server.close(() => {
         console.log('Server closed');
         process.exit(0);
       });
-      
+
       // Force shutdown after 10 seconds
       setTimeout(() => {
         console.error('Forced shutdown due to timeout');
@@ -376,7 +386,6 @@ async function startServer() {
       console.error('Unhandled Rejection at:', promise, 'reason:', reason);
       process.exit(1);
     });
-
   } catch (error) {
     console.error('Failed to start server:', error.message);
     process.exit(1);

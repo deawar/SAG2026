@@ -282,7 +282,7 @@ class EmailTemplateService {
    * Escape HTML to prevent XSS
    */
   static escapeHtml(text) {
-    if (!text) return '';
+    if (!text) {return '';}
     const map = {
       '&': '&amp;',
       '<': '&lt;',
@@ -361,7 +361,7 @@ class EmailProvider {
       text,
       headers: {
         'X-Mailer': 'Silent-Auction-Gallery/1.0',
-        'List-Unsubscribe': `<mailto:unsubscribe@SAG.live>`
+        'List-Unsubscribe': '<mailto:unsubscribe@SAG.live>'
       }
     });
   }
@@ -489,7 +489,7 @@ class NotificationService {
    */
   async checkPreferences(userId, notificationType, channel) {
     const result = await this.db.query(
-      `SELECT * FROM notification_preferences WHERE user_id = $1`,
+      'SELECT * FROM notification_preferences WHERE user_id = $1',
       [userId]
     );
 
@@ -594,7 +594,7 @@ class NotificationService {
    */
   async sendSMS(notification) {
     const templateData = JSON.parse(notification.template_data);
-    
+
     // Build SMS message (max 160 chars for standard SMS)
     const smsMessage = this.buildSMSMessage(notification.template_id, templateData);
 
@@ -681,8 +681,8 @@ class NotificationService {
        sms_winner = COALESCE($9, sms_winner),
        updated_at = NOW()
        RETURNING *`,
-      [userId, email_outbid, email_auction_ending, email_winner, email_payment, 
-       email_security, sms_outbid, sms_auction_ending, sms_winner]
+      [userId, email_outbid, email_auction_ending, email_winner, email_payment,
+        email_security, sms_outbid, sms_auction_ending, sms_winner]
     );
 
     return result.rows[0];
