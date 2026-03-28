@@ -127,6 +127,17 @@
                     <button
                         role="tab"
                         aria-selected="false"
+                        aria-controls="gallery"
+                        class="tab-button"
+                        id="tab-gallery"
+                        tabindex="-1"
+                    >
+                        <span class="tab-icon" aria-hidden="true">🖼️</span>
+                        Gallery
+                    </button>
+                    <button
+                        role="tab"
+                        aria-selected="false"
                         aria-controls="account"
                         class="tab-button"
                         id="tab-account"
@@ -186,6 +197,13 @@
                     <div id="no-wins" class="empty-state" style="display:none;">
                         <p>You haven't won any auctions yet. <a href="/auctions.html">Browse auctions</a> to start bidding!</p>
                     </div>
+                </section>
+
+                <!-- Gallery Tab — all roles -->
+                <section role="tabpanel" id="gallery" aria-labelledby="tab-gallery" class="tab-content" style="display:none;">
+                    <h2>Artwork Gallery</h2>
+                    <p class="section-help">Browse all active artwork currently available for bidding.</p>
+                    <div id="user-gallery-carousel" class="dashboard-carousel ac-section"></div>
                 </section>
 
                 <!-- My Artwork Tab (students only — shown by JS) -->
@@ -625,6 +643,39 @@
     <script src="/js/websocket-client.js"></script>
     <script src="/js/auth-manager.js"></script>
     <script src="/js/ui-components.js"></script>
+    <script src="/js/artwork-carousel.js"></script>
     <script src="/js/user-dashboard.js"></script>
+    <script>
+      // Initialise gallery carousel when the Gallery tab is first activated
+      let _galleryCarousel = null;
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const galleryTab = document.getElementById('tab-gallery');
+        if (!galleryTab) { return; }
+
+        galleryTab.addEventListener('click', () => {
+          if (_galleryCarousel) { return; } // already initialised
+
+          // Detect school from auth token so students see their school's art
+          let schoolId = null;
+          try {
+            const token = localStorage.getItem('auth_token');
+            if (token) {
+              const payload = JSON.parse(atob(token.split('.')[1]));
+              schoolId = payload.schoolId || null;
+            }
+          } catch (err) { console.debug('[Gallery] Could not decode school from token:', err.message); }
+
+          _galleryCarousel = new ArtworkCarousel('user-gallery-carousel', {
+            title:       'Active Artwork',
+            role:        'bidder',
+            schoolId:    schoolId,
+            autoAdvance: true,
+            interval:    6000,
+          });
+          _galleryCarousel.init();
+        });
+      });
+    </script>
 </body>
 </html>
