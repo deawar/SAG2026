@@ -311,6 +311,40 @@
         </div>
     </div>
 
+    <!-- Modal: Share -->
+    <div id="share-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="share-modal-title" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" id="share-modal-close" aria-label="Close share dialog">&times;</button>
+            <h2 id="share-modal-title">Share This Auction</h2>
+            <p class="modal-subtitle" id="share-modal-subtitle"></p>
+
+            <div class="share-options">
+                <button class="btn btn-primary btn-block" data-copy-link aria-label="Copy link to clipboard">
+                    <span aria-hidden="true">🔗</span> Copy Link
+                </button>
+                <div class="share-social">
+                    <a class="btn btn-secondary" data-share-twitter href="#" target="_blank" rel="noopener noreferrer">
+                        <span aria-hidden="true">𝕏</span> Twitter / X
+                    </a>
+                    <a class="btn btn-secondary" data-share-facebook href="#" target="_blank" rel="noopener noreferrer">
+                        <span aria-hidden="true">f</span> Facebook
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: QR Code -->
+    <div id="qr-code-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="qr-code-modal-title" style="display:none;">
+        <div class="modal-content" style="text-align:center;max-width:320px;">
+            <button class="modal-close" id="qr-code-modal-close" aria-label="Close QR code dialog">&times;</button>
+            <h2 id="qr-code-modal-title">Scan to View Auction</h2>
+            <p class="modal-subtitle">Point your phone camera at this code to open the auction page.</p>
+            <div class="qr-code" style="display:inline-block;margin:1rem auto;" aria-label="QR code for this auction"></div>
+            <p id="qr-code-url" style="font-size:0.75rem;color:var(--color-text-muted);word-break:break-all;margin-top:0.5rem;"></p>
+        </div>
+    </div>
+
     <!-- Alert Container -->
     <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
 
