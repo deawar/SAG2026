@@ -63,6 +63,13 @@
             </div>
         </section>
 
+        <!-- Featured Artwork Carousel -->
+        <section class="featured-carousel-section" aria-label="Featured artwork">
+            <div class="container">
+                <div id="featured-carousel"></div>
+            </div>
+        </section>
+
         <div class="container">
             <div class="auctions-container">
                 <!-- Filters Sidebar -->
@@ -280,6 +287,18 @@
     <script src="/js/websocket-client.js"></script>
     <script src="/js/auth-manager.js"></script>
     <script src="/js/ui-components.js"></script>
+    <script src="/js/artwork-carousel.js"></script>
     <script src="/js/auctions-page.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const carousel = new ArtworkCarousel('featured-carousel', {
+          title: 'Featured Artwork',
+          role:  'bidder',
+          autoAdvance: true,
+          interval: 6000,
+        });
+        carousel.init();
+      });
+    </script>
 </body>
 </html>

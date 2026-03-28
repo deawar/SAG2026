@@ -84,6 +84,7 @@
                             <li><a href="#students" class="sidebar-link active" data-section="students">Students</a></li>
                             <li><a href="#submissions" class="sidebar-link" data-section="submissions">Artwork Submissions</a></li>
                             <li><a href="#auctions" class="sidebar-link" data-section="auctions">My Auctions</a></li>
+                            <li><a href="#gallery" class="sidebar-link" data-section="gallery">Gallery Preview</a></li>
                             <li><a href="#theme" class="sidebar-link" data-section="theme">School Theme</a></li>
                             <li><a href="#security" class="sidebar-link" data-section="security">Account Security</a></li>
                         </ul>
@@ -222,6 +223,15 @@
                                 <button class="btn btn-secondary" id="teacher-disable-2fa-btn" type="button" style="display:none;">Disable 2FA</button>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Gallery Preview Section -->
+                    <div id="gallery-section" class="dashboard-section" style="display:none;">
+                        <div class="section-header">
+                            <h2>Gallery Preview</h2>
+                            <p>Your school's active artwork as bidders see it. Use the carousel to review each piece.</p>
+                        </div>
+                        <div id="teacher-gallery-carousel" class="dashboard-carousel ac-section"></div>
                     </div>
 
                     <!-- School Theme Section -->
@@ -406,6 +416,50 @@
     <script src="/js/websocket-client.js"></script>
     <script src="/js/auth-manager.js"></script>
     <script src="/js/ui-components.js"></script>
+    <script src="/js/artwork-carousel.js"></script>
     <script src="/js/teacher-dashboard.js"></script>
+    <script>
+      // Initialise gallery carousel when the Gallery section is first activated.
+      // The teacher dashboard uses sidebar links with data-section; we watch for
+      // the gallery section becoming visible.
+      let _teacherGalleryCarousel = null;
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const galleryLink = document.querySelector('[data-section="gallery"]');
+        if (!galleryLink) { return; }
+
+        galleryLink.addEventListener('click', () => {
+          if (_teacherGalleryCarousel) { return; }
+
+          let schoolId = null;
+          try {
+            const token = localStorage.getItem('auth_token');
+            if (token) {
+              const payload = JSON.parse(atob(token.split('.')[1]));
+              schoolId = payload.schoolId || null;
+            }
+          } catch (err) { console.debug('[Gallery] Could not decode school from token:', err.message); }
+
+          _teacherGalleryCarousel = new ArtworkCarousel('teacher-gallery-carousel', {
+            title:       'School Gallery',
+            role:        'teacher',
+            schoolId:    schoolId,
+            autoAdvance: false,
+            // Wire approve/reject to the existing teacher dashboard methods if available
+            onApprove: (submissionId) => {
+              if (globalThis.teacherDashboard && typeof globalThis.teacherDashboard.approveSubmission === 'function') {
+                globalThis.teacherDashboard.approveSubmission(submissionId);
+              }
+            },
+            onReject: (submissionId) => {
+              if (globalThis.teacherDashboard && typeof globalThis.teacherDashboard.rejectSubmission === 'function') {
+                globalThis.teacherDashboard.rejectSubmission(submissionId);
+              }
+            },
+          });
+          _teacherGalleryCarousel.init();
+        });
+      });
+    </script>
 </body>
 </html>
