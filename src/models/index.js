@@ -25,7 +25,7 @@ const pool = new Pool({
   database: process.env.DB_NAME,
   max: process.env.DB_POOL_MAX || 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 2000
 });
 
 pool.on('error', (err) => {
@@ -43,7 +43,7 @@ class Database {
       database: config.database,
       max: config.maxConnections || 20,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+      connectionTimeoutMillis: 2000
     });
 
     this.pool.on('error', (err) => {
@@ -56,12 +56,12 @@ class Database {
     try {
       const result = await this.pool.query(sql, params);
       const duration = Date.now() - startTime;
-      
+
       // Log slow queries
       if (duration > 1000) {
         console.warn(`Slow query (${duration}ms):`, sql);
       }
-      
+
       return result;
     } catch (error) {
       console.error('Database query error:', error);
@@ -115,7 +115,7 @@ class UserModel {
       phoneNumber,
       dateOfBirth,
       role,
-      schoolId,
+      schoolId
     } = userData;
 
     // Check if email already exists (exclude soft-deleted users)
@@ -153,8 +153,8 @@ class UserModel {
    * @returns {Promise<Object>} - User object
    */
   async getById(userId, includeSensitive = false) {
-    const selectFields = includeSensitive 
-      ? '*' 
+    const selectFields = includeSensitive
+      ? '*'
       : 'id, email, first_name, last_name, phone_number, role, school_id, account_status, two_fa_enabled, created_at, last_login';
 
     const result = await this.db.query(
@@ -298,7 +298,7 @@ class UserModel {
    */
   async updateLastLogin(userId) {
     await this.db.query(
-      `UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1`,
+      'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
       [userId]
     );
   }
@@ -315,7 +315,7 @@ class UserModel {
     const secret = speakeasy.generateSecret({
       name: `Silent Auction (${userId})`,
       issuer: 'Silent Auction Gallery',
-      length: 20, // 20 bytes = 160 bits = exactly 32 base32 chars (fits VARCHAR(32))
+      length: 20 // 20 bytes = 160 bits = exactly 32 base32 chars (fits VARCHAR(32))
     });
 
     // Generate backup codes
@@ -333,7 +333,7 @@ class UserModel {
     return {
       secret: secret.base32,
       qrCode: secret.otpauth_url,
-      backupCodes,
+      backupCodes
     };
   }
 
@@ -354,8 +354,8 @@ class UserModel {
     const verified = speakeasy.totp.verify({
       secret: user.two_fa_secret,
       encoding: 'base32',
-      token: token,
-      window: 2, // Allow for time drift
+      token,
+      window: 2 // Allow for time drift
     });
 
     return verified;
@@ -368,7 +368,7 @@ class UserModel {
    */
   async recordFailedLogin(userId) {
     const result = await this.db.query(
-      `SELECT failed_login_attempts, account_locked_until FROM users WHERE id = $1`,
+      'SELECT failed_login_attempts, account_locked_until FROM users WHERE id = $1',
       [userId]
     );
 
@@ -376,7 +376,7 @@ class UserModel {
       throw new Error('USER_NOT_FOUND');
     }
 
-    let attempts = result.rows[0].failed_login_attempts + 1;
+    const attempts = result.rows[0].failed_login_attempts + 1;
     let lockedUntil = result.rows[0].account_locked_until;
 
     // Lock account after 5 failed attempts for 30 minutes
@@ -392,7 +392,7 @@ class UserModel {
 
     return {
       lockedUntil,
-      attemptsRemaining: Math.max(0, 5 - attempts),
+      attemptsRemaining: Math.max(0, 5 - attempts)
     };
   }
 
@@ -440,7 +440,7 @@ class UserModel {
    */
   async checkAccountStatus(userId) {
     const result = await this.db.query(
-      `SELECT account_status, account_locked_until FROM users WHERE id = $1`,
+      'SELECT account_status, account_locked_until FROM users WHERE id = $1',
       [userId]
     );
 
@@ -454,7 +454,7 @@ class UserModel {
     return {
       isLocked,
       status: user.account_status,
-      lockedUntil: user.account_locked_until,
+      lockedUntil: user.account_locked_until
     };
   }
 
@@ -495,12 +495,12 @@ class UserModel {
       if (typeof dateOfBirth === 'string') {
         dateObj = new Date(dateOfBirth);
       }
-      
+
       // Validate date is valid
       if (!(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
         throw new Error('INVALID_DATE_OF_BIRTH');
       }
-      
+
       const age = this._calculateAge(dateObj);
       if (age < 13) {
         throw new Error('COPPA_PARENTAL_CONSENT_REQUIRED');
@@ -563,7 +563,7 @@ class UserModel {
     const cipher = crypto.createCipheriv(algorithm, key, iv);
     let encrypted = cipher.update(data, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    return iv.toString('hex') + ':' + encrypted;
+    return `${iv.toString('hex')}:${encrypted}`;
   }
 
   _decryptData(encrypted) {
@@ -734,7 +734,7 @@ class AuctionModel {
       endsAt,
       paymentGatewayId,
       platformFeePercentage,
-      visibility,
+      visibility
     } = auctionData;
 
     // Validation
@@ -924,7 +924,7 @@ class AuctionModel {
     return {
       hammerAmount,
       platformFee: fee,
-      totalAmount: hammerAmount + fee,
+      totalAmount: hammerAmount + fee
     };
   }
 }
@@ -952,7 +952,7 @@ class ArtworkModel {
       estimatedValue,
       startingBidAmount,
       reserveBidAmount,
-      imageUrl,
+      imageUrl
     } = artworkData;
 
     // Validation
@@ -981,7 +981,7 @@ class ArtworkModel {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'DRAFT')
        RETURNING id, title, artwork_status, starting_bid_amount, created_at`,
       [artworkId, auctionId, createdByUserId, title, description, artistName, artistGrade, medium,
-       width, height, depth, estimatedValue, startingBidAmount, reserveBidAmount, imageUrl]
+        width, height, depth, estimatedValue, startingBidAmount, reserveBidAmount, imageUrl]
     );
 
     return result.rows[0];
@@ -1104,7 +1104,7 @@ class BidModel {
       isAutoBid,
       autoMaxAmount,
       ipAddress,
-      userAgent,
+      userAgent
     } = bidData;
 
     // Validation
@@ -1319,7 +1319,7 @@ class PaymentModel {
    */
   async getById(paymentId) {
     const result = await this.db.query(
-      `SELECT * FROM payments WHERE id = $1 AND deleted_at IS NULL`,
+      'SELECT * FROM payments WHERE id = $1 AND deleted_at IS NULL',
       [paymentId]
     );
 
@@ -1335,7 +1335,7 @@ class PaymentModel {
    */
   async getByTransactionId(transactionId) {
     const result = await this.db.query(
-      `SELECT * FROM payments WHERE transaction_id = $1 AND deleted_at IS NULL`,
+      'SELECT * FROM payments WHERE transaction_id = $1 AND deleted_at IS NULL',
       [transactionId]
     );
 
@@ -1492,5 +1492,5 @@ module.exports = {
   AuctionModel,
   ArtworkModel,
   BidModel,
-  PaymentModel,
+  PaymentModel
 };

@@ -17,7 +17,7 @@ const UserController = require('../controllers/userController');
  * in containerised deployments where the app root is read-only.
  */
 function saveBase64Image(imageData) {
-  if (!imageData) return null;
+  if (!imageData) {return null;}
   const valid = /^data:image\/(jpeg|png|gif|webp);base64,[A-Za-z0-9+/]+=*$/.test(imageData);
   return valid ? imageData : null;
 }
@@ -243,7 +243,7 @@ module.exports = (db) => {
         }
       } catch (colErr) {
         // Column may not exist yet on older deployments — return defaults
-        if (colErr.code !== '42703') throw colErr;
+        if (colErr.code !== '42703') {throw colErr;}
       }
 
       return res.json({ success: true, notifications: prefs });
@@ -263,12 +263,12 @@ module.exports = (db) => {
 
       try {
         await db.query(
-          `UPDATE users SET notification_prefs = $1::jsonb, updated_at = NOW() WHERE id = $2`,
+          'UPDATE users SET notification_prefs = $1::jsonb, updated_at = NOW() WHERE id = $2',
           [JSON.stringify(prefs), userId]
         );
       } catch (colErr) {
         // Column may not exist yet on older deployments — ignore gracefully
-        if (colErr.code !== '42703') throw colErr;
+        if (colErr.code !== '42703') {throw colErr;}
       }
 
       return res.json({ success: true, message: 'Notification preferences saved' });
@@ -291,7 +291,7 @@ module.exports = (db) => {
 
       return res.json({
         success: true,
-        twoFactorEnabled: !!result.rows[0]?.totp_enabled,
+        twoFactorEnabled: !!result.rows[0]?.totp_enabled
       });
     } catch (err) {
       next(err);
@@ -364,13 +364,13 @@ module.exports = (db) => {
       const userId = req.user?.id;
       const {
         auctionId, title, artistName, medium,
-        width, height, startingBid, description, imageData,
+        width, height, startingBid, description, imageData
       } = req.body;
 
       if (!auctionId || !title || !artistName || startingBid === undefined) {
         return res.status(400).json({
           success: false,
-          message: 'auctionId, title, artistName, and startingBid are required',
+          message: 'auctionId, title, artistName, and startingBid are required'
         });
       }
 
@@ -404,7 +404,7 @@ module.exports = (db) => {
           height ? Number.parseFloat(height) : null,
           Number.parseFloat(startingBid),
           description || null,
-          imageUrl,
+          imageUrl
         ]
       );
 

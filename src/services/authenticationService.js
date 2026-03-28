@@ -43,14 +43,14 @@ class JWTService {
       role: userData.role,
       schoolId: userData.schoolId,
       iat: Math.floor(Date.now() / 1000),
-      ...(userData.purpose && { purpose: userData.purpose }),
+      ...(userData.purpose && { purpose: userData.purpose })
     };
 
     const token = jwt.sign(payload, this.accessTokenSecret, {
       expiresIn: this.accessTokenExpiry,
       issuer: this.issuer,
       audience: this.audience,
-      algorithm: 'HS256',
+      algorithm: 'HS256'
     });
 
     return { token, jti, expiresIn: this.accessTokenExpiry };
@@ -68,14 +68,14 @@ class JWTService {
       sub: userId,
       jti,
       type: 'refresh',
-      iat: Math.floor(Date.now() / 1000),
+      iat: Math.floor(Date.now() / 1000)
     };
 
     const token = jwt.sign(payload, this.refreshTokenSecret, {
       expiresIn: this.refreshTokenExpiry,
       issuer: this.issuer,
       audience: this.audience,
-      algorithm: 'HS256',
+      algorithm: 'HS256'
     });
 
     return { token, jti, expiresIn: this.refreshTokenExpiry };
@@ -92,7 +92,7 @@ class JWTService {
       const decoded = jwt.verify(token, this.accessTokenSecret, {
         issuer: this.issuer,
         audience: this.audience,
-        algorithms: ['HS256'],
+        algorithms: ['HS256']
       });
 
       return decoded;
@@ -117,7 +117,7 @@ class JWTService {
       const decoded = jwt.verify(token, this.refreshTokenSecret, {
         issuer: this.issuer,
         audience: this.audience,
-        algorithms: ['HS256'],
+        algorithms: ['HS256']
       });
 
       if (decoded.type !== 'refresh') {
@@ -167,7 +167,7 @@ class TwoFactorService {
     const secret = speakeasy.generateSecret({
       name: `Silent Auction (${userEmail})`,
       issuer: 'Silent Auction Gallery',
-      length: 20, // 20 bytes = 160 bits = exactly 32 base32 chars (fits VARCHAR(32))
+      length: 20 // 20 bytes = 160 bits = exactly 32 base32 chars (fits VARCHAR(32))
     });
 
     const backupCodes = this._generateBackupCodes(8);
@@ -176,7 +176,7 @@ class TwoFactorService {
       secret: secret.base32,
       qrCode: secret.otpauth_url,
       backupCodes,
-      manualEntryKey: secret.base32,
+      manualEntryKey: secret.base32
     };
   }
 
@@ -191,7 +191,7 @@ class TwoFactorService {
       secret,
       encoding: 'base32',
       token,
-      window: this.windowSize,
+      window: this.windowSize
     });
 
     return verified;
@@ -225,7 +225,7 @@ class TwoFactorService {
 
     return {
       sessionId,
-      sessionToken,
+      sessionToken
     };
   }
 
@@ -304,7 +304,7 @@ class TwoFactorService {
     const encrypted = this._encryptData(JSON.stringify(backupCodes));
 
     await this.db.query(
-      `UPDATE users SET backup_codes = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+      'UPDATE users SET backup_codes = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
       [[encrypted], userId]
     );
 
@@ -326,7 +326,7 @@ class TwoFactorService {
     const cipher = crypto.createCipheriv(algorithm, key, iv);
     let encrypted = cipher.update(data, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    return iv.toString('hex') + ':' + encrypted;
+    return `${iv.toString('hex')}:${encrypted}`;
   }
 
   _decryptData(encrypted) {
@@ -352,7 +352,7 @@ class RBACService {
       SCHOOL_ADMIN: ['SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'BIDDER'],
       TEACHER: ['TEACHER', 'STUDENT'],
       STUDENT: ['STUDENT'],
-      BIDDER: ['BIDDER'],
+      BIDDER: ['BIDDER']
     };
 
     this.rolePermissions = {
@@ -379,7 +379,7 @@ class RBACService {
         'payments:refund',
         'compliance:read',
         'compliance:export',
-        'admin:view',
+        'admin:view'
       ],
       SCHOOL_ADMIN: [
         'users:read',
@@ -395,7 +395,7 @@ class RBACService {
         'payments:read',
         'payments:process',
         'payments:refund',
-        'compliance:read',
+        'compliance:read'
       ],
       TEACHER: [
         'users:read',
@@ -403,20 +403,20 @@ class RBACService {
         'artwork:create',
         'artwork:read',
         'artwork:update',
-        'artwork:delete',
+        'artwork:delete'
       ],
       STUDENT: [
         'auctions:read',
         'bids:create',
         'bids:read',
-        'bids:cancel',
+        'bids:cancel'
       ],
       BIDDER: [
         'auctions:read',
         'bids:create',
         'bids:read',
-        'bids:cancel',
-      ],
+        'bids:cancel'
+      ]
     };
   }
 
@@ -526,7 +526,7 @@ class SessionService {
       ipAddress,
       userAgent,
       deviceFingerprint,
-      twoFAVerified,
+      twoFAVerified
     } = sessionData;
 
     const sessionId = uuidv4();
@@ -703,7 +703,7 @@ class AuthenticationService {
       return {
         requiresSecondFactor: true,
         preAuthToken,
-        message: '2FA code required',
+        message: '2FA code required'
       };
     }
 
@@ -761,12 +761,12 @@ class AuthenticationService {
       const accessToken = this.jwtService.generateAccessToken(payload.sub, {
         email: user.email,
         role: user.role,
-        schoolId: user.school_id,
+        schoolId: user.school_id
       });
 
       return {
         accessToken: accessToken.token,
-        expiresIn: accessToken.expiresIn,
+        expiresIn: accessToken.expiresIn
       };
     } catch (error) {
       throw new Error('REFRESH_TOKEN_INVALID_OR_EXPIRED');
@@ -891,7 +891,7 @@ class AuthenticationService {
     const accessToken = this.jwtService.generateAccessToken(user.id, {
       email: user.email,
       role: user.role,
-      schoolId: user.school_id,
+      schoolId: user.school_id
     });
 
     const refreshToken = this.jwtService.generateRefreshToken(user.id);
@@ -904,13 +904,13 @@ class AuthenticationService {
       ipAddress,
       userAgent,
       deviceFingerprint,
-      twoFAVerified: user.two_fa_enabled,
+      twoFAVerified: user.two_fa_enabled
     });
 
     // Record audit log
     await this._recordAuditLog(user.id, 'AUTH', 'LOGIN_SUCCESSFUL', {
       email: user.email,
-      ipAddress,
+      ipAddress
     });
 
     return {
@@ -921,8 +921,8 @@ class AuthenticationService {
         id: user.id,
         email: user.email,
         role: user.role,
-        schoolId: user.school_id,
-      },
+        schoolId: user.school_id
+      }
     };
   }
 
@@ -939,12 +939,12 @@ class AuthenticationService {
     const payload = {
       sub: userId,
       type: 'pre-auth',
-      iat: Math.floor(Date.now() / 1000),
+      iat: Math.floor(Date.now() / 1000)
     };
 
     return jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
       expiresIn: '5m',
-      algorithm: 'HS256',
+      algorithm: 'HS256'
     });
   }
 
@@ -973,7 +973,7 @@ function authenticateToken(req, res, next) {
   const sessionService = req.app.locals.sessionService;
 
   // Get token from Authorization header
-  const authHeader = req.headers['authorization'];
+  const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
@@ -990,7 +990,7 @@ function authenticateToken(req, res, next) {
         email: decoded.email,
         role: decoded.role,
         schoolId: decoded.schoolId,
-        tokenJti: decoded.jti,
+        tokenJti: decoded.jti
       };
       next();
     }).catch(() => {
@@ -1038,6 +1038,67 @@ function authorize(resource, action) {
 }
 
 // ============================================================================
+// Token Blacklist Service (JTI-based revocation via PostgreSQL)
+// ============================================================================
+
+class TokenBlacklistService {
+  constructor() {
+    // Lazy-loaded to avoid circular dependency at module init time
+    this._pool = null;
+  }
+
+  get pool() {
+    if (!this._pool) {
+      this._pool = require('../models/index').pool;
+    }
+    return this._pool;
+  }
+
+  /**
+   * Revoke a token by its JTI. Also prunes expired entries to keep the
+   * table small — fire-and-forget so it never blocks the response.
+   * @param {string} jti - JWT ID to revoke
+   * @param {Date} expiresAt - The token's natural expiry (from `exp` claim)
+   */
+  async revoke(jti, expiresAt) {
+    await this.pool.query(
+      `INSERT INTO token_blacklist (jti, expires_at)
+       VALUES ($1, $2)
+       ON CONFLICT (jti) DO NOTHING`,
+      [jti, expiresAt]
+    );
+    // Prune entries already past their natural expiry (non-blocking)
+    this.pool.query('DELETE FROM token_blacklist WHERE expires_at < NOW()').catch(() => {});
+  }
+
+  /**
+   * Check whether a JTI has been revoked.
+   * Returns false (not revoked) if the JTI is absent or if the DB is
+   * temporarily unavailable — fail-open keeps the app usable during
+   * transient DB issues while still blocking confirmed logouts.
+   * @param {string} jti
+   * @returns {Promise<boolean>}
+   */
+  async isRevoked(jti) {
+    if (!jti) {
+      return false;
+    }
+    try {
+      const result = await this.pool.query(
+        'SELECT 1 FROM token_blacklist WHERE jti = $1 AND expires_at > NOW()',
+        [jti]
+      );
+      return result.rows.length > 0;
+    } catch (_err) {
+      // DB unavailable — fail open to avoid locking everyone out
+      return false;
+    }
+  }
+}
+
+const tokenBlacklist = new TokenBlacklistService();
+
+// ============================================================================
 // Export Services
 // ============================================================================
 
@@ -1047,7 +1108,9 @@ module.exports = {
   RBACService,
   SessionService,
   AuthenticationService,
+  TokenBlacklistService,
+  tokenBlacklist,
   authenticateToken,
   authorizeRole,
-  authorize,
+  authorize
 };

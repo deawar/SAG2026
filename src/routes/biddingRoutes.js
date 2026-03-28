@@ -41,7 +41,7 @@ router.post('/place', authMiddleware.verifyToken, async (req, res) => {
     // Broadcast bid update via WebSocket
     realtimeService.broadcastBidUpdate(state.auctionId, {
       bidId: result.bidId,
-      artworkId: artworkId,
+      artworkId,
       bidder: userId,
       amount: bidAmount,
       totalBids: state.totalBids

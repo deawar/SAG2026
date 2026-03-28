@@ -4,13 +4,14 @@
  */
 
 const jwt = require('jsonwebtoken');
+const { tokenBlacklist } = require('../services/authenticationService');
 
 class AuthMiddleware {
   /**
    * Verify JWT token
    * Security: Validates Bearer prefix, signature (HS256), claims, expiry
    */
-  verifyToken(req, res, next) {
+  async verifyToken(req, res, next) {
     try {
       // 1. Extract Authorization header
       const authHeader = req.headers.authorization;
@@ -67,15 +68,24 @@ class AuthMiddleware {
         });
       }
 
-      // 7. Attach user to request object
+      // 7. Check token blacklist (revoked via logout)
+      if (await tokenBlacklist.isRevoked(decoded.jti)) {
+        return res.status(401).json({
+          success: false,
+          message: 'Token has been revoked'
+        });
+      }
+
+      // 8. Attach user to request object
       req.user = {
         id: userId,
-        userId: userId,
+        userId,
         sub: userId,
         role: decoded.role,
         schoolId: decoded.schoolId,
         email: decoded.email,
-        jti: decoded.jti
+        jti: decoded.jti,
+        exp: decoded.exp
       };
 
       next();
@@ -103,7 +113,7 @@ class AuthMiddleware {
    * Optional JWT verification — populates req.user if a valid token is present,
    * but does NOT reject unauthenticated requests (used for public routes).
    */
-  optionalVerifyToken(req, res, next) {
+  async optionalVerifyToken(req, res, next) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return next();
@@ -121,20 +131,21 @@ class AuthMiddleware {
 
       if (decoded.type !== 'refresh') {
         const userId = decoded.sub || decoded.userId;
-        if (userId && decoded.role) {
+        if (userId && decoded.role && !await tokenBlacklist.isRevoked(decoded.jti)) {
           req.user = {
             id: userId,
-            userId: userId,
+            userId,
             sub: userId,
             role: decoded.role,
             schoolId: decoded.schoolId,
             email: decoded.email,
-            jti: decoded.jti
+            jti: decoded.jti,
+            exp: decoded.exp
           };
         }
       }
-    } catch (e) {
-      // Invalid/expired token — proceed without user (public access)
+    } catch (_e) {
+      // Invalid/expired/revoked token — proceed without user (public access)
     }
 
     next();

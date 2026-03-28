@@ -217,4 +217,3 @@ app.use('/api/bidding', biddingRoutes);
  */
 
 module.exports = app;
-
