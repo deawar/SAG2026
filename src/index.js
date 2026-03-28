@@ -9,10 +9,9 @@ require('dotenv').config();
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
-const app = require('./app');
+const createApp = require('./app');
 const { Database } = require('./models');
 const realtimeService = require('./services/realtimeService');
-const { encodeHTML } = require('./middleware/securityMiddleware');
 
 /**
  * Configuration
@@ -23,18 +22,12 @@ const HTTPS_ENABLED = process.env.HTTPS_ENABLED === 'true';
 const SSL_KEY_PATH = process.env.SSL_KEY_PATH || './ssl/key.pem';
 const SSL_CERT_PATH = process.env.SSL_CERT_PATH || './ssl/cert.pem';
 
-// Store database instance for route initialization
-let db = null;
-
 /**
  * ============================================================================
  * START SERVER
  * ============================================================================
  */
 
-/**
- * Initialize database connection and start server
- */
 async function startServer() {
   try {
     console.log('============================================================');
@@ -47,6 +40,7 @@ async function startServer() {
     /**
      * Test Database Connection
      */
+    let db = null;
     console.log('\nTesting database connection...');
     try {
       const dbConfig = {
@@ -58,7 +52,6 @@ async function startServer() {
         maxConnections: process.env.DB_POOL_MAX || 10
       };
 
-      // Check if all required DB config values are present
       if (!dbConfig.user || !dbConfig.password || !dbConfig.host) {
         throw new Error('Missing database configuration in .env file');
       }
@@ -117,163 +110,16 @@ async function startServer() {
       } catch (migErr) {
         console.warn('⚠️  Startup migration warning:', migErr.message);
       }
-    }
-
-    /**
-     * Mount Authentication Routes (requires database)
-     */
-    if (db) {
-      console.log('\nMounting authentication routes...');
-      try {
-        const authRoutes = require('./routes/authRoutes')(db);
-        const { authLimiter } = require('./middleware/rateLimitMiddleware');
-        app.use('/api/auth', authLimiter);
-        app.use('/api/auth', authRoutes);
-        console.log('✅ Authentication routes mounted');
-      } catch (routeErr) {
-        console.error('❌ ERROR mounting auth routes:', routeErr);
-      }
-
-      /**
-       * Mount User Routes (requires authentication)
-       */
-      console.log('Mounting user routes...');
-      try {
-        const userRoutes = require('./routes/userRoutes')(db);
-        const authMiddleware = require('./middleware/authMiddleware');
-        app.use('/api/user', authMiddleware.verifyToken);
-        app.use('/api/user', userRoutes);
-        console.log('✅ User routes mounted');
-      } catch (routeErr) {
-        console.error('❌ ERROR mounting user routes:', routeErr);
-      }
-
-      /**
-       * Mount School Routes (public, no auth required)
-       */
-      console.log('Mounting school routes...');
-      try {
-        const schoolRoutes = require('./routes/schoolRoutes')(db);
-        app.use('/api/schools', schoolRoutes);
-        console.log('✅ School routes mounted');
-      } catch (routeErr) {
-        console.error('❌ ERROR mounting school routes:', routeErr);
-      }
-
-      /**
-       * Mount Admin Routes (requires SITE_ADMIN or SCHOOL_ADMIN role)
-       */
-      console.log('Mounting admin routes...');
-      try {
-        const adminRoutes = require('./routes/adminRoutes');
-        app.use('/api/admin', adminRoutes);
-        console.log('✅ Admin routes mounted');
-      } catch (routeErr) {
-        console.error('❌ ERROR mounting admin routes:', routeErr);
-      }
-
-      /**
-       * Mount Teacher Routes (requires TEACHER, SCHOOL_ADMIN, or SITE_ADMIN role)
-       */
-      console.log('Mounting teacher routes...');
-      try {
-        const teacherRoutes = require('./routes/teacherRoutes');
-        app.use('/api/teacher', teacherRoutes);
-        console.log('✅ Teacher routes mounted');
-      } catch (routeErr) {
-        console.error('❌ ERROR mounting teacher routes:', routeErr);
-      }
-
-      /**
-       * Mount Auction Routes (public list + authenticated CRUD)
-       */
-      console.log('Mounting auction routes...');
-      try {
-        const auctionRoutes = require('./routes/auctionRoutes');
-        const { apiLimiter } = require('./middleware/rateLimitMiddleware');
-        app.use('/api/auctions', apiLimiter);
-        app.use('/api/auctions', auctionRoutes);
-        console.log('✅ Auction routes mounted');
-      } catch (routeErr) {
-        console.error('❌ ERROR mounting auction routes:', routeErr);
-      }
-
-      /**
-       * Mount Bidding Routes (authenticated bidding operations + WebSocket broadcast)
-       */
-      console.log('Mounting bidding routes...');
-      try {
-        const biddingRoutes = require('./routes/biddingRoutes');
-        const { bidLimiter } = require('./middleware/rateLimitMiddleware');
-        app.use('/api/bidding', bidLimiter);
-        app.use('/api/bidding', biddingRoutes);
-        console.log('✅ Bidding routes mounted');
-      } catch (routeErr) {
-        console.error('❌ ERROR mounting bidding routes:', routeErr);
-      }
-
-      /**
-       * Mount Payment Routes (authenticated payment processing + webhook receiver)
-       */
-      console.log('Mounting payment routes...');
-      try {
-        const paymentRoutes = require('./routes/paymentRoutes');
-        const { paymentLimiter } = require('./middleware/rateLimitMiddleware');
-        app.use('/api/payments', paymentLimiter);
-        app.use('/api/payments', paymentRoutes);
-        console.log('✅ Payment routes mounted');
-      } catch (routeErr) {
-        console.error('❌ ERROR mounting payment routes:', routeErr);
-      }
     } else {
-      console.warn('⚠️  Skipping auth routes (database unavailable)');
+      console.warn('⚠️  Skipping auth/user routes (database unavailable)');
     }
 
     /**
-     * ============================================================================
-     * ERROR HANDLING & 404 HANDLERS (MUST BE LAST!)
-     * ============================================================================
+     * Build fully-configured Express application.
+     * All route mounting (auth, user, schools, admin, teacher, auctions,
+     * bidding, payments) and error handlers are set up inside createApp().
      */
-
-    /**
-     * 404 Not Found Handler
-     * Must come before error handler
-     */
-    app.use((req, res) => {
-      res.status(404).json({
-        error: 'Not Found',
-        message: `Route ${req.method} ${req.path} not found`,
-        timestamp: new Date().toISOString()
-      });
-    });
-
-    /**
-     * Global Error Handler
-     * Catches all errors from routes and middleware
-     * Encodes error messages to prevent XSS
-     */
-    app.use((err, req, res, next) => {
-      console.error('Global Error Handler:', {
-        message: err.message,
-        stack: err.stack,
-        url: req.originalUrl,
-        method: req.method,
-        timestamp: new Date().toISOString()
-      });
-
-      const statusCode = err.statusCode || err.status || 500;
-      let message = err.message || 'Internal Server Error';
-
-      // Encode HTML in error message to prevent XSS
-      message = encodeHTML(message);
-
-      res.status(statusCode).json({
-        error: err.name || 'Error',
-        message,
-        ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-        timestamp: new Date().toISOString()
-      });
-    });
+    const app = createApp(db);
 
     /**
      * Create HTTP/HTTPS Server with WebSocket Support
@@ -307,7 +153,6 @@ async function startServer() {
     /**
      * Start HTTP/HTTPS Server
      */
-    // Bind to all interfaces so healthchecks and proxies can reach the server
     const bindAddress = '0.0.0.0';
 
     server.listen(PORT, bindAddress, () => {
@@ -315,7 +160,6 @@ async function startServer() {
       const interfaces = os.networkInterfaces();
       let localIp = 'localhost';
 
-      // Find the local IP address
       for (const name of Object.keys(interfaces)) {
         for (const iface of interfaces[name]) {
           if (iface.family === 'IPv4' && !iface.internal) {
@@ -323,7 +167,7 @@ async function startServer() {
             break;
           }
         }
-        if (localIp !== 'localhost') {break;}
+        if (localIp !== 'localhost') { break; }
       }
 
       const protocol = HTTPS_ENABLED ? 'https' : 'http';
@@ -351,17 +195,11 @@ async function startServer() {
      */
     const gracefulShutdown = (signal) => {
       console.log(`\n${signal} received. Shutting down gracefully...`);
-
-      // Close WebSocket connections
       realtimeService.shutdown();
-
-      // Close HTTP server
       server.close(() => {
         console.log('Server closed');
         process.exit(0);
       });
-
-      // Force shutdown after 10 seconds
       setTimeout(() => {
         console.error('Forced shutdown due to timeout');
         process.exit(1);
@@ -371,17 +209,11 @@ async function startServer() {
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-    /**
-     * Uncaught Exception Handler
-     */
     process.on('uncaughtException', (error) => {
       console.error('Uncaught Exception:', error);
       process.exit(1);
     });
 
-    /**
-     * Unhandled Promise Rejection Handler
-     */
     process.on('unhandledRejection', (reason, promise) => {
       console.error('Unhandled Rejection at:', promise, 'reason:', reason);
       process.exit(1);
@@ -392,7 +224,4 @@ async function startServer() {
   }
 }
 
-/**
- * Start the server
- */
 startServer();

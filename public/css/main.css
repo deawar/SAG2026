@@ -2149,3 +2149,347 @@ tbody tr:hover {
     font-size: var(--font-size-sm);
     font-family: monospace;
 }
+
+/* ===== Artwork Carousel (ac-*) ===== */
+
+.ac-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.ac-header {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.ac-title {
+    margin: 0;
+    font-family: var(--font-heading, 'Cormorant Garant', serif);
+    font-size: var(--font-size-2xl);
+    color: var(--color-dark);
+}
+
+.ac-count {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray);
+}
+
+/* Stage: viewport + prev/next buttons */
+.ac-stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+
+.ac-viewport {
+    flex: 1;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+}
+
+.ac-track {
+    display: flex;
+    transition: transform var(--transition-normal);
+    will-change: transform;
+}
+
+/* Each slide is 100% of the viewport width */
+.ac-slide {
+    flex: 0 0 100%;
+    min-width: 100%;
+    list-style: none;
+}
+
+.ac-slide-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    background: var(--color-white);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.ac-slide-active .ac-slide-link:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.ac-slide-link:focus-visible {
+    outline: 3px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* Artwork image area */
+.ac-img-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background: var(--color-lightest-gray);
+    overflow: hidden;
+}
+
+.ac-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    transition: transform var(--transition-slow);
+}
+
+.ac-slide-active .ac-slide-link:hover .ac-img-wrap img {
+    transform: scale(1.03);
+}
+
+/* Status badge inside image */
+.ac-status-badge {
+    position: absolute;
+    top: var(--spacing-sm);
+    left: var(--spacing-sm);
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-full);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    pointer-events: none;
+}
+
+.ac-status-badge.status-active {
+    background: var(--color-success);
+    color: #fff;
+}
+
+.ac-status-badge.status-ended {
+    background: var(--color-gray);
+    color: #fff;
+}
+
+.ac-status-badge.status-draft {
+    background: var(--color-warning);
+    color: #fff;
+}
+
+/* Caption below image */
+.ac-caption {
+    padding: var(--spacing-lg);
+}
+
+.ac-slide-title {
+    margin: 0 0 var(--spacing-xs);
+    font-family: var(--font-heading, 'Cormorant Garant', serif);
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--color-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ac-artist {
+    margin: 0 0 var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    color: var(--color-gray);
+    font-style: italic;
+}
+
+.ac-school {
+    margin: 0 0 var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+.ac-bid {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-xs);
+}
+
+.ac-bid-label {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray);
+}
+
+.ac-bid-amount {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--color-dark);
+}
+
+.ac-bids {
+    margin: 0 0 var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    color: var(--color-gray);
+}
+
+.ac-time {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-warning);
+    font-weight: 500;
+}
+
+/* Teacher approve/reject buttons below the slide */
+.ac-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md);
+    background: var(--color-white);
+    border-top: 1px solid var(--color-lighter-gray);
+}
+
+.ac-actions .btn {
+    flex: 1;
+}
+
+/* Prev / Next arrow buttons */
+.ac-btn {
+    flex: 0 0 auto;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: none;
+    border-radius: 50%;
+    background: var(--color-white);
+    color: var(--color-dark);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--transition-fast), box-shadow var(--transition-fast);
+    z-index: 2;
+    margin: 0 var(--spacing-sm);
+}
+
+.ac-btn:hover:not(:disabled) {
+    background: var(--color-primary);
+    color: var(--color-white);
+    box-shadow: var(--shadow-lg);
+}
+
+.ac-btn:focus-visible {
+    outline: 3px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.ac-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+/* Dot indicators */
+.ac-dots {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.ac-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    border: none;
+    background: var(--color-lighter-gray);
+    cursor: pointer;
+    padding: 0;
+    transition: background var(--transition-fast), transform var(--transition-fast);
+}
+
+.ac-dot:hover {
+    background: var(--color-primary-light);
+    transform: scale(1.3);
+}
+
+.ac-dot-active {
+    background: var(--color-primary);
+    transform: scale(1.2);
+}
+
+.ac-dot:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* Empty / error state */
+.ac-empty {
+    text-align: center;
+    color: var(--color-gray);
+    padding: var(--spacing-2xl) 0;
+    font-size: var(--font-size-lg);
+}
+
+/* Skeleton loading */
+.ac-skeleton-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-md);
+}
+
+.ac-skeleton-card {
+    height: 320px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    border-radius: var(--radius-md);
+    animation: ac-shimmer 1.4s infinite;
+}
+
+@keyframes ac-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ── Section wrapper used in dashboard pages ── */
+.ac-section {
+    margin-bottom: var(--spacing-2xl);
+}
+
+/* ── Featured carousel (auctions.html) ── */
+.featured-carousel-section {
+    background: var(--color-lightest-gray);
+    padding: var(--spacing-xl) 0;
+    margin-bottom: var(--spacing-xl);
+    border-bottom: 1px solid var(--color-lighter-gray);
+}
+
+.featured-carousel-section .ac-wrapper {
+    max-width: 680px;
+    margin: 0 auto;
+}
+
+/* ── Dashboard embedded carousel (narrower) ── */
+.dashboard-carousel .ac-wrapper {
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .ac-btn {
+        width: 2rem;
+        height: 2rem;
+        font-size: 1.2rem;
+        margin: 0 0.25rem;
+    }
+
+    .ac-caption {
+        padding: var(--spacing-md);
+    }
+
+    .ac-skeleton-row {
+        grid-template-columns: 1fr;
+    }
+
+    .ac-skeleton-card {
+        height: 240px;
+    }
+}

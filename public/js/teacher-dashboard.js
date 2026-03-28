@@ -1400,4 +1400,6 @@ class TeacherDashboard {
 document.addEventListener('DOMContentLoaded', () => {
   const dashboard = new TeacherDashboard();
   dashboard.init();
+  // Expose for carousel approve/reject callbacks
+  globalThis.teacherDashboard = dashboard;
 });

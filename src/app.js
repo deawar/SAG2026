@@ -1,8 +1,13 @@
 /**
  * ============================================================================
- * Express Application Configuration
+ * Express Application Factory
  * Silent Auction Gallery - Main Application Setup
  * ============================================================================
+ *
+ * Usage:
+ *   const createApp = require('./app');
+ *   const app = createApp(db);   // production: pass real Database instance
+ *   const app = createApp(null); // minimal: auth/user/school routes skipped
  */
 
 const express = require('express');
@@ -11,209 +16,198 @@ const helmet = require('helmet');
 const path = require('path');
 require('dotenv').config();
 
-/**
- * Import Middleware
- */
-const { apiLimiter, paymentLimiter, bidLimiter } = require('./middleware/rateLimitMiddleware');
+const { apiLimiter, authLimiter, paymentLimiter, bidLimiter } = require('./middleware/rateLimitMiddleware');
 const {
   sanitizeInput,
   idempotencyMiddleware,
-  securityLogger
+  securityLogger,
+  encodeHTML
 } = require('./middleware/securityMiddleware');
 
 /**
- * Import Routes
+ * Create a fully-configured Express application.
+ *
+ * @param {Database|null} db - Initialized Database instance. When provided,
+ *   auth, user, school, admin and teacher routes are mounted. When null/undefined
+ *   those routes are skipped (useful for lightweight test setups).
+ * @returns {import('express').Application}
  */
-// authRoutes will be mounted dynamically in index.js after db initialization
-const auctionRoutes = require('./routes/auctionRoutes');
-const paymentRoutes = require('./routes/paymentRoutes');
-const biddingRoutes = require('./routes/biddingRoutes');
+function createApp(db) {
+  const app = express();
 
-/**
- * Create Express Application
- */
-const app = express();
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isTest = process.env.NODE_ENV === 'test';
 
-// Trust proxy for reverse proxy/load balancer headers
-app.set('trust proxy', 1);
+  // Trust proxy for reverse proxy / load-balancer headers
+  app.set('trust proxy', 1);
 
-// Store for WebSocket server (will be set by index.js)
-app.wsServer = null;
+  // Slot for WebSocket server reference (set by index.js)
+  app.wsServer = null;
 
-/**
- * ============================================================================
- * MIDDLEWARE SETUP
- * ============================================================================
- */
+  // ==========================================================================
+  // SECURITY HEADERS
+  // ==========================================================================
 
-/**
- * Security Headers (Helmet.js)
- * - Sets X-Frame-Options, X-Content-Type-Options, etc.
- * - Provides protection against common vulnerabilities
- * - Allow CSS, images, and fonts to load properly
- * - Disable CSP in development for easier debugging
- */
-if (process.env.NODE_ENV === 'production') {
-  app.use(helmet({
-    crossOriginResourcePolicy: { policy: 'cross-origin' },
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-        scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
-        imgSrc: ["'self'", 'data:', 'https:'],
-        fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
-        connectSrc: ["'self'", 'https:', 'wss:', 'ws:'],
-        objectSrc: ["'none'"],
-        upgradeInsecureRequests: []
+  // CSP is enabled in production and test; relaxed in development so local
+  // assets are not blocked during active development.
+  if (isProduction || isTest) {
+    app.use(helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+          scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
+          imgSrc: ["'self'", 'data:', 'https:'],
+          fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
+          connectSrc: ["'self'", 'https:', 'wss:', 'ws:'],
+          objectSrc: ["'none'"],
+          upgradeInsecureRequests: []
+        }
       }
+    }));
+  } else {
+    // Development: minimal helmet so assets aren't blocked
+    app.use(helmet({
+      contentSecurityPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' }
+    }));
+  }
+
+  // ==========================================================================
+  // CORS
+  // ==========================================================================
+  const corsOptions = {
+    origin: isProduction
+      ? ['https://yourdomain.com', 'https://www.yourdomain.com']
+      : '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+  };
+  app.use(cors(corsOptions));
+
+  // ==========================================================================
+  // BODY PARSING & STATIC FILES
+  // ==========================================================================
+  app.use(express.static(path.join(__dirname, '..', 'public')));
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+  // ==========================================================================
+  // SECURITY MIDDLEWARE
+  // Order matters: logger → sanitiser → idempotency → rate limiting
+  // ==========================================================================
+  app.use(securityLogger);
+  app.use(sanitizeInput);
+  app.use(idempotencyMiddleware);
+  app.use(apiLimiter);
+
+  // Request logging (dev only — skip in test to keep output clean)
+  if (!isProduction && !isTest) {
+    app.use((req, res, next) => {
+      console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+      next();
+    });
+  }
+
+  // ==========================================================================
+  // UTILITY ENDPOINTS
+  // ==========================================================================
+  app.get('/health', (req, res) => {
+    res.status(200).json({
+      status: 'OK',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  });
+
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+  });
+
+  // ==========================================================================
+  // API ROUTES — DB-DEPENDENT (auth, user, schools, admin, teacher)
+  // ==========================================================================
+  if (db) {
+    // Authentication routes (register, login, logout, refresh, 2FA)
+    const authRoutes = require('./routes/authRoutes')(db);
+    app.use('/api/auth', authLimiter);
+    app.use('/api/auth', authRoutes);
+
+    // User profile / account routes (all require JWT)
+    const authMiddleware = require('./middleware/authMiddleware');
+    const userRoutes = require('./routes/userRoutes')(db);
+    app.use('/api/user', authMiddleware.verifyToken);
+    app.use('/api/user', userRoutes);
+
+    // School lookup (public)
+    const schoolRoutes = require('./routes/schoolRoutes')(db);
+    app.use('/api/schools', schoolRoutes);
+
+    // Admin routes (SITE_ADMIN / SCHOOL_ADMIN)
+    const adminRoutes = require('./routes/adminRoutes');
+    app.use('/api/admin', adminRoutes);
+
+    // Teacher routes (TEACHER / SCHOOL_ADMIN / SITE_ADMIN)
+    const teacherRoutes = require('./routes/teacherRoutes');
+    app.use('/api/teacher', teacherRoutes);
+  }
+
+  // ==========================================================================
+  // API ROUTES — NO DB REQUIRED (auctions, bidding, payments)
+  // These routes manage their own DB access internally.
+  // ==========================================================================
+  const auctionRoutes = require('./routes/auctionRoutes');
+  app.use('/api/auctions', apiLimiter);
+  app.use('/api/auctions', auctionRoutes);
+
+  const paymentRoutes = require('./routes/paymentRoutes');
+  app.use('/api/payments', paymentLimiter);
+  app.use('/api/payments', paymentRoutes);
+
+  const biddingRoutes = require('./routes/biddingRoutes');
+  app.use('/api/bidding', bidLimiter);
+  app.use('/api/bidding', biddingRoutes);
+
+  // ==========================================================================
+  // ERROR HANDLING (must be last)
+  // ==========================================================================
+
+  // 404 — no route matched
+  app.use((req, res) => {
+    res.status(404).json({
+      error: 'Not Found',
+      message: `Route ${req.method} ${req.path} not found`,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Global error handler
+  app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
+    if (!isTest) {
+      console.error('Global Error Handler:', {
+        message: err.message,
+        stack: err.stack,
+        url: req.originalUrl,
+        method: req.method,
+        timestamp: new Date().toISOString()
+      });
     }
-  }));
-} else {
-  // Development: use minimal helmet config to avoid blocking assets
-  app.use(helmet({
-    contentSecurityPolicy: false,
-    crossOriginResourcePolicy: { policy: 'cross-origin' }
-  }));
+
+    const statusCode = err.statusCode || err.status || 500;
+    let message = err.message || 'Internal Server Error';
+    message = encodeHTML(message);
+
+    res.status(statusCode).json({
+      error: err.name || 'Error',
+      message,
+      ...(isProduction ? {} : { stack: err.stack }),
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  return app;
 }
 
-/**
- * CORS Configuration
- * - Allow requests from specified origins
- * - Development: Allow all origins
- * - Production: Restrict to specific domains
- */
-const corsOptions = {
-  origin: process.env.NODE_ENV === 'production'
-    ? ['https://yourdomain.com', 'https://www.yourdomain.com']
-    : '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-};
-app.use(cors(corsOptions));
-
-/**
- * Body Parser Middleware
- * - Parse application/json request bodies
- * - Limit payload size to 10MB
- */
-/**
- * Static Files Serving
- * - Serve public directory (HTML, CSS, JS)
- * - Use absolute path to ensure it works from any directory
- */
-app.use(express.static(path.join(__dirname, '..', 'public')));
-
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
-
-/**
- * Security Middleware (Applied to all requests)
- * Order matters: logger → sanitizer → idempotency → rate limiting
- */
-app.use(securityLogger); // Log suspicious patterns
-app.use(sanitizeInput); // Sanitize all input
-app.use(idempotencyMiddleware); // Handle idempotency for payments
-app.use(apiLimiter); // General rate limiting
-
-/**
- * Request Logging Middleware (Development Only)
- */
-if (process.env.NODE_ENV === 'development') {
-  app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-    next();
-  });
-}
-
-/**
- * ============================================================================
- * HEALTH CHECK ENDPOINT
- * ============================================================================
- */
-
-/**
- * Health check endpoint for monitoring and load balancers
- */
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
-});
-
-/**
- * Root route - serve index.html
- */
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
-});
-
-/**
- * ============================================================================
- * API ROUTES
- * ============================================================================
- */
-
-/**
- * Authentication Routes
- * POST   /api/auth/register      - User registration
- * POST   /api/auth/login         - User login
- * POST   /api/auth/logout        - User logout
- * POST   /api/auth/refresh       - Refresh access token
- * POST   /api/auth/2fa/setup     - Setup 2FA
- * POST   /api/auth/2fa/verify    - Verify 2FA code
- * Rate limit: 20 requests/min for general auth, 5/min for login
- * NOTE: Mounted dynamically in index.js after database initialization
- */
-
-/**
- * Auction Routes
- * GET    /api/auctions           - List auctions
- * GET    /api/auctions/:id       - Get auction details
- * POST   /api/auctions           - Create auction (admin only)
- * PUT    /api/auctions/:id       - Update auction (admin only)
- * DELETE /api/auctions/:id       - Delete auction (admin only)
- * POST   /api/auctions/:id/bids  - Place bid
- * Rate limit: 100 requests/min
- */
-app.use('/api/auctions', apiLimiter);
-app.use('/api/auctions', auctionRoutes);
-
-/**
- * Payment Routes
- * POST   /api/payments           - Process payment
- * GET    /api/payments/:id       - Get payment details
- * POST   /api/payments/:id/refund - Refund payment
- * POST   /api/webhooks/stripe    - Stripe webhook handler
- * POST   /api/webhooks/square    - Square webhook handler
- * Rate limit: 10 requests/min (strict for payment security)
- */
-app.use('/api/payments', paymentLimiter);
-app.use('/api/payments', paymentRoutes);
-
-/**
- * Bidding Routes
- * POST   /api/bidding/place      - Place a bid
- * POST   /api/bidding/withdraw   - Withdraw a bid
- * GET    /api/bidding/artwork/:id/history - Get bid history
- * GET    /api/bidding/artwork/:id/state - Get bidding state
- * GET    /api/bidding/user/history - Get user's bid history
- * GET    /api/bidding/user/active - Get user's active auctions
- * GET    /api/bidding/auction/:id/winner - Get auction winner
- * POST   /api/bidding/auction/:id/close - Close auction (admin)
- * GET    /api/bidding/stats      - Get real-time stats (admin)
- * Rate limit: 30 requests/min (to prevent bid spam)
- */
-app.use('/api/bidding', bidLimiter);
-app.use('/api/bidding', biddingRoutes);
-
-/**
- * ============================================================================
- * EXPORT APPLICATION
- * ============================================================================
- */
-
-module.exports = app;
+module.exports = createApp;
