@@ -136,7 +136,7 @@ class RealtimeService {
 
     ws.send(JSON.stringify({
       type: 'authenticated',
-      userId: userId,
+      userId,
       timestamp: new Date(),
       message: `Authenticated as user ${userId}`
     }));
@@ -178,7 +178,7 @@ class RealtimeService {
 
     ws.send(JSON.stringify({
       type: 'subscribed',
-      resourceId: resourceId,
+      resourceId,
       timestamp: new Date(),
       recentEvents: history.slice(-10), // Last 10 events
       message: `Subscribed to updates for ${auctionId ? 'auction' : 'artwork'} ${resourceId}`
@@ -217,7 +217,7 @@ class RealtimeService {
 
     ws.send(JSON.stringify({
       type: 'unsubscribed',
-      resourceId: resourceId,
+      resourceId,
       timestamp: new Date(),
       message: `Unsubscribed from ${auctionId ? 'auction' : 'artwork'} ${resourceId}`
     }));
@@ -250,7 +250,7 @@ class RealtimeService {
   broadcastBidUpdate(artworkId, bidData) {
     const event = {
       type: 'bid_update',
-      artworkId: artworkId,
+      artworkId,
       data: bidData,
       timestamp: new Date()
     };
@@ -261,7 +261,7 @@ class RealtimeService {
     }
     const history = this.eventHistory.get(artworkId);
     history.push(event);
-    if (history.length > 50) history.shift(); // Keep last 50 events
+    if (history.length > 50) {history.shift();} // Keep last 50 events
 
     // Broadcast to all subscribed clients
     this.clients.forEach((connections, userId) => {
@@ -287,9 +287,9 @@ class RealtimeService {
   broadcastAuctionStatusChange(auctionId, status, details = {}) {
     const event = {
       type: 'auction_status_change',
-      auctionId: auctionId,
-      status: status,
-      details: details,
+      auctionId,
+      status,
+      details,
       timestamp: new Date()
     };
 
@@ -299,7 +299,7 @@ class RealtimeService {
     }
     const history = this.eventHistory.get(auctionId);
     history.push(event);
-    if (history.length > 50) history.shift();
+    if (history.length > 50) {history.shift();}
 
     // Broadcast to all subscribed clients
     this.clients.forEach((connections, userId) => {
@@ -324,8 +324,8 @@ class RealtimeService {
   broadcastAuctionEndingSoon(auctionId, timeRemaining) {
     const event = {
       type: 'auction_ending_soon',
-      auctionId: auctionId,
-      timeRemaining: timeRemaining,
+      auctionId,
+      timeRemaining,
       timestamp: new Date()
     };
 
@@ -350,8 +350,8 @@ class RealtimeService {
   notifyUser(userId, notificationType, data = {}) {
     const event = {
       type: 'notification',
-      notificationType: notificationType,
-      data: data,
+      notificationType,
+      data,
       timestamp: new Date()
     };
 
@@ -392,7 +392,7 @@ class RealtimeService {
 
     return {
       connectedUsers: this.clients.size,
-      totalConnections: totalConnections,
+      totalConnections,
       activeSubscriptions: this.subscriptions.size,
       eventHistorySize: this.eventHistory.size
     };

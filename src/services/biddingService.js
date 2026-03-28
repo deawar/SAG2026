@@ -112,12 +112,11 @@ class BiddingService {
       return {
         success: true,
         bidId: bid.id,
-        artworkId: artworkId,
-        bidAmount: bidAmount,
+        artworkId,
+        bidAmount,
         timestamp: bid.placed_at,
         message: `Bid placed successfully for $${(bidAmount / 100).toFixed(2)}`
       };
-
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -205,10 +204,9 @@ class BiddingService {
 
       return {
         success: true,
-        bidId: bidId,
+        bidId,
         message: 'Bid withdrawn successfully'
       };
-
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -283,7 +281,7 @@ class BiddingService {
       totalBids: parseInt(state.total_bids),
       auctionStatus: state.auction_status,
       endTime: state.ends_at,
-      timeRemaining: timeRemaining,
+      timeRemaining,
       auctionActive: state.auction_status === 'LIVE' && endTime > now
     };
   }
@@ -387,18 +385,17 @@ class BiddingService {
         `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details)
          VALUES ($1, $2, $3, $4, $5)`,
         ['AUCTION', 'auction_closed', 'auction', auctionId,
-         JSON.stringify({ winner_id: winner?.id || null, final_bid: winner?.bidAmount || null })]
+          JSON.stringify({ winner_id: winner?.id || null, final_bid: winner?.bidAmount || null })]
       );
 
       await client.query('COMMIT');
 
       return {
         success: true,
-        auctionId: auctionId,
-        winner: winner,
+        auctionId,
+        winner,
         message: winner ? `Auction closed. Winner: ${winner.name}` : 'Auction closed with no winner'
       };
-
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;

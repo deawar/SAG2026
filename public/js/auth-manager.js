@@ -4,505 +4,505 @@
  */
 
 class AuthManager {
-    constructor() {
-        this.user = this.loadUser();
-        this.token = localStorage.getItem('auth_token');
-        this.refreshToken = localStorage.getItem('refresh_token');
-        this.require2FA = localStorage.getItem('2fa_required') === 'true';
-        
-        // Auto-refresh token before expiry
-        this.setupTokenRefresh();
-    }
+  constructor() {
+    this.user = this.loadUser();
+    this.token = localStorage.getItem('auth_token');
+    this.refreshToken = localStorage.getItem('refresh_token');
+    this.require2FA = localStorage.getItem('2fa_required') === 'true';
 
-    /**
+    // Auto-refresh token before expiry
+    this.setupTokenRefresh();
+  }
+
+  /**
      * Register new user
      * @param {object} userData - User registration data
      * @returns {Promise}
      */
-    async register(userData) {
-        try {
-            const response = await apiClient.register({
-                firstName: userData.firstName,
-                lastName: userData.lastName,
-                email: userData.email,
-                password: userData.password,
-                school_id: userData.schoolId,
-                phone: userData.phone,
-            });
+  async register(userData) {
+    try {
+      const response = await apiClient.register({
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        email: userData.email,
+        password: userData.password,
+        school_id: userData.schoolId,
+        phone: userData.phone
+      });
 
-            // Handle successful registration response from server
-            if (response.success && response.data) {
-                const { accessToken, refreshToken, ...userData } = response.data;
-                
-                // Store tokens
-                this.setToken(accessToken);
-                if (refreshToken) {
-                    this.setRefreshToken(refreshToken);
-                }
-                
-                // Store user data
-                this.setUser(userData);
-                
-                return { success: true, user: userData };
-            }
+      // Handle successful registration response from server
+      if (response.success && response.data) {
+        const { accessToken, refreshToken, ...userData } = response.data;
 
-            return { success: false, error: response.message || 'Registration failed' };
-        } catch (error) {
-            return { success: false, error: error.message };
+        // Store tokens
+        this.setToken(accessToken);
+        if (refreshToken) {
+          this.setRefreshToken(refreshToken);
         }
-    }
 
-    /**
+        // Store user data
+        this.setUser(userData);
+
+        return { success: true, user: userData };
+      }
+
+      return { success: false, error: response.message || 'Registration failed' };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
      * Login user
      * @param {string} email - User email
      * @param {string} password - User password
      * @returns {Promise}
      */
-    async login(email, password) {
-        try {
-            const response = await apiClient.login(email, password);
+  async login(email, password) {
+    try {
+      const response = await apiClient.login(email, password);
 
-            // Check for 2FA requirement (new format)
-            if (response.data?.requiresMfa || response.requires_2fa) {
-                this.require2FA = true;
-                localStorage.setItem('2fa_required', 'true');
-                localStorage.setItem('2fa_token', response.data?.tempToken || response.temp_token);
-                localStorage.setItem('2fa_user_id', response.data?.userId || '');
-                return { success: false, requires2FA: true };
-            }
+      // Check for 2FA requirement (new format)
+      if (response.data?.requiresMfa || response.requires_2fa) {
+        this.require2FA = true;
+        localStorage.setItem('2fa_required', 'true');
+        localStorage.setItem('2fa_token', response.data?.tempToken || response.temp_token);
+        localStorage.setItem('2fa_user_id', response.data?.userId || '');
+        return { success: false, requires2FA: true };
+      }
 
-            // Handle successful login with new response format
-            if (response.data?.accessToken) {
-                this.setToken(response.data.accessToken);
-                this.setRefreshToken(response.data.refreshToken);
-                
-                // Set user object from response data
-                if (response.data.userId || response.data.email) {
-                    this.setUser({
-                        id: response.data.userId,
-                        email: response.data.email,
-                        firstName: response.data.firstName || '',
-                        lastName: response.data.lastName || '',
-                        role: response.data.role,
-                        schoolId: response.data.schoolId || null
-                    });
-                }
-                
-                this.require2FA = false;
-                localStorage.removeItem('2fa_required');
-                localStorage.removeItem('2fa_token');
-                return { success: true, user: this.user };
-            }
+      // Handle successful login with new response format
+      if (response.data?.accessToken) {
+        this.setToken(response.data.accessToken);
+        this.setRefreshToken(response.data.refreshToken);
 
-            // Handle old response format for backward compatibility
-            if (response.token) {
-                this.setToken(response.token);
-                this.setUser(response.user);
-                if (response.refresh_token) {
-                    this.setRefreshToken(response.refresh_token);
-                }
-                this.require2FA = false;
-                localStorage.removeItem('2fa_required');
-                localStorage.removeItem('2fa_token');
-                return { success: true, user: response.user };
-            }
-
-            return { success: false, error: response.message };
-        } catch (error) {
-            return { success: false, error: error.message };
+        // Set user object from response data
+        if (response.data.userId || response.data.email) {
+          this.setUser({
+            id: response.data.userId,
+            email: response.data.email,
+            firstName: response.data.firstName || '',
+            lastName: response.data.lastName || '',
+            role: response.data.role,
+            schoolId: response.data.schoolId || null
+          });
         }
-    }
 
-    /**
+        this.require2FA = false;
+        localStorage.removeItem('2fa_required');
+        localStorage.removeItem('2fa_token');
+        return { success: true, user: this.user };
+      }
+
+      // Handle old response format for backward compatibility
+      if (response.token) {
+        this.setToken(response.token);
+        this.setUser(response.user);
+        if (response.refresh_token) {
+          this.setRefreshToken(response.refresh_token);
+        }
+        this.require2FA = false;
+        localStorage.removeItem('2fa_required');
+        localStorage.removeItem('2fa_token');
+        return { success: true, user: response.user };
+      }
+
+      return { success: false, error: response.message };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
      * Verify 2FA code
      * @param {string} code - 2FA code
      * @returns {Promise}
      */
-    async verify2FA(code) {
-        try {
-            const response = await apiClient.verify2FA(code);
+  async verify2FA(code) {
+    try {
+      const response = await apiClient.verify2FA(code);
 
-            if (response.token) {
-                this.setToken(response.token);
-                this.setUser(response.user);
-                if (response.refresh_token) {
-                    this.setRefreshToken(response.refresh_token);
-                }
-                this.require2FA = false;
-                localStorage.removeItem('2fa_required');
-                localStorage.removeItem('2fa_token');
-                return { success: true, user: response.user };
-            }
-
-            return { success: false, error: response.message };
-        } catch (error) {
-            return { success: false, error: error.message };
+      if (response.token) {
+        this.setToken(response.token);
+        this.setUser(response.user);
+        if (response.refresh_token) {
+          this.setRefreshToken(response.refresh_token);
         }
-    }
+        this.require2FA = false;
+        localStorage.removeItem('2fa_required');
+        localStorage.removeItem('2fa_token');
+        return { success: true, user: response.user };
+      }
 
-    /**
+      return { success: false, error: response.message };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
      * Logout user
      * @returns {Promise}
      */
-    async logout() {
-        try {
-            await apiClient.logout();
-        } catch (error) {
-            console.warn('Logout API call failed:', error);
-        }
-
-        this.clearAuth();
+  async logout() {
+    try {
+      await apiClient.logout();
+    } catch (error) {
+      console.warn('Logout API call failed:', error);
     }
 
-    /**
+    this.clearAuth();
+  }
+
+  /**
      * Refresh authentication token
      * @returns {Promise}
      */
-    async refreshAccessToken() {
-        if (!this.refreshToken) {
-            this.clearAuth();
-            return false;
-        }
-
-        try {
-            const response = await apiClient.refreshToken();
-
-            // Handle both response formats:
-            // New: { success: true, data: { accessToken, expiresIn } }
-            // Old: { token, refresh_token }
-            const newToken = response.data?.accessToken || response.token;
-            if (newToken) {
-                this.setToken(newToken);
-                const newRefresh = response.data?.refreshToken || response.refresh_token;
-                if (newRefresh) {
-                    this.setRefreshToken(newRefresh);
-                }
-                return true;
-            }
-
-            this.clearAuth();
-            return false;
-        } catch (error) {
-            console.error('Token refresh failed:', error);
-            this.clearAuth();
-            return false;
-        }
+  async refreshAccessToken() {
+    if (!this.refreshToken) {
+      this.clearAuth();
+      return false;
     }
 
-    /**
+    try {
+      const response = await apiClient.refreshToken();
+
+      // Handle both response formats:
+      // New: { success: true, data: { accessToken, expiresIn } }
+      // Old: { token, refresh_token }
+      const newToken = response.data?.accessToken || response.token;
+      if (newToken) {
+        this.setToken(newToken);
+        const newRefresh = response.data?.refreshToken || response.refresh_token;
+        if (newRefresh) {
+          this.setRefreshToken(newRefresh);
+        }
+        return true;
+      }
+
+      this.clearAuth();
+      return false;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      this.clearAuth();
+      return false;
+    }
+  }
+
+  /**
      * Setup automatic token refresh
      */
-    setupTokenRefresh() {
-        setInterval(async () => {
-            // Refresh while token exists — fires at 14 min so token is still valid
-            // when the 15-min expiry hits
-            if (this.token) {
-                await this.refreshAccessToken();
-            }
-        }, 14 * 60 * 1000); // 14 minutes (1 min before the 15-min access token expires)
-    }
+  setupTokenRefresh() {
+    setInterval(async () => {
+      // Refresh while token exists — fires at 14 min so token is still valid
+      // when the 15-min expiry hits
+      if (this.token) {
+        await this.refreshAccessToken();
+      }
+    }, 14 * 60 * 1000); // 14 minutes (1 min before the 15-min access token expires)
+  }
 
-    /**
+  /**
      * Get current user
      * @returns {Promise}
      */
-    async getCurrentUser() {
-        try {
-            const response = await apiClient.getCurrentUser();
-            this.setUser(response);
-            return response;
-        } catch (error) {
-            console.error('Failed to get current user:', error);
-            return null;
-        }
+  async getCurrentUser() {
+    try {
+      const response = await apiClient.getCurrentUser();
+      this.setUser(response);
+      return response;
+    } catch (error) {
+      console.error('Failed to get current user:', error);
+      return null;
     }
+  }
 
-    /**
+  /**
      * Update user profile
      * @param {object} data - Profile data
      * @returns {Promise}
      */
-    async updateProfile(data) {
-        try {
-            const response = await apiClient.updateProfile(data);
-            this.setUser(response);
-            return { success: true, user: response };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
+  async updateProfile(data) {
+    try {
+      const response = await apiClient.updateProfile(data);
+      this.setUser(response);
+      return { success: true, user: response };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
+  }
 
-    /**
+  /**
      * Change password
      * @param {string} currentPassword - Current password
      * @param {string} newPassword - New password
      * @returns {Promise}
      */
-    async changePassword(currentPassword, newPassword) {
-        try {
-            await apiClient.changePassword(currentPassword, newPassword);
-            return { success: true };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
+  async changePassword(currentPassword, newPassword) {
+    try {
+      await apiClient.changePassword(currentPassword, newPassword);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
+  }
 
-    /**
+  /**
      * Request password reset
      * @param {string} email - User email
      * @returns {Promise}
      */
-    async requestPasswordReset(email) {
-        try {
-            const response = await apiClient.requestPasswordReset(email);
-            return { success: true, message: response.message };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
+  async requestPasswordReset(email) {
+    try {
+      const response = await apiClient.requestPasswordReset(email);
+      return { success: true, message: response.message };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
+  }
 
-    /**
+  /**
      * Reset password with token
      * @param {string} token - Reset token
      * @param {string} password - New password
      * @returns {Promise}
      */
-    async resetPassword(token, password) {
-        try {
-            const response = await apiClient.resetPassword(token, password);
-            return { success: true, message: response.message };
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
+  async resetPassword(token, password) {
+    try {
+      const response = await apiClient.resetPassword(token, password);
+      return { success: true, message: response.message };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
+  }
 
-    // ===== Token Management =====
+  // ===== Token Management =====
 
-    /**
+  /**
      * Set authentication token
      * @param {string} token - JWT token
      */
-    setToken(token) {
-        this.token = token;
-        if (token) {
-            localStorage.setItem('auth_token', token);
-            apiClient.setToken(token);
-        } else {
-            localStorage.removeItem('auth_token');
-            apiClient.setToken(null);
-        }
+  setToken(token) {
+    this.token = token;
+    if (token) {
+      localStorage.setItem('auth_token', token);
+      apiClient.setToken(token);
+    } else {
+      localStorage.removeItem('auth_token');
+      apiClient.setToken(null);
     }
+  }
 
-    /**
+  /**
      * Set refresh token
      * @param {string} token - Refresh token
      */
-    setRefreshToken(token) {
-        this.refreshToken = token;
-        if (token) {
-            localStorage.setItem('refresh_token', token);
-        } else {
-            localStorage.removeItem('refresh_token');
-        }
+  setRefreshToken(token) {
+    this.refreshToken = token;
+    if (token) {
+      localStorage.setItem('refresh_token', token);
+    } else {
+      localStorage.removeItem('refresh_token');
     }
+  }
 
-    /**
+  /**
      * Get authentication token
      * @returns {string|null}
      */
-    getToken() {
-        return this.token;
-    }
+  getToken() {
+    return this.token;
+  }
 
-    /**
+  /**
      * Decode JWT token
      * @param {string} token - JWT token
      * @returns {object|null}
      */
-    decodeToken(token = this.token) {
-        if (!token) return null;
+  decodeToken(token = this.token) {
+    if (!token) {return null;}
 
-        try {
-            const parts = token.split('.');
-            if (parts.length !== 3) return null;
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) {return null;}
 
-            const decoded = JSON.parse(atob(parts[1]));
-            return decoded;
-        } catch (error) {
-            console.error('Failed to decode token:', error);
-            return null;
-        }
+      const decoded = JSON.parse(atob(parts[1]));
+      return decoded;
+    } catch (error) {
+      console.error('Failed to decode token:', error);
+      return null;
     }
+  }
 
-    /**
+  /**
      * Check if token is expired
      * @returns {boolean}
      */
-    isTokenExpired() {
-        const decoded = this.decodeToken();
-        if (!decoded || !decoded.exp) return true;
+  isTokenExpired() {
+    const decoded = this.decodeToken();
+    if (!decoded || !decoded.exp) {return true;}
 
-        const now = Math.floor(Date.now() / 1000);
-        return decoded.exp <= now;
-    }
+    const now = Math.floor(Date.now() / 1000);
+    return decoded.exp <= now;
+  }
 
-    /**
+  /**
      * Get token expiration time
      * @returns {Date|null}
      */
-    getTokenExpiration() {
-        const decoded = this.decodeToken();
-        if (!decoded || !decoded.exp) return null;
+  getTokenExpiration() {
+    const decoded = this.decodeToken();
+    if (!decoded || !decoded.exp) {return null;}
 
-        return new Date(decoded.exp * 1000);
-    }
+    return new Date(decoded.exp * 1000);
+  }
 
-    // ===== User Management =====
+  // ===== User Management =====
 
-    /**
+  /**
      * Set current user
      * @param {object} user - User object
      */
-    setUser(user) {
-        this.user = user;
-        localStorage.setItem('user', JSON.stringify(user));
-        this.emitUserChange();
-    }
+  setUser(user) {
+    this.user = user;
+    localStorage.setItem('user', JSON.stringify(user));
+    this.emitUserChange();
+  }
 
-    /**
+  /**
      * Load user from storage
      * @returns {object|null}
      */
-    loadUser() {
-        try {
-            const stored = localStorage.getItem('user');
-            return stored ? JSON.parse(stored) : null;
-        } catch (error) {
-            return null;
-        }
+  loadUser() {
+    try {
+      const stored = localStorage.getItem('user');
+      return stored ? JSON.parse(stored) : null;
+    } catch (error) {
+      return null;
     }
+  }
 
-    /**
+  /**
      * Get current user
      * @returns {object|null}
      */
-    getUser() {
-        return this.user;
-    }
+  getUser() {
+    return this.user;
+  }
 
-    /**
+  /**
      * Check if user has specific role
      * @param {string} role - Role name
      * @returns {boolean}
      */
-    hasRole(role) {
-        return this.user && this.user.role === role;
-    }
+  hasRole(role) {
+    return this.user && this.user.role === role;
+  }
 
-    /**
+  /**
      * Check if user has specific permission
      * @param {string} permission - Permission name
      * @returns {boolean}
      */
-    hasPermission(permission) {
-        if (!this.user || !this.user.permissions) return false;
-        return this.user.permissions.includes(permission);
-    }
+  hasPermission(permission) {
+    if (!this.user || !this.user.permissions) {return false;}
+    return this.user.permissions.includes(permission);
+  }
 
-    /**
+  /**
      * Check if user is admin
      * @returns {boolean}
      */
-    isAdmin() {
-        return this.hasRole('admin') || this.hasRole('school_admin');
-    }
+  isAdmin() {
+    return this.hasRole('admin') || this.hasRole('school_admin');
+  }
 
-    /**
+  /**
      * Check if user is bidder
      * @returns {boolean}
      */
-    isBidder() {
-        return this.hasRole('bidder');
-    }
+  isBidder() {
+    return this.hasRole('bidder');
+  }
 
-    // ===== Authentication State =====
+  // ===== Authentication State =====
 
-    /**
+  /**
      * Check if user is authenticated
      * @returns {boolean}
      */
-    isAuthenticated() {
-        return !!this.token && !this.isTokenExpired();
-    }
+  isAuthenticated() {
+    return !!this.token && !this.isTokenExpired();
+  }
 
-    /**
+  /**
      * Check if 2FA is required
      * @returns {boolean}
      */
-    is2FARequired() {
-        return this.require2FA;
-    }
+  is2FARequired() {
+    return this.require2FA;
+  }
 
-    /**
+  /**
      * Clear all authentication data
      */
-    clearAuth() {
-        this.user = null;
-        this.token = null;
-        this.refreshToken = null;
-        this.require2FA = false;
+  clearAuth() {
+    this.user = null;
+    this.token = null;
+    this.refreshToken = null;
+    this.require2FA = false;
 
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('2fa_required');
-        localStorage.removeItem('2fa_token');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('2fa_required');
+    localStorage.removeItem('2fa_token');
 
-        apiClient.setToken(null);
-        this.emitUserChange();
-    }
+    apiClient.setToken(null);
+    this.emitUserChange();
+  }
 
-    // ===== Event Handling =====
+  // ===== Event Handling =====
 
-    /**
+  /**
      * Event handlers for auth changes
      */
-    handlers = [];
+  handlers = [];
 
-    /**
+  /**
      * Register auth change handler
      * @param {function} handler - Handler function
      */
-    onChange(handler) {
-        this.handlers.push(handler);
-    }
+  onChange(handler) {
+    this.handlers.push(handler);
+  }
 
-    /**
+  /**
      * Remove auth change handler
      * @param {function} handler - Handler function
      */
-    offChange(handler) {
-        const index = this.handlers.indexOf(handler);
-        if (index > -1) {
-            this.handlers.splice(index, 1);
-        }
+  offChange(handler) {
+    const index = this.handlers.indexOf(handler);
+    if (index > -1) {
+      this.handlers.splice(index, 1);
     }
+  }
 
-    /**
+  /**
      * Emit user change event
      */
-    emitUserChange() {
-        this.handlers.forEach(handler => {
-            try {
-                handler(this.user);
-            } catch (error) {
-                console.error('Error in auth change handler:', error);
-            }
-        });
+  emitUserChange() {
+    this.handlers.forEach(handler => {
+      try {
+        handler(this.user);
+      } catch (error) {
+        console.error('Error in auth change handler:', error);
+      }
+    });
 
-        // Dispatch custom event for other listeners
-        window.dispatchEvent(new CustomEvent('authChange', { detail: this.user }));
-    }
+    // Dispatch custom event for other listeners
+    window.dispatchEvent(new CustomEvent('authChange', { detail: this.user }));
+  }
 }
 
 // Create global instance
@@ -510,12 +510,12 @@ window.authManager = new AuthManager();
 
 // Listen for storage changes in other tabs
 window.addEventListener('storage', (event) => {
-    if (event.key === 'auth_token') {
-        window.location.reload();
-    }
+  if (event.key === 'auth_token') {
+    window.location.reload();
+  }
 });
 
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = AuthManager;
+  module.exports = AuthManager;
 }

@@ -17,11 +17,11 @@ const paymentController = new PaymentController(null);
  * POST /api/payments
  * Process payment for bid
  * Auth: Required (any authenticated user)
- * 
+ *
  * Headers:
  * - Authorization: Bearer <accessToken>
  * - Idempotency-Key: <uuid> (optional, prevents double-charge)
- * 
+ *
  * Body:
  * {
  *   "auctionId": "uuid",
@@ -29,7 +29,7 @@ const paymentController = new PaymentController(null);
  *   "paymentToken": "tok_123",
  *   "description": "Payment for auction xyz"
  * }
- * 
+ *
  * Response: 201
  * {
  *   "success": true,
@@ -54,10 +54,10 @@ router.post('/',
  * GET /api/payments/:transactionId
  * Get payment transaction details
  * Auth: Required (owner or SITE_ADMIN)
- * 
+ *
  * Headers:
  * - Authorization: Bearer <accessToken>
- * 
+ *
  * Response: 200
  * {
  *   "success": true,
@@ -85,16 +85,16 @@ router.get('/:transactionId',
  * Refund payment (Full or Partial)
  * Auth: Required (SITE_ADMIN or SCHOOL_ADMIN only)
  * RBAC: Enforced - admin roles only
- * 
+ *
  * Headers:
  * - Authorization: Bearer <accessToken>
- * 
+ *
  * Body:
  * {
  *   "amount": 175.00 (optional, for partial refund),
  *   "reason": "Auction cancelled"
  * }
- * 
+ *
  * Response: 200
  * {
  *   "success": true,
@@ -120,13 +120,13 @@ router.post('/:transactionId/refund',
  * POST /api/webhooks/payment
  * Generic payment webhook handler
  * Auth: NOT required (signature verified instead)
- * 
+ *
  * Headers:
  * - X-Webhook-Signature: <signature>
  * - X-Gateway: stripe|square|paypal|authorize.net
- * 
+ *
  * Body: Gateway-specific event JSON
- * 
+ *
  * Response: 200
  * {
  *   "success": true,

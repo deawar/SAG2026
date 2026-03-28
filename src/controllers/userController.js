@@ -6,6 +6,7 @@
  */
 
 const ValidationUtils = require('../utils/validationUtils');
+const { tokenBlacklist } = require('../services/authenticationService');
 
 class UserController {
   constructor(userModel, authenticationService) {
@@ -16,7 +17,7 @@ class UserController {
   /**
    * Register a new user
    * POST /api/auth/register
-   * 
+   *
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    * @param {Function} next - Express next middleware
@@ -114,7 +115,7 @@ class UserController {
         'INVALID_LAST_NAME': { status: 400, message: 'Last name must be 2–100 characters' },
         'INVALID_ROLE': { status: 400, message: 'Invalid account type' },
         'INVALID_DATE_OF_BIRTH': { status: 400, message: 'Invalid date of birth' },
-        'COPPA_PARENTAL_CONSENT_REQUIRED': { status: 400, message: 'Parental consent required for users under 13' },
+        'COPPA_PARENTAL_CONSENT_REQUIRED': { status: 400, message: 'Parental consent required for users under 13' }
       };
 
       const mapped = validationErrors[error.message];
@@ -132,7 +133,7 @@ class UserController {
   /**
    * Login user
    * POST /api/auth/login
-   * 
+   *
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    * @param {Function} next - Express next middleware
@@ -248,29 +249,44 @@ class UserController {
    * Logout user
    * POST /api/auth/logout
    * Auth: Required
-   * 
+   *
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    * @param {Function} next - Express next middleware
    */
   async logout(req, res, next) {
     try {
-      const userId = req.user.id;
-      const jti = req.user.jti; // JWT ID for token revocation
+      const { jti, exp } = req.user;
+      const { refreshToken } = req.body;
 
-      if (!userId || !jti) {
+      if (!jti) {
         return res.status(400).json({
           success: false,
-          message: 'Missing user or token information'
+          message: 'Invalid token: missing JTI'
         });
       }
 
-      // 1. Add token to blacklist (JTI-based revocation)
-      // In production, this would store the JTI in Redis or database
-      // For now, we'll just return success
-      // TODO: Implement token blacklist/revocation
+      // 1. Revoke the access token — use its exp claim so the blacklist
+      //    entry is automatically irrelevant once the token would have
+      //    expired anyway. Fall back to 15 min from now if exp is absent.
+      const accessExpiry = exp
+        ? new Date(exp * 1000)
+        : new Date(Date.now() + 15 * 60 * 1000);
+      await tokenBlacklist.revoke(jti, accessExpiry);
 
-      // 2. Return success response
+      // 2. Revoke the refresh token if the client sent it.
+      //    Ignore invalid/expired tokens — they are already unusable.
+      if (refreshToken) {
+        try {
+          const decoded = this.authService.jwtService.verifyRefreshToken(refreshToken);
+          if (decoded.jti && decoded.exp) {
+            await tokenBlacklist.revoke(decoded.jti, new Date(decoded.exp * 1000));
+          }
+        } catch (_err) {
+          // Refresh token already expired or invalid — nothing to revoke
+        }
+      }
+
       return res.json({
         success: true,
         message: 'Logged out successfully'
@@ -283,7 +299,7 @@ class UserController {
   /**
    * Refresh access token
    * POST /api/auth/refresh
-   * 
+   *
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    * @param {Function} next - Express next middleware
@@ -310,7 +326,15 @@ class UserController {
         });
       }
 
-      // 2. Retrieve user
+      // 2. Check refresh token has not been revoked (e.g. via logout)
+      if (await tokenBlacklist.isRevoked(decoded.jti)) {
+        return res.status(401).json({
+          success: false,
+          message: 'Refresh token has been revoked'
+        });
+      }
+
+      // 3. Retrieve user
       const user = await this.userModel.getById(decoded.sub);
 
       // 3. Generate new access token
@@ -343,7 +367,7 @@ class UserController {
   /**
    * Verify 2FA code and complete login
    * POST /api/auth/verify-2fa
-   * 
+   *
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    * @param {Function} next - Express next middleware
@@ -353,7 +377,7 @@ class UserController {
       const { code } = req.body;
 
       // Extract the temp token from the Authorization header
-      const authHeader = req.headers['authorization'];
+      const authHeader = req.headers.authorization;
       const tempToken = authHeader && authHeader.split(' ')[1];
 
       if (!tempToken || !code) {
@@ -437,7 +461,7 @@ class UserController {
   /**
    * Get user profile (requires authentication)
    * GET /api/user/profile
-   * 
+   *
    * @param {Object} req - Express request
    * @param {Object} res - Express response
    * @param {Function} next - Express next middleware

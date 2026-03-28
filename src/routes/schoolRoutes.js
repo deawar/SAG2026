@@ -11,22 +11,22 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 // Preset color values — must stay in sync with public/css/theme.css school-theme-* classes
 const PRESET_COLORS = {
-    'crimson-gold':  { primary: '#9B1B30', primaryDark: '#7A1525', primaryLight: '#C2223D', secondary: '#B8860B', secondaryDark: '#956D09', secondaryLight: '#D4A017' },
-    'navy-gold':     { primary: '#003087', primaryDark: '#00246B', primaryLight: '#0040A8', secondary: '#C5A028', secondaryDark: '#A08020', secondaryLight: '#E0B830' },
-    'forest-gold':   { primary: '#1B5E20', primaryDark: '#155118', primaryLight: '#217328', secondary: '#B7820A', secondaryDark: '#8F6508', secondaryLight: '#D49A10' },
-    'purple-gold':   { primary: '#4A1D7B', primaryDark: '#39165E', primaryLight: '#5E2599', secondary: '#C5A028', secondaryDark: '#A08020', secondaryLight: '#E0B830' },
-    'scarlet-gray':  { primary: '#BB0000', primaryDark: '#960000', primaryLight: '#D90000', secondary: '#666666', secondaryDark: '#444444', secondaryLight: '#888888' },
-    'royal-blue':    { primary: '#003FA5', primaryDark: '#002D7A', primaryLight: '#0050D0', secondary: '#4A90C4', secondaryDark: '#3373A0', secondaryLight: '#65ABDF' },
-    'orange-black':  { primary: '#C85200', primaryDark: '#A34200', primaryLight: '#E06000', secondary: '#1A1A1A', secondaryDark: '#000000', secondaryLight: '#333333' },
+  'crimson-gold': { primary: '#9B1B30', primaryDark: '#7A1525', primaryLight: '#C2223D', secondary: '#B8860B', secondaryDark: '#956D09', secondaryLight: '#D4A017' },
+  'navy-gold': { primary: '#003087', primaryDark: '#00246B', primaryLight: '#0040A8', secondary: '#C5A028', secondaryDark: '#A08020', secondaryLight: '#E0B830' },
+  'forest-gold': { primary: '#1B5E20', primaryDark: '#155118', primaryLight: '#217328', secondary: '#B7820A', secondaryDark: '#8F6508', secondaryLight: '#D49A10' },
+  'purple-gold': { primary: '#4A1D7B', primaryDark: '#39165E', primaryLight: '#5E2599', secondary: '#C5A028', secondaryDark: '#A08020', secondaryLight: '#E0B830' },
+  'scarlet-gray': { primary: '#BB0000', primaryDark: '#960000', primaryLight: '#D90000', secondary: '#666666', secondaryDark: '#444444', secondaryLight: '#888888' },
+  'royal-blue': { primary: '#003FA5', primaryDark: '#002D7A', primaryLight: '#0050D0', secondary: '#4A90C4', secondaryDark: '#3373A0', secondaryLight: '#65ABDF' },
+  'orange-black': { primary: '#C85200', primaryDark: '#A34200', primaryLight: '#E06000', secondary: '#1A1A1A', secondaryDark: '#000000', secondaryLight: '#333333' }
 };
 
 const VALID_PRESETS = Object.keys(PRESET_COLORS);
 const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
 
 function resolveTheme(preset, colors) {
-    if (preset && PRESET_COLORS[preset]) return PRESET_COLORS[preset];
-    if (colors?.primary) return colors;
-    return null;
+  if (preset && PRESET_COLORS[preset]) {return PRESET_COLORS[preset];}
+  if (colors?.primary) {return colors;}
+  return null;
 }
 
 /**
@@ -42,12 +42,12 @@ module.exports = (db) => {
    * GET /api/schools
    * Public endpoint - fetch schools from database or external API
    * No authentication required
-   * 
+   *
    * Query Parameters:
    * - state: Filter by state (e.g., "IL", "CA")
    * - city: Filter by city
    * - search: Search by school name
-   * 
+   *
    * Response: 200
    * {
    *   "success": true,
@@ -92,12 +92,12 @@ module.exports = (db) => {
       query += ' ORDER BY name ASC LIMIT 500';
 
       const result = await db.query(query, params);
-      
+
       // Log for debugging
       if (process.env.NODE_ENV === 'development') {
         console.log(`[SCHOOLS API] Query returned ${result.rows.length} schools`, { state, city, search });
       }
-      
+
       res.json({
         success: true,
         message: 'Schools retrieved successfully',
@@ -122,13 +122,13 @@ module.exports = (db) => {
          FROM schools
          ORDER BY country ASC, state_province ASC`
       );
-      
+
       const states = result.rows.map(row => row.state_province);
-      
+
       if (process.env.NODE_ENV === 'development') {
         console.log(`[SCHOOLS API] /states returned ${states.length} states`);
       }
-      
+
       res.json({
         success: true,
         message: 'States with schools retrieved successfully',
@@ -144,13 +144,13 @@ module.exports = (db) => {
   /**
    * GET /api/schools/by-state/:state
    * Fetch schools by state code
-   * 
+   *
    * Example: /api/schools/by-state/IL
    */
   router.get('/by-state/:state', async (req, res, next) => {
     try {
       const { state } = req.params;
-      
+
       const result = await db.query(
         `SELECT id, ceeb_code, name, city, state_province, address_line1, postal_code, country
          FROM schools
@@ -159,11 +159,11 @@ module.exports = (db) => {
          LIMIT 500`,
         [state.toUpperCase()]
       );
-      
+
       if (process.env.NODE_ENV === 'development') {
         console.log(`[SCHOOLS API] /by-state/${state} returned ${result.rows.length} schools`);
       }
-      
+
       res.json({
         success: true,
         message: `Schools in ${state.toUpperCase()} retrieved successfully`,
@@ -233,9 +233,9 @@ module.exports = (db) => {
 
       return res.json({
         success: true,
-        data:    result.rows,
-        count:   result.rows.length,
-        query,
+        data: result.rows,
+        count: result.rows.length,
+        query
       });
     } catch (error) {
       next(error);
@@ -278,8 +278,8 @@ module.exports = (db) => {
           schoolId,
           preset: preset || null,
           colors: colors || null,
-          resolved: resolveTheme(preset, colors),
-        },
+          resolved: resolveTheme(preset, colors)
+        }
       });
     } catch (error) {
       next(error);
@@ -302,7 +302,7 @@ module.exports = (db) => {
       if (role !== 'SITE_ADMIN' && userSchoolId !== schoolId) {
         return res.status(403).json({
           success: false,
-          message: 'You can only update the theme for your own school',
+          message: 'You can only update the theme for your own school'
         });
       }
       if (!['SITE_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'].includes(role)) {
@@ -315,7 +315,7 @@ module.exports = (db) => {
       if (preset !== null && !VALID_PRESETS.includes(preset)) {
         return res.status(400).json({
           success: false,
-          message: `Invalid preset. Valid values: ${VALID_PRESETS.join(', ')}`,
+          message: `Invalid preset. Valid values: ${VALID_PRESETS.join(', ')}`
         });
       }
 
@@ -326,7 +326,7 @@ module.exports = (db) => {
           if (!HEX_RE.test(colors[key])) {
             return res.status(400).json({
               success: false,
-              message: `Invalid hex color for ${key}. Expected format: #RRGGBB`,
+              message: `Invalid hex color for ${key}. Expected format: #RRGGBB`
             });
           }
         }
@@ -353,8 +353,8 @@ module.exports = (db) => {
           schoolId,
           preset: savedPreset || null,
           colors: savedColors || null,
-          resolved: resolveTheme(savedPreset, savedColors),
-        },
+          resolved: resolveTheme(savedPreset, savedColors)
+        }
       });
     } catch (error) {
       next(error);

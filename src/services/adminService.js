@@ -2,7 +2,7 @@
  * Admin Service - Section 8
  * Centralized admin operations for user management, auction management,
  * payment management, compliance reporting, and real-time monitoring
- * 
+ *
  * CRITICAL: All methods enforce RBAC and multi-tenant isolation
  * CRITICAL: All actions are logged to admin_audit_logs for compliance
  */
@@ -57,7 +57,7 @@ class AdminService {
    */
   async listUsers(filters, adminId) {
     const admin = await this.verifyAdminAccess(adminId);
-    
+
     const { role, status, search, page = 1, limit = 20 } = filters;
     const offset = (page - 1) * limit;
 
@@ -99,7 +99,7 @@ class AdminService {
     // Get total count
     let countQuery = 'SELECT COUNT(*) as count FROM users WHERE deleted_at IS NULL';
     const countParams = [];
-    
+
     if (admin.role === 'SCHOOL_ADMIN') {
       countQuery += ' AND school_id = $1';
       countParams.push(admin.school_id);
@@ -419,7 +419,7 @@ class AdminService {
     );
 
     return {
-      user: user,
+      user,
       auctions: auctionsResult.rows,
       bids: bidsResult.rows,
       payments: paymentsResult.rows,
@@ -932,7 +932,7 @@ class AdminService {
     // Calculate date range
     const endDate = new Date();
     const startDate = new Date();
-    
+
     switch (period) {
       case 'day':
         startDate.setDate(startDate.getDate() - 1);
@@ -960,11 +960,11 @@ class AdminService {
 
     // Multi-tenant isolation
     if (admin.role === 'SCHOOL_ADMIN') {
-      query += ` AND buyer_user_id IN (SELECT id FROM users WHERE school_id = $3)`;
+      query += ' AND buyer_user_id IN (SELECT id FROM users WHERE school_id = $3)';
       params.push(admin.school_id);
     }
 
-    query += ` GROUP BY transaction_status ORDER BY total_revenue DESC`;
+    query += ' GROUP BY transaction_status ORDER BY total_revenue DESC';
 
     const result = await pool.query(query, params);
 
@@ -993,22 +993,22 @@ class AdminService {
 
     // Get user deletion count
     const deletionsResult = await pool.query(
-      'SELECT COUNT(*) as count FROM audit_logs WHERE event_type = $1 AND created_at BETWEEN $2 AND $3' +
-      (schoolId ? ' AND school_id = $4' : ''),
+      `SELECT COUNT(*) as count FROM audit_logs WHERE event_type = $1 AND created_at BETWEEN $2 AND $3${
+        schoolId ? ' AND school_id = $4' : ''}`,
       schoolId ? ['USER_DELETED', startDate, endDate, schoolId] : ['USER_DELETED', startDate, endDate]
     );
 
     // Get data export count
     const exportsResult = await pool.query(
-      'SELECT COUNT(*) as count FROM audit_logs WHERE event_type = $1 AND created_at BETWEEN $2 AND $3' +
-      (schoolId ? ' AND school_id = $4' : ''),
+      `SELECT COUNT(*) as count FROM audit_logs WHERE event_type = $1 AND created_at BETWEEN $2 AND $3${
+        schoolId ? ' AND school_id = $4' : ''}`,
       schoolId ? ['DATA_EXPORTED', startDate, endDate, schoolId] : ['DATA_EXPORTED', startDate, endDate]
     );
 
     // Get consent tracking
     const consentsResult = await pool.query(
-      'SELECT COUNT(*) as count FROM users WHERE consent_given = true AND created_at BETWEEN $1 AND $2' +
-      (schoolId ? ' AND school_id = $3' : ''),
+      `SELECT COUNT(*) as count FROM users WHERE consent_given = true AND created_at BETWEEN $1 AND $2${
+        schoolId ? ' AND school_id = $3' : ''}`,
       schoolId ? [startDate, endDate, schoolId] : [startDate, endDate]
     );
 
@@ -1059,16 +1059,16 @@ class AdminService {
     const minorsResult = await pool.query(
       `SELECT COUNT(*) as count FROM users 
        WHERE EXTRACT(YEAR FROM age(date_of_birth)) < 13
-       AND created_at BETWEEN $1 AND $2` +
-      (schoolId ? ' AND school_id = $3' : ''),
+       AND created_at BETWEEN $1 AND $2${
+  schoolId ? ' AND school_id = $3' : ''}`,
       schoolId ? [startDate, endDate, schoolId] : [startDate, endDate]
     );
 
     // Get parental consent records
     const consentsResult = await pool.query(
       `SELECT COUNT(*) as count FROM coppa_verifications 
-       WHERE created_at BETWEEN $1 AND $2` +
-      (schoolId ? ' AND user_id IN (SELECT id FROM users WHERE school_id = $3)' : ''),
+       WHERE created_at BETWEEN $1 AND $2${
+  schoolId ? ' AND user_id IN (SELECT id FROM users WHERE school_id = $3)' : ''}`,
       schoolId ? [startDate, endDate, schoolId] : [startDate, endDate]
     );
 
@@ -1118,8 +1118,8 @@ class AdminService {
     const accessLogsResult = await pool.query(
       `SELECT COUNT(*) as count FROM audit_logs 
        WHERE event_type LIKE 'STUDENT_DATA_%'
-       AND created_at BETWEEN $1 AND $2` +
-      (schoolId ? ' AND school_id = $3' : ''),
+       AND created_at BETWEEN $1 AND $2${
+  schoolId ? ' AND school_id = $3' : ''}`,
       schoolId ? [startDate, endDate, schoolId] : [startDate, endDate]
     );
 
@@ -1169,8 +1169,8 @@ class AdminService {
     const deletionsResult = await pool.query(
       `SELECT COUNT(*) as count FROM audit_logs 
        WHERE event_type = 'DATA_DELETION_REQUEST'
-       AND created_at BETWEEN $1 AND $2` +
-      (schoolId ? ' AND school_id = $3' : ''),
+       AND created_at BETWEEN $1 AND $2${
+  schoolId ? ' AND school_id = $3' : ''}`,
       schoolId ? [startDate, endDate, schoolId] : [startDate, endDate]
     );
 
@@ -1178,8 +1178,8 @@ class AdminService {
     const optOutsResult = await pool.query(
       `SELECT COUNT(*) as count FROM audit_logs 
        WHERE event_type = 'OPT_OUT_REQUEST'
-       AND created_at BETWEEN $1 AND $2` +
-      (schoolId ? ' AND school_id = $3' : ''),
+       AND created_at BETWEEN $1 AND $2${
+  schoolId ? ' AND school_id = $3' : ''}`,
       schoolId ? [startDate, endDate, schoolId] : [startDate, endDate]
     );
 
@@ -1297,7 +1297,7 @@ class AdminService {
     try {
       // Test database connection
       const _dbTest = await pool.query('SELECT NOW()');
-      
+
       return {
         database: 'HEALTHY',
         timestamp: new Date().toISOString(),

@@ -175,7 +175,7 @@ router.delete(
       const { auctionId } = req.params;
       const userId = req.user.id;
       await pool.query(
-        `DELETE FROM auction_watchlist WHERE user_id = $1 AND auction_id = $2`,
+        'DELETE FROM auction_watchlist WHERE user_id = $1 AND auction_id = $2',
         [userId, auctionId]
       );
       return res.json({ success: true });

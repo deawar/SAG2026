@@ -4,1118 +4,1118 @@
  */
 
 class AuthPages {
-    constructor() {
-        this.currentStep = 1;
-        this.totalSteps = 3;
-        this.formData = {};
-        this.init();
-    }
+  constructor() {
+    this.currentStep = 1;
+    this.totalSteps = 3;
+    this.formData = {};
+    this.init();
+  }
 
-    /**
+  /**
      * Initialize auth page components
      */
-    init() {
-        // Detect which auth page we're on
-        const path = window.location.pathname;
+  init() {
+    // Detect which auth page we're on
+    const path = window.location.pathname;
 
-        if (path.includes('register')) {
-            this.initRegister();
-        } else if (path.includes('2fa-setup')) {
-            this.init2FASetup();
-        } else if (path.includes('2fa-verify')) {
-            this.init2FAVerify();
-        } else if (path.includes('password-reset')) {
-            this.initPasswordReset();
-        } else if (path.includes('login')) {
-            this.initLogin();
-        }
+    if (path.includes('register')) {
+      this.initRegister();
+    } else if (path.includes('2fa-setup')) {
+      this.init2FASetup();
+    } else if (path.includes('2fa-verify')) {
+      this.init2FAVerify();
+    } else if (path.includes('password-reset')) {
+      this.initPasswordReset();
+    } else if (path.includes('login')) {
+      this.initLogin();
     }
+  }
 
-    /**
+  /**
      * Initialize login form
      */
-    initLogin() {
-        const form = document.getElementById('login-form');
-        if (!form) return;
+  initLogin() {
+    const form = document.getElementById('login-form');
+    if (!form) {return;}
 
-        const loginBtn = form.querySelector('button[type="submit"]');
-        const emailInput = form.querySelector('input[type="email"]');
-        const passwordInput = form.querySelector('input[type="password"]');
+    const loginBtn = form.querySelector('button[type="submit"]');
+    const emailInput = form.querySelector('input[type="email"]');
+    const passwordInput = form.querySelector('input[type="password"]');
 
-        loginBtn.addEventListener('click', (e) => this.handleLogin(e, form));
+    loginBtn.addEventListener('click', (e) => this.handleLogin(e, form));
 
-        // Validation on change
-        emailInput.addEventListener('blur', () => this.validateEmail(emailInput));
-        passwordInput.addEventListener('blur', () => this.validatePassword(passwordInput));
+    // Validation on change
+    emailInput.addEventListener('blur', () => this.validateEmail(emailInput));
+    passwordInput.addEventListener('blur', () => this.validatePassword(passwordInput));
 
-        // Remove error message when user starts typing
-        emailInput.addEventListener('input', () => this.clearFieldError(emailInput));
-        passwordInput.addEventListener('input', () => this.clearFieldError(passwordInput));
-    }
+    // Remove error message when user starts typing
+    emailInput.addEventListener('input', () => this.clearFieldError(emailInput));
+    passwordInput.addEventListener('input', () => this.clearFieldError(passwordInput));
+  }
 
-    /**
+  /**
      * Handle login submission
      */
-    async handleLogin(e, form) {
-        e.preventDefault();
+  async handleLogin(e, form) {
+    e.preventDefault();
 
-        const errors = UIComponents.validateForm(form);
-        if (!errors.isValid) {
-            UIComponents.displayFormErrors(form, errors.errors);
-            return;
-        }
-
-        UIComponents.clearFormErrors(form);
-
-        const email = form.querySelector('input[type="email"]').value;
-        const password = form.querySelector('input[type="password"]').value;
-        const rememberMe = form.querySelector('input[name="remember-me"]')?.checked;
-
-        try {
-            const loader = UIComponents.showLoading('Logging in...');
-
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, rememberMe }),
-            });
-
-            const data = await response.json();
-            UIComponents.hideLoading(loader);
-
-            if (!response.ok) {
-                UIComponents.showAlert(data.message || 'Login failed', 'error');
-                return;
-            }
-
-            // Check if 2FA is required (response: { data: { requiresMfa, tempToken, userId } })
-            if (data.data?.requiresMfa || data.data?.requires2FA || data.require2FA) {
-                localStorage.setItem('2fa_token', data.data?.tempToken || data.tempToken || '');
-                localStorage.setItem('2fa_user_id', data.data?.userId || data.userId || '');
-                localStorage.setItem('2fa_required', 'true');
-                window.location.href = '/2fa-verify.html';
-            } else {
-                // Store tokens from successful login
-                if (data.data?.accessToken) {
-                    localStorage.setItem('auth_token', data.data.accessToken);
-                    if (data.data.refreshToken) localStorage.setItem('refresh_token', data.data.refreshToken);
-                    localStorage.setItem('user', JSON.stringify({
-                        id: data.data.userId,
-                        email: data.data.email,
-                        role: data.data.role,
-                        schoolId: data.data.schoolId || null
-                    }));
-                }
-                UIComponents.createToast({ message: 'Logged in successfully!', type: 'success' });
-                const role = data.data?.role;
-                const adminRoles = ['SUPER_ADMIN', 'SITE_ADMIN', 'SCHOOL_ADMIN'];
-                setTimeout(() => {
-                    window.location.href = adminRoles.includes(role) ? '/admin-dashboard.html' : '/index.html';
-                }, 1000);
-            }
-        } catch (error) {
-            console.error('Login error:', error);
-            UIComponents.createToast({ message: 'Connection error', type: 'error' });
-        }
+    const errors = UIComponents.validateForm(form);
+    if (!errors.isValid) {
+      UIComponents.displayFormErrors(form, errors.errors);
+      return;
     }
 
-    /**
+    UIComponents.clearFormErrors(form);
+
+    const email = form.querySelector('input[type="email"]').value;
+    const password = form.querySelector('input[type="password"]').value;
+    const rememberMe = form.querySelector('input[name="remember-me"]')?.checked;
+
+    try {
+      const loader = UIComponents.showLoading('Logging in...');
+
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, rememberMe })
+      });
+
+      const data = await response.json();
+      UIComponents.hideLoading(loader);
+
+      if (!response.ok) {
+        UIComponents.showAlert(data.message || 'Login failed', 'error');
+        return;
+      }
+
+      // Check if 2FA is required (response: { data: { requiresMfa, tempToken, userId } })
+      if (data.data?.requiresMfa || data.data?.requires2FA || data.require2FA) {
+        localStorage.setItem('2fa_token', data.data?.tempToken || data.tempToken || '');
+        localStorage.setItem('2fa_user_id', data.data?.userId || data.userId || '');
+        localStorage.setItem('2fa_required', 'true');
+        window.location.href = '/2fa-verify.html';
+      } else {
+        // Store tokens from successful login
+        if (data.data?.accessToken) {
+          localStorage.setItem('auth_token', data.data.accessToken);
+          if (data.data.refreshToken) {localStorage.setItem('refresh_token', data.data.refreshToken);}
+          localStorage.setItem('user', JSON.stringify({
+            id: data.data.userId,
+            email: data.data.email,
+            role: data.data.role,
+            schoolId: data.data.schoolId || null
+          }));
+        }
+        UIComponents.createToast({ message: 'Logged in successfully!', type: 'success' });
+        const role = data.data?.role;
+        const adminRoles = ['SUPER_ADMIN', 'SITE_ADMIN', 'SCHOOL_ADMIN'];
+        setTimeout(() => {
+          window.location.href = adminRoles.includes(role) ? '/admin-dashboard.html' : '/index.html';
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      UIComponents.createToast({ message: 'Connection error', type: 'error' });
+    }
+  }
+
+  /**
      * Initialize register form (multi-step)
      */
-    initRegister() {
-        this.currentStep = 1;
-        this.totalSteps = 3;
-        this.inviteToken = null;
-        this.isStudentInvite = false;
+  initRegister() {
+    this.currentStep = 1;
+    this.totalSteps = 3;
+    this.inviteToken = null;
+    this.isStudentInvite = false;
 
-        const form = document.getElementById('register-form');
-        if (!form) return;
+    const form = document.getElementById('register-form');
+    if (!form) {return;}
 
-        // Detect student invite link (?token=...&email=...)
-        const urlParams = new URLSearchParams(window.location.search);
-        const inviteToken = urlParams.get('token');
-        const inviteEmail = urlParams.get('email');
+    // Detect student invite link (?token=...&email=...)
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteToken = urlParams.get('token');
+    const inviteEmail = urlParams.get('email');
 
-        if (inviteToken && inviteEmail) {
-            this.isStudentInvite = true;
-            this.inviteToken = inviteToken;
-            this.totalSteps = 4;
+    if (inviteToken && inviteEmail) {
+      this.isStudentInvite = true;
+      this.inviteToken = inviteToken;
+      this.totalSteps = 4;
 
-            // Hide account type — students only via invite link
-            const accountTypeGroup = document.getElementById('account-type-group');
-            if (accountTypeGroup) accountTypeGroup.style.display = 'none';
-            const studentRadio = document.getElementById('account-student');
-            if (studentRadio) studentRadio.checked = true;
+      // Hide account type — students only via invite link
+      const accountTypeGroup = document.getElementById('account-type-group');
+      if (accountTypeGroup) {accountTypeGroup.style.display = 'none';}
+      const studentRadio = document.getElementById('account-student');
+      if (studentRadio) {studentRadio.checked = true;}
 
-            // Pre-fill and lock the email field
-            const emailInput = document.getElementById('register-email');
-            if (emailInput) {
-                emailInput.value = decodeURIComponent(inviteEmail);
-                emailInput.readOnly = true;
-                emailInput.style.background = 'var(--color-surface-alt, #f5f5f5)';
-            }
+      // Pre-fill and lock the email field
+      const emailInput = document.getElementById('register-email');
+      if (emailInput) {
+        emailInput.value = decodeURIComponent(inviteEmail);
+        emailInput.readOnly = true;
+        emailInput.style.background = 'var(--color-surface-alt, #f5f5f5)';
+      }
 
-            // Show 4th progress step
-            document.getElementById('progress-line-4').style.display = '';
-            document.getElementById('progress-step-4').style.display = '';
-            document.getElementById('progress-indicator').setAttribute('aria-valuemax', '4');
+      // Show 4th progress step
+      document.getElementById('progress-line-4').style.display = '';
+      document.getElementById('progress-step-4').style.display = '';
+      document.getElementById('progress-indicator').setAttribute('aria-valuemax', '4');
 
-            // Update header description
-            const headerP = document.querySelector('.auth-header p');
-            if (headerP) headerP.textContent = 'Complete your student registration to submit artwork';
+      // Update header description
+      const headerP = document.querySelector('.auth-header p');
+      if (headerP) {headerP.textContent = 'Complete your student registration to submit artwork';}
 
-            // Wire payment step buttons
-            form.querySelector('#back-payment-btn')?.addEventListener('click', () => this.prevRegisterStep(form));
-            form.querySelector('#next-payment-btn')?.addEventListener('click', () => this.nextRegisterStep(form));
-            form.querySelector('#skip-payment-btn')?.addEventListener('click', () => {
-                this.formData.skipPayment = true;
-                this.saveStepData(form);
-                this.currentStep++;
-                this.updateProgressIndicator();
-                this.showStep(form, this.currentStep);
-                window.scrollTo(0, 0);
-            });
-        } else {
-            // Non-invite flow: remove payment fieldset so it doesn't affect step indexing
-            const paymentFieldset = document.getElementById('step-payment-fieldset');
-            if (paymentFieldset) paymentFieldset.remove();
-        }
-
-        const nextBtn = form.querySelector('#next-step-btn') || form.querySelector('.btn-next');
-        const backBtn = form.querySelector('#prev-step-btn') || form.querySelector('.btn-back');
-        const passwordInput = form.querySelector('input[name="password"]');
-        const schoolSelect = form.querySelector('select[name="school_id"]');
-        const schoolSearch = form.querySelector('#school-search');
-
-        nextBtn?.addEventListener('click', () => this.nextRegisterStep(form));
-        backBtn?.addEventListener('click', () => this.prevRegisterStep(form));
-
-        // Step 2 navigation buttons
-        form.querySelector('#back-step-btn')?.addEventListener('click', () => this.prevRegisterStep(form));
-        form.querySelector('#next-step-2-btn')?.addEventListener('click', () => this.nextRegisterStep(form));
-
-        // Terms step navigation buttons (step 3 in normal flow, step 4 in invite flow)
-        form.querySelector('#back-step-2-btn')?.addEventListener('click', () => this.prevRegisterStep(form));
-        form.querySelector('#create-account-btn')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.nextRegisterStep(form);
-        });
-
-        // Prevent native form submission (create-account-btn is type="submit")
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.nextRegisterStep(form);
-        });
-
-        // Set up school search functionality — type-to-search, no pre-load
-        if (schoolSearch && schoolSelect) {
-          // Show prompt on init
-          schoolSelect.innerHTML = '<option value="">Type above to search schools</option>';
-
-          let searchTimeout;
-          schoolSearch.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            const query = e.target.value.trim();
-
-            if (query.length >= 2) {
-              schoolSelect.innerHTML = '<option value="">Searching...</option>';
-              searchTimeout = setTimeout(() => {
-                this.searchSchools(query, schoolSelect);
-              }, 300);
-            } else {
-              schoolSelect.innerHTML = '<option value="">Type above to search schools</option>';
-            }
-          });
-
-          // Allow selection by pressing Enter
-          schoolSearch.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              schoolSelect.focus();
-            }
-          });
-        }
-
-        // Password requirement checker
-        if (passwordInput) {
-            passwordInput.addEventListener('input', () => this.updatePasswordRequirements(passwordInput));
-            // Initialize requirements on page load
-            this.updatePasswordRequirements(passwordInput);
-        }
-
-        // Age verification listener
-        const dobInput = form.querySelector('input[name="date_of_birth"]');
-        if (dobInput) {
-            dobInput.addEventListener('change', () => this.checkCOPPA(form));
-        }
-
+      // Wire payment step buttons
+      form.querySelector('#back-payment-btn')?.addEventListener('click', () => this.prevRegisterStep(form));
+      form.querySelector('#next-payment-btn')?.addEventListener('click', () => this.nextRegisterStep(form));
+      form.querySelector('#skip-payment-btn')?.addEventListener('click', () => {
+        this.formData.skipPayment = true;
+        this.saveStepData(form);
+        this.currentStep++;
         this.updateProgressIndicator();
+        this.showStep(form, this.currentStep);
+        window.scrollTo(0, 0);
+      });
+    } else {
+      // Non-invite flow: remove payment fieldset so it doesn't affect step indexing
+      const paymentFieldset = document.getElementById('step-payment-fieldset');
+      if (paymentFieldset) {paymentFieldset.remove();}
     }
 
-    /**
+    const nextBtn = form.querySelector('#next-step-btn') || form.querySelector('.btn-next');
+    const backBtn = form.querySelector('#prev-step-btn') || form.querySelector('.btn-back');
+    const passwordInput = form.querySelector('input[name="password"]');
+    const schoolSelect = form.querySelector('select[name="school_id"]');
+    const schoolSearch = form.querySelector('#school-search');
+
+    nextBtn?.addEventListener('click', () => this.nextRegisterStep(form));
+    backBtn?.addEventListener('click', () => this.prevRegisterStep(form));
+
+    // Step 2 navigation buttons
+    form.querySelector('#back-step-btn')?.addEventListener('click', () => this.prevRegisterStep(form));
+    form.querySelector('#next-step-2-btn')?.addEventListener('click', () => this.nextRegisterStep(form));
+
+    // Terms step navigation buttons (step 3 in normal flow, step 4 in invite flow)
+    form.querySelector('#back-step-2-btn')?.addEventListener('click', () => this.prevRegisterStep(form));
+    form.querySelector('#create-account-btn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.nextRegisterStep(form);
+    });
+
+    // Prevent native form submission (create-account-btn is type="submit")
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.nextRegisterStep(form);
+    });
+
+    // Set up school search functionality — type-to-search, no pre-load
+    if (schoolSearch && schoolSelect) {
+      // Show prompt on init
+      schoolSelect.innerHTML = '<option value="">Type above to search schools</option>';
+
+      let searchTimeout;
+      schoolSearch.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        const query = e.target.value.trim();
+
+        if (query.length >= 2) {
+          schoolSelect.innerHTML = '<option value="">Searching...</option>';
+          searchTimeout = setTimeout(() => {
+            this.searchSchools(query, schoolSelect);
+          }, 300);
+        } else {
+          schoolSelect.innerHTML = '<option value="">Type above to search schools</option>';
+        }
+      });
+
+      // Allow selection by pressing Enter
+      schoolSearch.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          schoolSelect.focus();
+        }
+      });
+    }
+
+    // Password requirement checker
+    if (passwordInput) {
+      passwordInput.addEventListener('input', () => this.updatePasswordRequirements(passwordInput));
+      // Initialize requirements on page load
+      this.updatePasswordRequirements(passwordInput);
+    }
+
+    // Age verification listener
+    const dobInput = form.querySelector('input[name="date_of_birth"]');
+    if (dobInput) {
+      dobInput.addEventListener('change', () => this.checkCOPPA(form));
+    }
+
+    this.updateProgressIndicator();
+  }
+
+  /**
      * Load schools from API and populate dropdown
      * Supports searching by state, city, or school name
      */
-    async loadSchools(selectElement) {
-      try {
-        const form = selectElement.closest('form');
-        const stateInput = form?.querySelector('input[name="state"]');
-        // cityInput reserved for future city-based filtering
-        
-        let url = '/api/schools';
-        const params = new URLSearchParams();
-        
-        // If state selected, filter by state
-        if (stateInput?.value) {
-          params.append('state', stateInput.value);
-        }
-        
-        if (params.toString()) {
-          url += '?' + params.toString();
-        }
-        
-        const response = await fetch(url);
-        const data = await response.json();
+  async loadSchools(selectElement) {
+    try {
+      const form = selectElement.closest('form');
+      const stateInput = form?.querySelector('input[name="state"]');
+      // cityInput reserved for future city-based filtering
 
-        if (!data.success || !data.data) {
-          console.error('Failed to load schools:', data.message);
-          UIComponents.createToast({ message: 'Could not load schools', type: 'error' });
-          return;
-        }
+      let url = '/api/schools';
+      const params = new URLSearchParams();
 
-        // Clear existing options except the placeholder
-        selectElement.innerHTML = '<option value="">Select your school</option>';
-
-        // Add schools to dropdown
-        data.data.forEach(school => {
-          const option = document.createElement('option');
-          option.value = school.id;
-          option.textContent = `${school.name} - ${school.city}, ${school.state_province}`;
-          selectElement.appendChild(option);
-        });
-        
-        // Show count if many schools loaded
-        if (data.data.length >= 500) {
-          const hint = document.createElement('option');
-          hint.disabled = true;
-          hint.textContent = `... and ${data.count} more (use search to filter)`;
-          selectElement.appendChild(hint);
-        }
-      } catch (error) {
-        console.error('Error loading schools:', error);
-        UIComponents.createToast({ message: 'Connection error loading schools', type: 'error' });
+      // If state selected, filter by state
+      if (stateInput?.value) {
+        params.append('state', stateInput.value);
       }
+
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (!data.success || !data.data) {
+        console.error('Failed to load schools:', data.message);
+        UIComponents.createToast({ message: 'Could not load schools', type: 'error' });
+        return;
+      }
+
+      // Clear existing options except the placeholder
+      selectElement.innerHTML = '<option value="">Select your school</option>';
+
+      // Add schools to dropdown
+      data.data.forEach(school => {
+        const option = document.createElement('option');
+        option.value = school.id;
+        option.textContent = `${school.name} - ${school.city}, ${school.state_province}`;
+        selectElement.appendChild(option);
+      });
+
+      // Show count if many schools loaded
+      if (data.data.length >= 500) {
+        const hint = document.createElement('option');
+        hint.disabled = true;
+        hint.textContent = `... and ${data.count} more (use search to filter)`;
+        selectElement.appendChild(hint);
+      }
+    } catch (error) {
+      console.error('Error loading schools:', error);
+      UIComponents.createToast({ message: 'Connection error loading schools', type: 'error' });
     }
-    
-    /**
+  }
+
+  /**
      * Search schools by name, city, or state
      * @param {string} query - Search query
      * @param {HTMLElement} selectElement - School select element
      */
-    async searchSchools(query, selectElement) {
-      if (!query || query.length < 2) {
+  async searchSchools(query, selectElement) {
+    if (!query || query.length < 2) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/schools/search/${encodeURIComponent(query)}`);
+      const data = await response.json();
+
+      if (!data.success || !data.data) {
+        selectElement.innerHTML = '<option value="">No schools found — try a different search</option>';
         return;
       }
-      
-      try {
-        const response = await fetch(`/api/schools/search/${encodeURIComponent(query)}`);
-        const data = await response.json();
 
-        if (!data.success || !data.data) {
-          selectElement.innerHTML = '<option value="">No schools found — try a different search</option>';
-          return;
+      if (data.data.length === 0) {
+        selectElement.innerHTML = '<option value="">No schools found — try a different search</option>';
+        return;
+      }
+
+      // Clear and repopulate dropdown with results
+      selectElement.innerHTML = '<option value="">-- Select your school --</option>';
+      data.data.forEach(school => {
+        const option = document.createElement('option');
+        option.value = school.id;
+        option.textContent = `${school.name} — ${school.city}, ${school.state_province}`;
+        selectElement.appendChild(option);
+      });
+    } catch (error) {
+      console.error('Error searching schools:', error);
+      selectElement.innerHTML = '<option value="">Search unavailable — please try again</option>';
+    }
+  }
+
+  /**
+     * Validate current register step
+     */
+  validateRegisterStep(form) {
+    const step = this.currentStep;
+
+    if (step === 1) {
+      const fullName = form.querySelector('input[name="full_name"]');
+      const email = form.querySelector('input[name="email"]');
+      const dob = form.querySelector('input[name="date_of_birth"]');
+      const school = form.querySelector('select[name="school_id"]');
+      const password = form.querySelector('input[name="password"]');
+      const confirmPass = form.querySelector('input[name="confirm_password"]');
+
+      const errors = {};
+
+      if (!fullName?.value.trim()) {errors.fullname = 'Full name is required';}
+      if (!email?.value.trim()) {errors.email = 'Email is required';}
+      else if (!UIComponents.validateEmail(email.value)) {errors.email = 'Invalid email format';}
+      if (!dob?.value) {errors.dob = 'Date of birth is required';}
+      if (!school?.value) {errors.school = 'School is required';}
+      if (!password?.value) {
+        errors.password = 'Password is required';
+      } else {
+        // Check password complexity - must have all requirements
+        const pwd = password.value;
+        const requirements = {
+          minLength: pwd.length >= 12,
+          uppercase: /[A-Z]/.test(pwd),
+          lowercase: /[a-z]/.test(pwd),
+          number: /[0-9]/.test(pwd),
+          special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pwd)
+        };
+
+        const allMet = Object.values(requirements).every(req => req === true);
+
+        if (!allMet) {
+          const missing = [];
+          if (!requirements.minLength) {missing.push('12+ characters');}
+          if (!requirements.uppercase) {missing.push('uppercase letter');}
+          if (!requirements.lowercase) {missing.push('lowercase letter');}
+          if (!requirements.number) {missing.push('number');}
+          if (!requirements.special) {missing.push('special character');}
+          errors.password = `Password must contain: ${missing.join(', ')}`;
         }
+      }
+      if (confirmPass?.value !== password?.value) {errors.confirmpass = 'Passwords do not match';}
 
-        if (data.data.length === 0) {
-          selectElement.innerHTML = '<option value="">No schools found — try a different search</option>';
-          return;
+      if (Object.keys(errors).length > 0) {
+        UIComponents.displayFormErrors(form, errors);
+        // Also show a toast for the password error
+        if (errors.password) {
+          UIComponents.createToast({ message: errors.password, type: 'error' });
         }
+        return false;
+      }
+    } else if (step === 2) {
+      const street = form.querySelector('input[name="street_address"]');
+      const city = form.querySelector('input[name="city"]');
+      const state = form.querySelector('input[name="state"]');
+      const zip = form.querySelector('input[name="postal_code"]');
 
-        // Clear and repopulate dropdown with results
-        selectElement.innerHTML = '<option value="">-- Select your school --</option>';
-        data.data.forEach(school => {
-          const option = document.createElement('option');
-          option.value = school.id;
-          option.textContent = `${school.name} — ${school.city}, ${school.state_province}`;
-          selectElement.appendChild(option);
-        });
-      } catch (error) {
-        console.error('Error searching schools:', error);
-        selectElement.innerHTML = '<option value="">Search unavailable — please try again</option>';
+      const errors = {};
+      if (!street?.value.trim()) {errors.street = 'Street address is required';}
+      if (!city?.value.trim()) {errors.city = 'City is required';}
+      if (!state?.value.trim()) {errors.state = 'State is required';}
+      if (!zip?.value.trim()) {errors.zip = 'Postal code is required';}
+
+      if (Object.keys(errors).length > 0) {
+        UIComponents.displayFormErrors(form, errors);
+        return false;
+      }
+    } else if (step === 3) {
+      const termsCheck = form.querySelector('input[name="accept_terms"]');
+      const privacyCheck = form.querySelector('input[name="accept_privacy"]');
+
+      if (!termsCheck?.checked || !privacyCheck?.checked) {
+        UIComponents.showAlert('You must accept terms and privacy policy', 'warning');
+        return false;
+      }
+
+      // Check COPPA if needed
+      const coppaConsent = form.querySelector('input[name="parental-consent"]');
+      if (coppaConsent && !coppaConsent.checked) {
+        UIComponents.showAlert('Parental consent is required for users under 13', 'warning');
+        return false;
       }
     }
 
-    /**
-     * Validate current register step
-     */
-    validateRegisterStep(form) {
-        const step = this.currentStep;
+    return true;
+  }
 
-        if (step === 1) {
-            const fullName = form.querySelector('input[name="full_name"]');
-            const email = form.querySelector('input[name="email"]');
-            const dob = form.querySelector('input[name="date_of_birth"]');
-            const school = form.querySelector('select[name="school_id"]');
-            const password = form.querySelector('input[name="password"]');
-            const confirmPass = form.querySelector('input[name="confirm_password"]');
-
-            const errors = {};
-
-            if (!fullName?.value.trim()) errors.fullname = 'Full name is required';
-            if (!email?.value.trim()) errors.email = 'Email is required';
-            else if (!UIComponents.validateEmail(email.value)) errors.email = 'Invalid email format';
-            if (!dob?.value) errors.dob = 'Date of birth is required';
-            if (!school?.value) errors.school = 'School is required';
-            if (!password?.value) {
-                errors.password = 'Password is required';
-            } else {
-                // Check password complexity - must have all requirements
-                const pwd = password.value;
-                const requirements = {
-                    minLength: pwd.length >= 12,
-                    uppercase: /[A-Z]/.test(pwd),
-                    lowercase: /[a-z]/.test(pwd),
-                    number: /[0-9]/.test(pwd),
-                    special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pwd)
-                };
-
-                const allMet = Object.values(requirements).every(req => req === true);
-                
-                if (!allMet) {
-                    const missing = [];
-                    if (!requirements.minLength) missing.push('12+ characters');
-                    if (!requirements.uppercase) missing.push('uppercase letter');
-                    if (!requirements.lowercase) missing.push('lowercase letter');
-                    if (!requirements.number) missing.push('number');
-                    if (!requirements.special) missing.push('special character');
-                    errors.password = `Password must contain: ${missing.join(', ')}`;
-                }
-            }
-            if (confirmPass?.value !== password?.value) errors.confirmpass = 'Passwords do not match';
-
-            if (Object.keys(errors).length > 0) {
-                UIComponents.displayFormErrors(form, errors);
-                // Also show a toast for the password error
-                if (errors.password) {
-                    UIComponents.createToast({ message: errors.password, type: 'error' });
-                }
-                return false;
-            }
-        } else if (step === 2) {
-            const street = form.querySelector('input[name="street_address"]');
-            const city = form.querySelector('input[name="city"]');
-            const state = form.querySelector('input[name="state"]');
-            const zip = form.querySelector('input[name="postal_code"]');
-
-            const errors = {};
-            if (!street?.value.trim()) errors.street = 'Street address is required';
-            if (!city?.value.trim()) errors.city = 'City is required';
-            if (!state?.value.trim()) errors.state = 'State is required';
-            if (!zip?.value.trim()) errors.zip = 'Postal code is required';
-
-            if (Object.keys(errors).length > 0) {
-                UIComponents.displayFormErrors(form, errors);
-                return false;
-            }
-        } else if (step === 3) {
-            const termsCheck = form.querySelector('input[name="accept_terms"]');
-            const privacyCheck = form.querySelector('input[name="accept_privacy"]');
-
-            if (!termsCheck?.checked || !privacyCheck?.checked) {
-                UIComponents.showAlert('You must accept terms and privacy policy', 'warning');
-                return false;
-            }
-
-            // Check COPPA if needed
-            const coppaConsent = form.querySelector('input[name="parental-consent"]');
-            if (coppaConsent && !coppaConsent.checked) {
-                UIComponents.showAlert('Parental consent is required for users under 13', 'warning');
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
+  /**
      * Next register step
      */
-    nextRegisterStep(form) {
-        if (!this.validateRegisterStep(form)) return;
+  nextRegisterStep(form) {
+    if (!this.validateRegisterStep(form)) {return;}
 
-        if (this.currentStep < this.totalSteps) {
-            this.saveStepData(form);
-            this.currentStep++;
-            this.updateProgressIndicator();
-            this.showStep(form, this.currentStep);
-            window.scrollTo(0, 0);
-        } else {
-            this.submitRegister(form);
-        }
+    if (this.currentStep < this.totalSteps) {
+      this.saveStepData(form);
+      this.currentStep++;
+      this.updateProgressIndicator();
+      this.showStep(form, this.currentStep);
+      window.scrollTo(0, 0);
+    } else {
+      this.submitRegister(form);
     }
+  }
 
-    /**
+  /**
      * Previous register step
      */
-    prevRegisterStep(form) {
-        if (this.currentStep > 1) {
-            this.saveStepData(form);
-            this.currentStep--;
-            this.updateProgressIndicator();
-            this.showStep(form, this.currentStep);
-            window.scrollTo(0, 0);
-        }
+  prevRegisterStep(form) {
+    if (this.currentStep > 1) {
+      this.saveStepData(form);
+      this.currentStep--;
+      this.updateProgressIndicator();
+      this.showStep(form, this.currentStep);
+      window.scrollTo(0, 0);
     }
+  }
 
-    /**
+  /**
      * Save step data
      */
-    saveStepData(form) {
-        const inputs = form.querySelectorAll('input, textarea, select');
-        inputs.forEach((input) => {
-            if (input.type === 'checkbox') {
-                this.formData[input.name] = input.checked;
-            } else {
-                this.formData[input.name] = input.value;
-            }
-        });
-    }
+  saveStepData(form) {
+    const inputs = form.querySelectorAll('input, textarea, select');
+    inputs.forEach((input) => {
+      if (input.type === 'checkbox') {
+        this.formData[input.name] = input.checked;
+      } else {
+        this.formData[input.name] = input.value;
+      }
+    });
+  }
 
-    /**
+  /**
      * Show specific step
      */
-    showStep(form, stepNumber) {
-        const fieldsets = form.querySelectorAll('fieldset');
-        fieldsets.forEach((fieldset, index) => {
-            fieldset.style.display = (index + 1) === stepNumber ? 'block' : 'none';
-        });
-    }
+  showStep(form, stepNumber) {
+    const fieldsets = form.querySelectorAll('fieldset');
+    fieldsets.forEach((fieldset, index) => {
+      fieldset.style.display = (index + 1) === stepNumber ? 'block' : 'none';
+    });
+  }
 
-    /**
+  /**
      * Update progress indicator
      */
-    updateProgressIndicator() {
-        const steps = document.querySelectorAll('.progress-step');
-        steps.forEach((step, index) => {
-            step.classList.toggle('active', (index + 1) <= this.currentStep);
-        });
-    }
+  updateProgressIndicator() {
+    const steps = document.querySelectorAll('.progress-step');
+    steps.forEach((step, index) => {
+      step.classList.toggle('active', (index + 1) <= this.currentStep);
+    });
+  }
 
-    /**
+  /**
      * Check COPPA age requirement
      */
-    checkCOPPA(form) {
-        const dobInput = form.querySelector('input[name="dob"]');
-        const parentalSection = form.querySelector('.parental-consent-section');
+  checkCOPPA(form) {
+    const dobInput = form.querySelector('input[name="dob"]');
+    const parentalSection = form.querySelector('.parental-consent-section');
 
-        if (!dobInput?.value || !parentalSection) return;
+    if (!dobInput?.value || !parentalSection) {return;}
 
-        const birthDate = new Date(dobInput.value);
-        const today = new Date();
-        const age = today.getFullYear() - birthDate.getFullYear();
+    const birthDate = new Date(dobInput.value);
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
 
-        if (age < 13) {
-            parentalSection.style.display = 'block';
-            form.querySelector('input[name="parental-consent"]').setAttribute('required', 'true');
-        } else {
-            parentalSection.style.display = 'none';
-            form.querySelector('input[name="parental-consent"]').removeAttribute('required');
-        }
+    if (age < 13) {
+      parentalSection.style.display = 'block';
+      form.querySelector('input[name="parental-consent"]').setAttribute('required', 'true');
+    } else {
+      parentalSection.style.display = 'none';
+      form.querySelector('input[name="parental-consent"]').removeAttribute('required');
     }
+  }
 
-    /**
+  /**
      * Submit registration
      */
-    async submitRegister(form) {
-        this.saveStepData(form);
+  async submitRegister(form) {
+    this.saveStepData(form);
 
-        // Map form field names to API field names
-        const fullName = (this.formData.full_name || '').trim();
-        const nameParts = fullName.split(/\s+/);
-        const firstName = nameParts[0] || '';
-        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : firstName;
+    // Map form field names to API field names
+    const fullName = (this.formData.full_name || '').trim();
+    const nameParts = fullName.split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : firstName;
 
-        const payload = {
-            email: this.formData.email,
-            password: this.formData.password,
-            firstName,
-            lastName,
-            dateOfBirth: this.formData.date_of_birth,
-            schoolId: this.formData.school_id,
-            accountType: this.isStudentInvite ? 'student' : this.formData.account_type,
-            ...(this.inviteToken && { registrationToken: this.inviteToken }),
-            ...(this.isStudentInvite && { canBid: !this.formData.skipPayment }),
-        };
+    const payload = {
+      email: this.formData.email,
+      password: this.formData.password,
+      firstName,
+      lastName,
+      dateOfBirth: this.formData.date_of_birth,
+      schoolId: this.formData.school_id,
+      accountType: this.isStudentInvite ? 'student' : this.formData.account_type,
+      ...(this.inviteToken && { registrationToken: this.inviteToken }),
+      ...(this.isStudentInvite && { canBid: !this.formData.skipPayment })
+    };
 
-        try {
-            const loader = UIComponents.showLoading('Creating account...');
+    try {
+      const loader = UIComponents.showLoading('Creating account...');
 
-            const response = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
-            const data = await response.json();
-            UIComponents.hideLoading(loader);
+      const data = await response.json();
+      UIComponents.hideLoading(loader);
 
-            if (!response.ok) {
-                const errorMessage = data.message || 'Registration failed';
-                UIComponents.createToast({ message: errorMessage, type: 'error' });
-                UIComponents.showAlert(errorMessage, 'error');
-                return;
-            }
+      if (!response.ok) {
+        const errorMessage = data.message || 'Registration failed';
+        UIComponents.createToast({ message: errorMessage, type: 'error' });
+        UIComponents.showAlert(errorMessage, 'error');
+        return;
+      }
 
-            // Store tokens so 2FA setup page can authenticate immediately
-            if (data.data?.accessToken) {
-                authManager.setToken(data.data.accessToken);
-                authManager.setRefreshToken(data.data.refreshToken);
-                authManager.setUser({
-                    id: data.data.userId,
-                    email: data.data.email,
-                    role: data.data.role,
-                });
-            }
+      // Store tokens so 2FA setup page can authenticate immediately
+      if (data.data?.accessToken) {
+        authManager.setToken(data.data.accessToken);
+        authManager.setRefreshToken(data.data.refreshToken);
+        authManager.setUser({
+          id: data.data.userId,
+          email: data.data.email,
+          role: data.data.role
+        });
+      }
 
-            UIComponents.createToast({ message: 'Account created! Setting up 2FA...', type: 'success' });
-            setTimeout(() => window.location.href = '/2fa-setup.html', 800);
-        } catch (error) {
-            console.error('Registration error:', error);
-            UIComponents.createToast({ message: 'Connection error: ' + error.message, type: 'error' });
-        }
+      UIComponents.createToast({ message: 'Account created! Setting up 2FA...', type: 'success' });
+      setTimeout(() => { window.location.href = '/2fa-setup.html'; }, 800);
+    } catch (error) {
+      console.error('Registration error:', error);
+      UIComponents.createToast({ message: `Connection error: ${error.message}`, type: 'error' });
     }
+  }
 
-    /**
+  /**
      * Initialize 2FA setup
      */
-    init2FASetup() {
-        this.currentStep = 1;
-        this.totalSteps = 2;
+  init2FASetup() {
+    this.currentStep = 1;
+    this.totalSteps = 2;
 
-        const form = document.getElementById('twofa-setup-form');
-        if (!form) return;
+    const form = document.getElementById('twofa-setup-form');
+    if (!form) {return;}
 
-        const qrCode = form.querySelector('.qr-code');
-        const manualEntry = form.querySelector('.manual-entry-details');
-        const showManualBtn = form.querySelector('[data-show-manual]');
+    const qrCode = form.querySelector('.qr-code');
+    const manualEntry = form.querySelector('.manual-entry-details');
+    const showManualBtn = form.querySelector('[data-show-manual]');
 
-        // Toggle manual entry
-        if (showManualBtn) {
-            showManualBtn.addEventListener('click', () => {
-                manualEntry.style.display = manualEntry.style.display === 'none' ? 'block' : 'none';
-            });
-        }
-
-        // Generate QR code
-        this.generateQRCode(qrCode);
-
-        // Navigation
-        const nextBtn = form.querySelector('.btn-next');
-        const backBtn = form.querySelector('.btn-back');
-
-        nextBtn?.addEventListener('click', () => this.next2FAStep(form));
-        backBtn?.addEventListener('click', () => this.prev2FAStep(form));
-
-        this.updateProgressIndicator();
+    // Toggle manual entry
+    if (showManualBtn) {
+      showManualBtn.addEventListener('click', () => {
+        manualEntry.style.display = manualEntry.style.display === 'none' ? 'block' : 'none';
+      });
     }
 
-    /**
+    // Generate QR code
+    this.generateQRCode(qrCode);
+
+    // Navigation
+    const nextBtn = form.querySelector('.btn-next');
+    const backBtn = form.querySelector('.btn-back');
+
+    nextBtn?.addEventListener('click', () => this.next2FAStep(form));
+    backBtn?.addEventListener('click', () => this.prev2FAStep(form));
+
+    this.updateProgressIndicator();
+  }
+
+  /**
      * Generate QR code for 2FA
      */
-    generateQRCode(container) {
-        if (!container) return;
+  generateQRCode(container) {
+    if (!container) {return;}
 
-        // Placeholder: In production, use qrcode.js library
-        // For now, show instruction
-        container.innerHTML = `
+    // Placeholder: In production, use qrcode.js library
+    // For now, show instruction
+    container.innerHTML = `
             <div style="background: #f5f5f5; padding: 20px; border: 2px dashed #ccc; border-radius: 8px; text-align: center;">
                 <p>📱 QR Code will be displayed here</p>
                 <p style="font-size: 0.875rem; color: #666;">Use authenticator app to scan</p>
             </div>
         `;
-    }
+  }
 
-    /**
+  /**
      * Navigate 2FA steps
      */
-    next2FAStep(form) {
-        if (this.currentStep < this.totalSteps) {
-            this.currentStep++;
-            this.updateProgressIndicator();
-            this.showStep(form, this.currentStep);
-        } else {
-            this.submit2FASetup(form);
-        }
+  next2FAStep(form) {
+    if (this.currentStep < this.totalSteps) {
+      this.currentStep++;
+      this.updateProgressIndicator();
+      this.showStep(form, this.currentStep);
+    } else {
+      this.submit2FASetup(form);
     }
+  }
 
-    prev2FAStep(form) {
-        if (this.currentStep > 1) {
-            this.currentStep--;
-            this.updateProgressIndicator();
-            this.showStep(form, this.currentStep);
-        }
+  prev2FAStep(form) {
+    if (this.currentStep > 1) {
+      this.currentStep--;
+      this.updateProgressIndicator();
+      this.showStep(form, this.currentStep);
     }
+  }
 
-    /**
+  /**
      * Submit 2FA setup
      */
-    async submit2FASetup(form) {
-        const codeInput = form.querySelector('input[name="twofa-code"]');
-        const confirmCheck = form.querySelector('input[name="confirm-backup"]');
+  async submit2FASetup(form) {
+    const codeInput = form.querySelector('input[name="twofa-code"]');
+    const confirmCheck = form.querySelector('input[name="confirm-backup"]');
 
-        if (!codeInput?.value.trim()) {
-            UIComponents.showAlert('Please enter your 6-digit code', 'warning');
-            return;
-        }
-
-        if (!confirmCheck?.checked) {
-            UIComponents.showAlert('Please confirm you saved backup codes', 'warning');
-            return;
-        }
-
-        try {
-            const loader = UIComponents.showLoading('Enabling 2FA...');
-
-            const response = await fetch('/api/auth/2fa/setup', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code: codeInput.value }),
-            });
-
-            UIComponents.hideLoading(loader);
-
-            if (!response.ok) {
-                UIComponents.showAlert('Invalid verification code', 'error');
-                return;
-            }
-
-            UIComponents.createToast({ message: '2FA enabled successfully!', type: 'success' });
-            setTimeout(() => window.location.href = '/user-dashboard.html', 1500);
-        } catch (error) {
-            console.error('2FA setup error:', error);
-            UIComponents.createToast({ message: 'Connection error', type: 'error' });
-        }
+    if (!codeInput?.value.trim()) {
+      UIComponents.showAlert('Please enter your 6-digit code', 'warning');
+      return;
     }
 
-    /**
+    if (!confirmCheck?.checked) {
+      UIComponents.showAlert('Please confirm you saved backup codes', 'warning');
+      return;
+    }
+
+    try {
+      const loader = UIComponents.showLoading('Enabling 2FA...');
+
+      const response = await fetch('/api/auth/2fa/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: codeInput.value })
+      });
+
+      UIComponents.hideLoading(loader);
+
+      if (!response.ok) {
+        UIComponents.showAlert('Invalid verification code', 'error');
+        return;
+      }
+
+      UIComponents.createToast({ message: '2FA enabled successfully!', type: 'success' });
+      setTimeout(() => { window.location.href = '/user-dashboard.html'; }, 1500);
+    } catch (error) {
+      console.error('2FA setup error:', error);
+      UIComponents.createToast({ message: 'Connection error', type: 'error' });
+    }
+  }
+
+  /**
      * Initialize 2FA verification
      */
-    init2FAVerify() {
-        const form = document.getElementById('twofa-verify-form');
-        if (!form) return;
+  init2FAVerify() {
+    const form = document.getElementById('twofa-verify-form');
+    if (!form) {return;}
 
-        const codeInput = form.querySelector('input[name="twofa-code"]');
-        const backupForm = form.querySelector('[data-backup-form]');
-        const useBackupBtn = form.querySelector('[data-use-backup]');
+    const codeInput = form.querySelector('input[name="twofa-code"]');
+    const backupForm = form.querySelector('[data-backup-form]');
+    const useBackupBtn = form.querySelector('[data-use-backup]');
 
-        // Auto-focus code input
-        codeInput?.focus();
+    // Auto-focus code input
+    codeInput?.focus();
 
-        // Toggle backup code form
-        useBackupBtn?.addEventListener('click', () => {
-            const isHidden = backupForm.style.display === 'none';
-            backupForm.style.display = isHidden ? 'block' : 'none';
-            if (isHidden) {
-                form.querySelector('input[name="backup-code"]')?.focus();
-            }
-        });
+    // Toggle backup code form
+    useBackupBtn?.addEventListener('click', () => {
+      const isHidden = backupForm.style.display === 'none';
+      backupForm.style.display = isHidden ? 'block' : 'none';
+      if (isHidden) {
+        form.querySelector('input[name="backup-code"]')?.focus();
+      }
+    });
 
-        // Submit listener
-        const submitBtn = form.querySelector('button[type="submit"]');
-        submitBtn?.addEventListener('click', (e) => this.submit2FAVerify(e, form));
-    }
+    // Submit listener
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn?.addEventListener('click', (e) => this.submit2FAVerify(e, form));
+  }
 
-    /**
+  /**
      * Submit 2FA verification
      */
-    async submit2FAVerify(e, form) {
-        e.preventDefault();
+  async submit2FAVerify(e, form) {
+    e.preventDefault();
 
-        const codeInput = form.querySelector('input[name="twofa-code"]');
-        const backupCodeInput = form.querySelector('input[name="backup-code"]');
-        const rememberDevice = form.querySelector('input[name="remember-device"]')?.checked;
+    const codeInput = form.querySelector('input[name="twofa-code"]');
+    const backupCodeInput = form.querySelector('input[name="backup-code"]');
+    const rememberDevice = form.querySelector('input[name="remember-device"]')?.checked;
 
-        const code = codeInput?.value.trim();
-        const backupCode = backupCodeInput?.value.trim();
+    const code = codeInput?.value.trim();
+    const backupCode = backupCodeInput?.value.trim();
 
-        if (!code && !backupCode) {
-            UIComponents.showAlert('Please enter a code', 'warning');
-            return;
-        }
-
-        try {
-            const loader = UIComponents.showLoading('Verifying...');
-
-            const response = await fetch('/api/auth/2fa/verify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    code: code || undefined,
-                    backupCode: backupCode || undefined,
-                    rememberDevice,
-                }),
-            });
-
-            UIComponents.hideLoading(loader);
-
-            if (!response.ok) {
-                UIComponents.showAlert('Invalid code', 'error');
-                return;
-            }
-
-            UIComponents.createToast({ message: 'Verified successfully!', type: 'success' });
-            setTimeout(() => window.location.href = '/user-dashboard.html', 1000);
-        } catch (error) {
-            console.error('2FA verify error:', error);
-            UIComponents.createToast({ message: 'Connection error', type: 'error' });
-        }
+    if (!code && !backupCode) {
+      UIComponents.showAlert('Please enter a code', 'warning');
+      return;
     }
 
-    /**
+    try {
+      const loader = UIComponents.showLoading('Verifying...');
+
+      const response = await fetch('/api/auth/2fa/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: code || undefined,
+          backupCode: backupCode || undefined,
+          rememberDevice
+        })
+      });
+
+      UIComponents.hideLoading(loader);
+
+      if (!response.ok) {
+        UIComponents.showAlert('Invalid code', 'error');
+        return;
+      }
+
+      UIComponents.createToast({ message: 'Verified successfully!', type: 'success' });
+      setTimeout(() => { window.location.href = '/user-dashboard.html'; }, 1000);
+    } catch (error) {
+      console.error('2FA verify error:', error);
+      UIComponents.createToast({ message: 'Connection error', type: 'error' });
+    }
+  }
+
+  /**
      * Initialize password reset
      */
-    initPasswordReset() {
-        this.currentStep = 1;
-        this.totalSteps = 3;
+  initPasswordReset() {
+    this.currentStep = 1;
+    this.totalSteps = 3;
 
-        const form = document.getElementById('password-reset-form');
-        if (!form) return;
+    const form = document.getElementById('password-reset-form');
+    if (!form) {return;}
 
-        // If a token is in the URL, skip directly to the "enter new password" step
-        const urlParams = new URLSearchParams(window.location.search);
-        const resetToken = urlParams.get('token');
-        if (resetToken) {
-            this.currentStep = 3;
-            this.showStep(form, 3);
-            this.updateProgressIndicator();
+    // If a token is in the URL, skip directly to the "enter new password" step
+    const urlParams = new URLSearchParams(window.location.search);
+    const resetToken = urlParams.get('token');
+    if (resetToken) {
+      this.currentStep = 3;
+      this.showStep(form, 3);
+      this.updateProgressIndicator();
 
-            // Disable hidden inputs in steps 1 & 2 so the browser skips them during validation
-            form.querySelectorAll('#step-1-fieldset input, #step-2-fieldset input').forEach(input => {
-                input.disabled = true;
-            });
+      // Disable hidden inputs in steps 1 & 2 so the browser skips them during validation
+      form.querySelectorAll('#step-1-fieldset input, #step-2-fieldset input').forEach(input => {
+        input.disabled = true;
+      });
 
-            // Show a contextual message above step 3
-            const step3Fieldset = document.getElementById('step-3-fieldset');
-            if (step3Fieldset) {
-                const msg = document.createElement('p');
-                msg.className = 'help-text';
-                msg.textContent = 'Your reset link is valid. Enter your new password below.';
-                step3Fieldset.prepend(msg);
-            }
+      // Show a contextual message above step 3
+      const step3Fieldset = document.getElementById('step-3-fieldset');
+      if (step3Fieldset) {
+        const msg = document.createElement('p');
+        msg.className = 'help-text';
+        msg.textContent = 'Your reset link is valid. Enter your new password below.';
+        step3Fieldset.prepend(msg);
+      }
 
-            // Wire the Reset Password button — prevent native form submission, use JS instead
-            const resetBtn = document.getElementById('reset-password-btn');
-            resetBtn?.addEventListener('click', (e) => {
-                e.preventDefault();
-                const newPass = form.querySelector('input[name="new_password"]');
-                const confirmPass = form.querySelector('input[name="confirm_new_password"]');
-                const errors = {};
-                if (!newPass?.value) errors.new_password = 'Password is required';
-                else {
-                    const strength = UIComponents.validatePassword(newPass.value);
-                    if (strength.score < 2) errors.new_password = 'Password too weak';
-                }
-                if (confirmPass?.value !== newPass?.value) errors.confirm_new_password = 'Passwords do not match';
-                if (Object.keys(errors).length === 0) {
-                    this.submitPasswordResetWithToken(resetToken, newPass.value);
-                } else {
-                    UIComponents.displayFormErrors(form, errors);
-                }
-            });
-
-            // Password strength meter
-            const passwordInput = form.querySelector('input[name="new_password"]');
-            if (passwordInput) {
-                passwordInput.addEventListener('input', () => {
-                    const meter = document.querySelector('.password-strength-meter');
-                    if (meter) meter.replaceWith(UIComponents.createPasswordStrengthMeter(passwordInput.value));
-                });
-            }
-            return;
+      // Wire the Reset Password button — prevent native form submission, use JS instead
+      const resetBtn = document.getElementById('reset-password-btn');
+      resetBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        const newPass = form.querySelector('input[name="new_password"]');
+        const confirmPass = form.querySelector('input[name="confirm_new_password"]');
+        const errors = {};
+        if (!newPass?.value) {errors.new_password = 'Password is required';}
+        else {
+          const strength = UIComponents.validatePassword(newPass.value);
+          if (strength.score < 2) {errors.new_password = 'Password too weak';}
         }
-
-        const nextBtn = form.querySelector('.btn-next');
-        const backBtn = form.querySelector('.btn-back');
-        const resendBtn = form.querySelector('[data-resend-code]');
-
-        nextBtn?.addEventListener('click', () => this.nextPasswordResetStep(form));
-        backBtn?.addEventListener('click', () => this.prevPasswordResetStep(form));
-        resendBtn?.addEventListener('click', (e) => this.resendResetCode(form, e));
-
-        // Password input listener for strength meter
-        const passwordInput = form.querySelector('input[name="new-password"]');
-        if (passwordInput) {
-            passwordInput.addEventListener('input', () => {
-                const meter = document.querySelector('.password-strength-meter');
-                if (meter) {
-                    meter.replaceWith(UIComponents.createPasswordStrengthMeter(passwordInput.value));
-                }
-            });
+        if (confirmPass?.value !== newPass?.value) {errors.confirm_new_password = 'Passwords do not match';}
+        if (Object.keys(errors).length === 0) {
+          this.submitPasswordResetWithToken(resetToken, newPass.value);
+        } else {
+          UIComponents.displayFormErrors(form, errors);
         }
+      });
 
-        this.updateProgressIndicator();
+      // Password strength meter
+      const passwordInput = form.querySelector('input[name="new_password"]');
+      if (passwordInput) {
+        passwordInput.addEventListener('input', () => {
+          const meter = document.querySelector('.password-strength-meter');
+          if (meter) {meter.replaceWith(UIComponents.createPasswordStrengthMeter(passwordInput.value));}
+        });
+      }
+      return;
     }
 
-    /**
+    const nextBtn = form.querySelector('.btn-next');
+    const backBtn = form.querySelector('.btn-back');
+    const resendBtn = form.querySelector('[data-resend-code]');
+
+    nextBtn?.addEventListener('click', () => this.nextPasswordResetStep(form));
+    backBtn?.addEventListener('click', () => this.prevPasswordResetStep(form));
+    resendBtn?.addEventListener('click', (e) => this.resendResetCode(form, e));
+
+    // Password input listener for strength meter
+    const passwordInput = form.querySelector('input[name="new-password"]');
+    if (passwordInput) {
+      passwordInput.addEventListener('input', () => {
+        const meter = document.querySelector('.password-strength-meter');
+        if (meter) {
+          meter.replaceWith(UIComponents.createPasswordStrengthMeter(passwordInput.value));
+        }
+      });
+    }
+
+    this.updateProgressIndicator();
+  }
+
+  /**
      * Submit token-based password reset (admin-initiated link)
      */
-    async submitPasswordResetWithToken(token, newPassword) {
-        try {
-            const loader = UIComponents.showLoading('Resetting password...');
+  async submitPasswordResetWithToken(token, newPassword) {
+    try {
+      const loader = UIComponents.showLoading('Resetting password...');
 
-            const response = await fetch('/api/auth/reset-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token, newPassword }),
-            });
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword })
+      });
 
-            const data = await response.json();
-            UIComponents.hideLoading(loader);
+      const data = await response.json();
+      UIComponents.hideLoading(loader);
 
-            if (!response.ok) {
-                UIComponents.showAlert(data.message || 'Reset failed', 'error');
-                return;
-            }
+      if (!response.ok) {
+        UIComponents.showAlert(data.message || 'Reset failed', 'error');
+        return;
+      }
 
-            UIComponents.createToast({ message: 'Password reset successfully!', type: 'success' });
-            setTimeout(() => window.location.href = '/login.html', 1500);
-        } catch (error) {
-            console.error('Token password reset error:', error);
-            UIComponents.createToast({ message: 'Connection error', type: 'error' });
-        }
+      UIComponents.createToast({ message: 'Password reset successfully!', type: 'success' });
+      setTimeout(() => { window.location.href = '/login.html'; }, 1500);
+    } catch (error) {
+      console.error('Token password reset error:', error);
+      UIComponents.createToast({ message: 'Connection error', type: 'error' });
     }
+  }
 
-    /**
+  /**
      * Next password reset step
      */
-    nextPasswordResetStep(form) {
-        const step = this.currentStep;
-        let isValid = false;
+  nextPasswordResetStep(form) {
+    const step = this.currentStep;
+    let isValid = false;
 
-        if (step === 1) {
-            const email = form.querySelector('input[name="email"]');
-            if (email?.value && UIComponents.validateEmail(email.value)) {
-                this.sendResetCode(form, email.value);
-                isValid = true;
-            } else {
-                UIComponents.showAlert('Please enter a valid email', 'warning');
-            }
-        } else if (step === 2) {
-            const code = form.querySelector('input[name="reset-code"]');
-            if (code?.value.trim()) {
-                isValid = true;
-            } else {
-                UIComponents.showAlert('Please enter the verification code', 'warning');
-            }
-        } else if (step === 3) {
-            const newPass = form.querySelector('input[name="new-password"]');
-            const confirmPass = form.querySelector('input[name="confirm-password"]');
+    if (step === 1) {
+      const email = form.querySelector('input[name="email"]');
+      if (email?.value && UIComponents.validateEmail(email.value)) {
+        this.sendResetCode(form, email.value);
+        isValid = true;
+      } else {
+        UIComponents.showAlert('Please enter a valid email', 'warning');
+      }
+    } else if (step === 2) {
+      const code = form.querySelector('input[name="reset-code"]');
+      if (code?.value.trim()) {
+        isValid = true;
+      } else {
+        UIComponents.showAlert('Please enter the verification code', 'warning');
+      }
+    } else if (step === 3) {
+      const newPass = form.querySelector('input[name="new-password"]');
+      const confirmPass = form.querySelector('input[name="confirm-password"]');
 
-            const errors = {};
-            if (!newPass?.value) errors.newpassword = 'Password is required';
-            else {
-                const strength = UIComponents.validatePassword(newPass.value);
-                if (strength.score < 2) errors.newpassword = 'Password too weak';
-            }
-            if (confirmPass?.value !== newPass?.value) errors.confirmpass = 'Passwords do not match';
+      const errors = {};
+      if (!newPass?.value) {errors.newpassword = 'Password is required';}
+      else {
+        const strength = UIComponents.validatePassword(newPass.value);
+        if (strength.score < 2) {errors.newpassword = 'Password too weak';}
+      }
+      if (confirmPass?.value !== newPass?.value) {errors.confirmpass = 'Passwords do not match';}
 
-            if (Object.keys(errors).length === 0) {
-                isValid = true;
-                this.submitPasswordReset(form);
-            } else {
-                UIComponents.displayFormErrors(form, errors);
-            }
-        }
-
-        if (isValid && step < this.totalSteps) {
-            this.currentStep++;
-            this.updateProgressIndicator();
-            this.showStep(form, this.currentStep);
-            window.scrollTo(0, 0);
-        }
+      if (Object.keys(errors).length === 0) {
+        isValid = true;
+        this.submitPasswordReset(form);
+      } else {
+        UIComponents.displayFormErrors(form, errors);
+      }
     }
 
-    /**
+    if (isValid && step < this.totalSteps) {
+      this.currentStep++;
+      this.updateProgressIndicator();
+      this.showStep(form, this.currentStep);
+      window.scrollTo(0, 0);
+    }
+  }
+
+  /**
      * Previous password reset step
      */
-    prevPasswordResetStep(form) {
-        if (this.currentStep > 1) {
-            this.currentStep--;
-            this.updateProgressIndicator();
-            this.showStep(form, this.currentStep);
-            window.scrollTo(0, 0);
-        }
+  prevPasswordResetStep(form) {
+    if (this.currentStep > 1) {
+      this.currentStep--;
+      this.updateProgressIndicator();
+      this.showStep(form, this.currentStep);
+      window.scrollTo(0, 0);
     }
+  }
 
-    /**
+  /**
      * Send reset code to email
      */
-    async sendResetCode(_form, email) {
-        try {
-            const response = await fetch('/api/auth/password-reset/send-code', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email }),
-            });
+  async sendResetCode(_form, email) {
+    try {
+      const response = await fetch('/api/auth/password-reset/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
 
-            const data = await response.json();
+      const data = await response.json();
 
-            if (!response.ok) {
-                UIComponents.showAlert(data.message || 'Failed to send code', 'error');
-                return false;
-            }
+      if (!response.ok) {
+        UIComponents.showAlert(data.message || 'Failed to send code', 'error');
+        return false;
+      }
 
-            return true;
-        } catch (error) {
-            console.error('Send code error:', error);
-            UIComponents.createToast({ message: 'Connection error', type: 'error' });
-            return false;
-        }
+      return true;
+    } catch (error) {
+      console.error('Send code error:', error);
+      UIComponents.createToast({ message: 'Connection error', type: 'error' });
+      return false;
     }
+  }
 
-    /**
+  /**
      * Resend reset code
      */
-    resendResetCode(form, e) {
-        const email = form.querySelector('input[name="email"]');
-        const timer = form.querySelector('[data-resend-timer]');
+  resendResetCode(form, e) {
+    const email = form.querySelector('input[name="email"]');
+    const timer = form.querySelector('[data-resend-timer]');
 
-        if (!email?.value) {
-            UIComponents.showAlert('Please go back and enter your email', 'warning');
-            return;
-        }
-
-        this.sendResetCode(form, email.value);
-
-        // Start cooldown timer
-        let seconds = 60;
-        const btn = e?.target || form.querySelector('[data-resend-code]');
-        btn.disabled = true;
-
-        const countdown = setInterval(() => {
-            seconds--;
-            if (timer) timer.textContent = seconds;
-
-            if (seconds === 0) {
-                clearInterval(countdown);
-                btn.disabled = false;
-                if (timer) timer.textContent = '60';
-            }
-        }, 1000);
+    if (!email?.value) {
+      UIComponents.showAlert('Please go back and enter your email', 'warning');
+      return;
     }
 
-    /**
+    this.sendResetCode(form, email.value);
+
+    // Start cooldown timer
+    let seconds = 60;
+    const btn = e?.target || form.querySelector('[data-resend-code]');
+    btn.disabled = true;
+
+    const countdown = setInterval(() => {
+      seconds--;
+      if (timer) {timer.textContent = seconds;}
+
+      if (seconds === 0) {
+        clearInterval(countdown);
+        btn.disabled = false;
+        if (timer) {timer.textContent = '60';}
+      }
+    }, 1000);
+  }
+
+  /**
      * Submit password reset
      */
-    async submitPasswordReset(form) {
-        const email = form.querySelector('input[name="email"]');
-        const code = form.querySelector('input[name="reset-code"]');
-        const newPassword = form.querySelector('input[name="new-password"]');
+  async submitPasswordReset(form) {
+    const email = form.querySelector('input[name="email"]');
+    const code = form.querySelector('input[name="reset-code"]');
+    const newPassword = form.querySelector('input[name="new-password"]');
 
-        try {
-            const loader = UIComponents.showLoading('Resetting password...');
+    try {
+      const loader = UIComponents.showLoading('Resetting password...');
 
-            const response = await fetch('/api/auth/password-reset', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: email?.value,
-                    code: code?.value,
-                    newPassword: newPassword?.value,
-                }),
-            });
+      const response = await fetch('/api/auth/password-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email?.value,
+          code: code?.value,
+          newPassword: newPassword?.value
+        })
+      });
 
-            const data = await response.json();
-            UIComponents.hideLoading(loader);
+      const data = await response.json();
+      UIComponents.hideLoading(loader);
 
-            if (!response.ok) {
-                UIComponents.showAlert(data.message || 'Reset failed', 'error');
-                return;
-            }
+      if (!response.ok) {
+        UIComponents.showAlert(data.message || 'Reset failed', 'error');
+        return;
+      }
 
-            UIComponents.createToast({ message: 'Password reset successfully!', type: 'success' });
-            setTimeout(() => window.location.href = '/login.html', 1500);
-        } catch (error) {
-            console.error('Password reset error:', error);
-            UIComponents.createToast({ message: 'Connection error', type: 'error' });
-        }
+      UIComponents.createToast({ message: 'Password reset successfully!', type: 'success' });
+      setTimeout(() => { window.location.href = '/login.html'; }, 1500);
+    } catch (error) {
+      console.error('Password reset error:', error);
+      UIComponents.createToast({ message: 'Connection error', type: 'error' });
     }
+  }
 
-    /**
+  /**
      * Validate email field
      */
-    validateEmail(input) {
-        const isValid = UIComponents.validateEmail(input.value);
-        input.classList.toggle('error', !isValid && input.value);
-        return isValid;
-    }
+  validateEmail(input) {
+    const isValid = UIComponents.validateEmail(input.value);
+    input.classList.toggle('error', !isValid && input.value);
+    return isValid;
+  }
 
-    /**
+  /**
      * Validate password field
      */
-    validatePassword(input) {
-        const isValid = input.value.length >= 8;
-        input.classList.toggle('error', !isValid && input.value);
-        return isValid;
-    }
+  validatePassword(input) {
+    const isValid = input.value.length >= 8;
+    input.classList.toggle('error', !isValid && input.value);
+    return isValid;
+  }
 
-    /**
+  /**
      * Update password requirements checklist
      */
-    updatePasswordRequirements(passwordInput) {
-        const password = passwordInput.value;
-        
-        // Define requirements
-        const requirements = {
-            'req-length': password.length >= 12,
-            'req-uppercase': /[A-Z]/.test(password),
-            'req-lowercase': /[a-z]/.test(password),
-            'req-number': /[0-9]/.test(password),
-            'req-special': /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)
-        };
+  updatePasswordRequirements(passwordInput) {
+    const password = passwordInput.value;
 
-        // Update UI
-        Object.keys(requirements).forEach(reqId => {
-            const reqElement = document.getElementById(reqId);
-            if (reqElement) {
-                reqElement.classList.toggle('met', requirements[reqId]);
-                const check = reqElement.querySelector('.req-check');
-                if (check) {
-                    check.textContent = requirements[reqId] ? '✓' : '✗';
-                }
-            }
-        });
+    // Define requirements
+    const requirements = {
+      'req-length': password.length >= 12,
+      'req-uppercase': /[A-Z]/.test(password),
+      'req-lowercase': /[a-z]/.test(password),
+      'req-number': /[0-9]/.test(password),
+      'req-special': /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)
+    };
 
-        // Check if all requirements are met
-        const allMet = Object.values(requirements).every(req => req === true);
-        
-        // Update password input styling
-        if (password) {
-            passwordInput.classList.toggle('valid', allMet);
-            passwordInput.classList.toggle('error', !allMet);
+    // Update UI
+    Object.keys(requirements).forEach(reqId => {
+      const reqElement = document.getElementById(reqId);
+      if (reqElement) {
+        reqElement.classList.toggle('met', requirements[reqId]);
+        const check = reqElement.querySelector('.req-check');
+        if (check) {
+          check.textContent = requirements[reqId] ? '✓' : '✗';
         }
-    }
+      }
+    });
 
-    /**
+    // Check if all requirements are met
+    const allMet = Object.values(requirements).every(req => req === true);
+
+    // Update password input styling
+    if (password) {
+      passwordInput.classList.toggle('valid', allMet);
+      passwordInput.classList.toggle('error', !allMet);
+    }
+  }
+
+  /**
      * Clear field error
      */
-    clearFieldError(input) {
-        input.classList.remove('error');
-        const error = input.parentNode.querySelector('.error-message');
-        if (error) error.remove();
-    }
+  clearFieldError(input) {
+    input.classList.remove('error');
+    const error = input.parentNode.querySelector('.error-message');
+    if (error) {error.remove();}
+  }
 }
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize navbar (shared across all pages)
-    UIComponents.initializeNavbar();
-    
-    // Initialize auth pages
-    window.authPages = new AuthPages();
+  // Initialize navbar (shared across all pages)
+  UIComponents.initializeNavbar();
+
+  // Initialize auth pages
+  window.authPages = new AuthPages();
 });
 
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = AuthPages;
+  module.exports = AuthPages;
 }
