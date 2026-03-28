@@ -322,6 +322,24 @@ class AuctionDetail {
       if (e.target === artworkModal) {artworkModal.style.display = 'none';}
     });
 
+    // Share modal — close button and backdrop
+    const shareModal = document.getElementById('share-modal');
+    document.getElementById('share-modal-close')?.addEventListener('click', () => {
+      if (shareModal) {shareModal.style.display = 'none';}
+    });
+    shareModal?.addEventListener('click', (e) => {
+      if (e.target === shareModal) {shareModal.style.display = 'none';}
+    });
+
+    // QR code modal — close button and backdrop
+    const qrModal = document.getElementById('qr-code-modal');
+    document.getElementById('qr-code-modal-close')?.addEventListener('click', () => {
+      if (qrModal) {qrModal.style.display = 'none';}
+    });
+    qrModal?.addEventListener('click', (e) => {
+      if (e.target === qrModal) {qrModal.style.display = 'none';}
+    });
+
     // Auth required login button
     const loginBtn = document.getElementById('login-from-auction');
     if (loginBtn) {
@@ -338,7 +356,7 @@ class AuctionDetail {
     const bidAmount = form.querySelector('#bid-amount')?.value;
     const paymentMethod = form.querySelector('#payment-method')?.value;
 
-    if (!bidAmount || isNaN(Number.parseFloat(bidAmount))) {
+    if (!bidAmount || Number.isNaN(Number.parseFloat(bidAmount))) {
       UIComponents.showAlert('Please enter a valid bid amount', 'warning');
       return;
     }
@@ -527,18 +545,12 @@ class AuctionDetail {
 
     // Social share buttons
     const twitterBtn = document.querySelector('[data-share-twitter]');
-    if (twitterBtn) {
-      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`;
-      twitterBtn.href = twitterUrl;
-      twitterBtn.target = '_blank';
-    }
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`;
+    if (twitterBtn) { twitterBtn.href = twitterUrl; }
 
     const facebookBtn = document.querySelector('[data-share-facebook]');
-    if (facebookBtn) {
-      const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
-      facebookBtn.href = fbUrl;
-      facebookBtn.target = '_blank';
-    }
+    const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+    if (facebookBtn) { facebookBtn.href = fbUrl; }
   }
 
   /**
@@ -548,7 +560,7 @@ class AuctionDetail {
     UIComponents.showModal('qr-code-modal');
 
     const container = document.querySelector('#qr-code-modal .qr-code');
-    if (container && container.innerHTML.trim() === '') {
+    if (container?.innerHTML.trim() === '') {
       const QRCodeLib = globalThis.QRCode;
       if (QRCodeLib) {
         this._qrCode = new QRCodeLib(container, {
@@ -612,7 +624,7 @@ class AuctionDetail {
     // Current bid (falls back to starting price if no bids yet)
     const currentBidEl = document.getElementById('display-current-bid');
     if (currentBidEl) {
-      const bid = piece.currentBid != null ? Number(piece.currentBid) : Number(piece.startingPrice ?? 0);
+      const bid = piece.currentBid == null ? Number(piece.startingPrice ?? 0) : Number(piece.currentBid);
       currentBidEl.textContent = UIComponents.formatCurrency(bid);
     }
 
@@ -621,7 +633,7 @@ class AuctionDetail {
 
     const minBidHelpEl = document.getElementById('min-bid-amount');
     if (minBidHelpEl) {
-      const current = piece.currentBid != null ? Number(piece.currentBid) : Number(piece.startingPrice ?? 0);
+      const current = piece.currentBid == null ? Number(piece.startingPrice ?? 0) : Number(piece.currentBid);
       minBidHelpEl.textContent = UIComponents.formatCurrency(current + 10);
     }
   }
