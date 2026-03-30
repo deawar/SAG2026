@@ -98,6 +98,28 @@ class ArtworkCarousel {
     const token = localStorage.getItem('auth_token');
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
+    // Teachers see all their school's submissions via the teacher API
+    if (this.options.role === 'teacher') {
+      const resp = await fetch('/api/teacher/submissions', { headers });
+      if (!resp.ok) { throw new Error(`HTTP ${resp.status}`); }
+      const data = await resp.json();
+
+      return (data.data || data.submissions || []).map(s => ({
+        id:               s.id,
+        title:            s.title || 'Untitled',
+        artist:           s.artistName || s.artist_name || '',
+        school:           s.schoolName || '',
+        image:            s.imageUrl   || s.image_url   || '/images/placeholder-art.svg',
+        currentBid:       s.startingBidAmount || s.startingBid || 0,
+        bidCount:         s.bidCount   || 0,
+        endTime:          null,
+        status:           s.status     || 'SUBMITTED',
+        submissionId:     s.id,
+        submissionStatus: s.status     || 'SUBMITTED',
+      }));
+    }
+
+    // Bidders and students see live auctions
     let url = '/api/auctions?limit=60&status=LIVE';
     if (this.options.schoolId) {
       url += `&schoolId=${encodeURIComponent(this.options.schoolId)}`;
@@ -108,16 +130,16 @@ class ArtworkCarousel {
     const data = await resp.json();
 
     return (data.auctions || []).map(a => ({
-      id:          a.id,
-      title:       a.title || 'Untitled',
-      artist:      a.artwork?.artist_name || a.artworkArtist || '',
-      school:      a.school || a.schoolName || '',
-      image:       a.image || a.artwork?.image_url || '/images/placeholder-art.svg',
-      currentBid:  a.currentBid || 0,
-      bidCount:    a.bidCount   || 0,
-      endTime:     a.endTime    || null,
-      status:      a.status     || 'LIVE',
-      submissionId: a.artworkId || null,
+      id:               a.id,
+      title:            a.title || 'Untitled',
+      artist:           a.artwork?.artist_name || a.artworkArtist || '',
+      school:           a.school || a.schoolName || '',
+      image:            a.image  || a.artwork?.image_url || '/images/placeholder-art.svg',
+      currentBid:       a.currentBid || 0,
+      bidCount:         a.bidCount   || 0,
+      endTime:          a.endTime    || null,
+      status:           a.status     || 'LIVE',
+      submissionId:     a.artworkId  || null,
       submissionStatus: a.artworkStatus || null,
     }));
   }
