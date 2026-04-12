@@ -135,15 +135,47 @@ class UserModel {
     // Generate user ID
     const userId = uuidv4();
 
-    // Insert user
+    // Insert user — account_status starts as PENDING until email is verified
     const result = await this.db.query(
       `INSERT INTO users (id, email, password_hash, first_name, last_name, phone_number, date_of_birth, role, school_id, account_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'ACTIVE')
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING')
        RETURNING id, email, first_name, last_name, phone_number, role, school_id, created_at, account_status`,
       [userId, email.toLowerCase(), passwordHash, firstName, lastName, phoneNumber, dateOfBirth, role, schoolId]
     );
 
     return result.rows[0];
+  }
+
+  /**
+   * Store hashed email-verification token and expiry on the user row.
+   */
+  async setVerificationToken(userId, tokenHash, expiresAt) {
+    await this.db.query(
+      `UPDATE users SET email_verification_token = $1, email_verification_expires_at = $2 WHERE id = $3`,
+      [tokenHash, expiresAt, userId]
+    );
+  }
+
+  /**
+   * Verify the email-verification token. On success: set email_verified_at, clear token
+   * fields, and promote account_status to ACTIVE. Returns true if the token matched.
+   */
+  async verifyEmailToken(userId, tokenHash) {
+    const result = await this.db.query(
+      `UPDATE users
+          SET email_verified_at              = NOW(),
+              email_verification_token       = NULL,
+              email_verification_expires_at  = NULL,
+              account_status                 = 'ACTIVE'
+        WHERE id                            = $1
+          AND email_verification_token       = $2
+          AND email_verification_expires_at  > NOW()
+          AND email_verified_at              IS NULL
+          AND deleted_at                     IS NULL
+        RETURNING id`,
+      [userId, tokenHash]
+    );
+    return result.rowCount > 0;
   }
 
   /**

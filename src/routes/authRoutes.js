@@ -5,6 +5,7 @@
  * ============================================================================
  */
 
+const crypto = require('crypto');
 const express = require('express');
 const authMiddleware = require('../middleware/authMiddleware');
 const UserController = require('../controllers/userController');
@@ -439,6 +440,58 @@ module.exports = (db) => {
         return res.status(400).json({ success: false, message: 'This reset link is invalid or has already been used.' });
       }
       next(error);
+    }
+  });
+
+  /**
+   * GET /api/auth/verify-email?uid=<id>&token=<raw>
+   * Verify email address from registration link.
+   * Auth: Not required | Rate-limited by authLimiter (applied at app level)
+   */
+  router.get('/verify-email', async (req, res, next) => {
+    try {
+      const { uid, token } = req.query;
+      if (!uid || !token) {
+        return res.status(400).json({ success: false, message: 'Missing uid or token' });
+      }
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      const verified = await userModel.verifyEmailToken(uid, tokenHash);
+      if (!verified) {
+        return res.status(400).json({ success: false, message: 'Invalid or expired verification link.' });
+      }
+      return res.json({ ok: true, message: 'Email verified. You can now log in.' });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /**
+   * POST /api/auth/resend-verification
+   * Re-send the email verification link.
+   * Auth: Not required | Rate-limited by authLimiter (applied at app level)
+   * Always returns 200 to prevent email enumeration.
+   *
+   * Body: { email: string }
+   */
+  router.post('/resend-verification', async (req, res, next) => {
+    try {
+      const { email } = req.body;
+      if (email && ValidationUtils.validateEmail(email)) {
+        const sanitizedEmail = ValidationUtils.sanitizeString(email, 254).toLowerCase();
+        const user = await userModel.getByEmail(sanitizedEmail);
+        if (user && !user.email_verified_at && user.account_status === 'PENDING') {
+          const rawToken = crypto.randomBytes(32).toString('hex');
+          const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+          const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+          await userModel.setVerificationToken(user.id, tokenHash, expiresAt);
+          // Use userController's private send helper via a temporary controller instance
+          const uc = new UserController(userModel, authService);
+          await uc._sendVerificationEmail(user.email, user.first_name || 'User', user.id, rawToken);
+        }
+      }
+      return res.json({ ok: true });
+    } catch (err) {
+      next(err);
     }
   });
 
