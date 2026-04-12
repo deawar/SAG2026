@@ -43,7 +43,8 @@ class JWTService {
       role: userData.role,
       schoolId: userData.schoolId,
       iat: Math.floor(Date.now() / 1000),
-      ...(userData.purpose && { purpose: userData.purpose })
+      ...(userData.purpose && { purpose: userData.purpose }),
+      ...(userData.twoFaEnabled !== undefined && { twoFaEnabled: userData.twoFaEnabled })
     };
 
     const token = jwt.sign(payload, this.accessTokenSecret, {
@@ -513,10 +514,14 @@ class SessionService {
   }
 
   /**
-   * Create user session
+   * Create a REFRESH-token session row.
+   * Enforces MAX_SESSIONS_PER_USER (env, default 5): if the limit is reached,
+   * revokes the oldest active session and returns its JTI so the caller can
+   * add it to the JTI blacklist.
+   *
    * @param {string} userId - User UUID
-   * @param {Object} sessionData - Session metadata
-   * @returns {Promise<Object>} - Session record
+   * @param {Object} sessionData - { tokenJti, tokenType, expiresAt, ipAddress, userAgent, deviceFingerprint, twoFAVerified }
+   * @returns {Promise<{ id, user_id, token_jti, created_at, revokedJti: string|null }>}
    */
   async createSession(userId, sessionData) {
     const {
@@ -530,44 +535,89 @@ class SessionService {
     } = sessionData;
 
     const sessionId = uuidv4();
+    const maxSessions = parseInt(process.env.MAX_SESSIONS_PER_USER || '5', 10);
 
-    // Check concurrent session limit
-    const activeSessions = await this.db.query(
-      `SELECT COUNT(*) as count FROM user_sessions 
-       WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > CURRENT_TIMESTAMP`,
+    // Count active REFRESH sessions for this user
+    const countResult = await this.db.query(
+      `SELECT COUNT(*) AS count FROM user_sessions
+       WHERE user_id = $1 AND token_type = 'REFRESH'
+         AND revoked_at IS NULL AND expires_at > CURRENT_TIMESTAMP`,
       [userId]
     );
 
-    if (activeSessions.rows[0].count >= this.maxConcurrentSessions) {
-      // Revoke oldest session
-      await this.db.query(
+    let revokedJti = null;
+    if (parseInt(countResult.rows[0].count, 10) >= maxSessions) {
+      // Revoke the oldest session (PostgreSQL subquery — ORDER BY LIMIT in UPDATE is not valid PG syntax)
+      const revokeResult = await this.db.query(
         `UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP
-         WHERE user_id = $1 AND revoked_at IS NULL
-         ORDER BY created_at ASC LIMIT 1`,
+         WHERE id = (
+           SELECT id FROM user_sessions
+           WHERE user_id = $1 AND token_type = 'REFRESH'
+             AND revoked_at IS NULL AND expires_at > CURRENT_TIMESTAMP
+           ORDER BY created_at ASC LIMIT 1
+         )
+         RETURNING token_jti`,
         [userId]
       );
+      if (revokeResult.rows.length > 0) {
+        revokedJti = revokeResult.rows[0].token_jti;
+      }
     }
 
-    // Create session
+    // Insert the new session record
     const result = await this.db.query(
-      `INSERT INTO user_sessions (id, user_id, token_jti, token_type, expires_at, ip_address, user_agent, device_fingerprint, two_fa_verified, two_fa_verified_at)
+      `INSERT INTO user_sessions
+         (id, user_id, token_jti, token_type, expires_at, ip_address, user_agent,
+          device_fingerprint, two_fa_verified, two_fa_verified_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING id, user_id, token_jti, created_at`,
-      [sessionId, userId, tokenJti, tokenType, expiresAt, ipAddress, userAgent, deviceFingerprint, twoFAVerified, twoFAVerified ? new Date() : null]
+      [sessionId, userId, tokenJti, tokenType, expiresAt,
+       ipAddress, userAgent, deviceFingerprint,
+       twoFAVerified || false, twoFAVerified ? new Date() : null]
     );
 
-    return result.rows[0];
+    return { ...result.rows[0], revokedJti };
   }
 
   /**
-   * Verify session is valid
+   * Check whether a session (identified by refresh token JTI) is still valid.
+   * Returns null when no row exists (legacy sessions without a DB record — allow).
+   * Returns { revoked: true }  when the row is explicitly revoked.
+   * Returns { revoked: false } when the row is active.
+   *
+   * @param {string} tokenJti
+   * @returns {Promise<{revoked: boolean}|null>}
+   */
+  async checkSession(tokenJti) {
+    const result = await this.db.query(
+      `SELECT revoked_at FROM user_sessions WHERE token_jti = $1`,
+      [tokenJti]
+    );
+    if (result.rows.length === 0) return null; // No record — legacy token, allow
+    return { revoked: result.rows[0].revoked_at !== null };
+  }
+
+  /**
+   * Update last_used_at timestamp for a session.
+   * @param {string} tokenJti
+   */
+  async updateLastUsed(tokenJti) {
+    await this.db.query(
+      `UPDATE user_sessions SET last_used_at = CURRENT_TIMESTAMP
+       WHERE token_jti = $1 AND revoked_at IS NULL`,
+      [tokenJti]
+    );
+  }
+
+  /**
+   * Verify session is valid (legacy method — kept for AuthenticationService.refreshAccessToken).
    * @param {string} userId - User UUID
    * @param {string} tokenJti - Token JTI
    * @returns {Promise<Object>} - Session data
    */
   async getSession(userId, tokenJti) {
     const result = await this.db.query(
-      `SELECT * FROM user_sessions 
+      `SELECT * FROM user_sessions
        WHERE user_id = $1 AND token_jti = $2 AND revoked_at IS NULL AND expires_at > CURRENT_TIMESTAMP`,
       [userId, tokenJti]
     );
@@ -580,23 +630,71 @@ class SessionService {
   }
 
   /**
-   * Revoke session
+   * Revoke session by JTI.
    * @param {string} userId - User UUID
    * @param {string} tokenJti - Token JTI
-   * @returns {Promise<void>}
    */
   async revokeSession(userId, tokenJti) {
     await this.db.query(
       `UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP
-       WHERE user_id = $1 AND token_jti = $2 AND expires_at > CURRENT_TIMESTAMP`,
+       WHERE user_id = $1 AND token_jti = $2 AND revoked_at IS NULL`,
       [userId, tokenJti]
     );
   }
 
   /**
-   * Revoke all user sessions
+   * Revoke a specific session by session row ID (user-initiated selective revoke).
+   * Ownership is enforced: user_id must match.
+   *
+   * @param {string} userId - Requesting user UUID
+   * @param {string} sessionId - Session row UUID
+   * @returns {Promise<string>} - The token_jti of the revoked session (for blacklisting)
+   */
+  async revokeSessionById(userId, sessionId) {
+    const result = await this.db.query(
+      `UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL
+       RETURNING token_jti`,
+      [sessionId, userId]
+    );
+    if (result.rows.length === 0) {
+      throw new Error('SESSION_NOT_FOUND');
+    }
+    return result.rows[0].token_jti;
+  }
+
+  /**
+   * Revoke all active REFRESH sessions for a user, optionally sparing one.
+   *
+   * @param {string} userId
+   * @param {string|null} exceptJti - JTI to spare (current session). Pass null to revoke all.
+   * @returns {Promise<string[]>} - Array of revoked token_jtis (for blacklisting)
+   */
+  async revokeAllExcept(userId, exceptJti) {
+    let result;
+    if (exceptJti) {
+      result = await this.db.query(
+        `UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP
+         WHERE user_id = $1 AND token_jti != $2
+           AND token_type = 'REFRESH' AND revoked_at IS NULL AND expires_at > CURRENT_TIMESTAMP
+         RETURNING token_jti`,
+        [userId, exceptJti]
+      );
+    } else {
+      result = await this.db.query(
+        `UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP
+         WHERE user_id = $1
+           AND token_type = 'REFRESH' AND revoked_at IS NULL AND expires_at > CURRENT_TIMESTAMP
+         RETURNING token_jti`,
+        [userId]
+      );
+    }
+    return result.rows.map(r => r.token_jti);
+  }
+
+  /**
+   * Revoke all user sessions (all types, used on password change / account deletion).
    * @param {string} userId - User UUID
-   * @returns {Promise<void>}
    */
   async revokeAllSessions(userId) {
     await this.db.query(
@@ -607,19 +705,21 @@ class SessionService {
   }
 
   /**
-   * Get active sessions for user
+   * Get active sessions for a user (REFRESH tokens only, newest first).
+   * Includes last_used_at for display in the sessions management UI.
+   *
    * @param {string} userId - User UUID
-   * @returns {Promise<Array>} - Active sessions
+   * @returns {Promise<Array>}
    */
   async getActiveSessions(userId) {
     const result = await this.db.query(
-      `SELECT id, ip_address, user_agent, device_fingerprint, created_at, expires_at, two_fa_verified
+      `SELECT id, ip_address, user_agent, created_at, last_used_at, expires_at, two_fa_verified
        FROM user_sessions
-       WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > CURRENT_TIMESTAMP
-       ORDER BY created_at DESC`,
+       WHERE user_id = $1 AND token_type = 'REFRESH'
+         AND revoked_at IS NULL AND expires_at > CURRENT_TIMESTAMP
+       ORDER BY COALESCE(last_used_at, created_at) DESC`,
       [userId]
     );
-
     return result.rows;
   }
 
@@ -627,7 +727,6 @@ class SessionService {
    * Update 2FA verification status
    * @param {string} userId - User UUID
    * @param {string} tokenJti - Token JTI
-   * @returns {Promise<void>}
    */
   async verify2FA(userId, tokenJti) {
     await this.db.query(

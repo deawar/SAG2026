@@ -88,6 +88,14 @@ class AuthPages {
         return;
       }
 
+      // Check if admin must complete mandatory 2FA setup before accessing the app
+      if (data.data?.requiresTwoFactorSetup) {
+        sessionStorage.setItem('force_2fa_setup_token', data.data.setupToken || '');
+        sessionStorage.setItem('force_2fa_user_id', data.data.userId || '');
+        window.location.href = '/force-2fa-setup.html';
+        return;
+      }
+
       // Check if 2FA is required (response: { data: { requiresMfa, tempToken, userId } })
       if (data.data?.requiresMfa || data.data?.requires2FA || data.require2FA) {
         localStorage.setItem('2fa_token', data.data?.tempToken || data.tempToken || '');

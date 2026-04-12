@@ -269,7 +269,29 @@ class UserController {
         });
       }
 
-      // 6. Check if 2FA is enabled
+      // 6a. Admin 2FA enforcement: admins without 2FA must set it up before accessing the app
+      const adminRoles = ['SITE_ADMIN', 'SCHOOL_ADMIN'];
+      if (adminRoles.includes(user.role) && !user.two_fa_enabled) {
+        const setupToken = this.authService.jwtService.generateAccessToken(user.id, {
+          email: user.email,
+          role: user.role,
+          schoolId: user.school_id,
+          purpose: '2fa_force_setup',
+          twoFaEnabled: false
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: '2FA setup required for admin accounts',
+          data: {
+            requiresTwoFactorSetup: true,
+            setupToken: setupToken.token,
+            userId: user.id
+          }
+        });
+      }
+
+      // 6b. Check if 2FA is enabled (voluntary — non-admin users who opted in)
       if (user.two_fa_enabled) {
         // Generate temporary 2FA token
         const tempToken = this.authService.jwtService.generateAccessToken(user.id, {
@@ -294,13 +316,17 @@ class UserController {
       const accessTokenResult = this.authService.jwtService.generateAccessToken(user.id, {
         email: user.email,
         role: user.role,
-        schoolId: user.school_id
+        schoolId: user.school_id,
+        twoFaEnabled: false
       });
 
       const refreshTokenResult = this.authService.jwtService.generateRefreshToken(user.id);
 
       // 8. Update last login
       await this.userModel.updateLastLogin(user.id);
+
+      // 8b. Session tracking (non-fatal: failure does not block login)
+      await this._createSessionRecord(user.id, refreshTokenResult.jti, req);
 
       // 9. Return tokens (NO sensitive data)
       return res.json({
@@ -353,12 +379,17 @@ class UserController {
       await tokenBlacklist.revoke(jti, accessExpiry);
 
       // 2. Revoke the refresh token if the client sent it.
+      //    Also marks the user_sessions row as revoked.
       //    Ignore invalid/expired tokens — they are already unusable.
       if (refreshToken) {
         try {
           const decoded = this.authService.jwtService.verifyRefreshToken(refreshToken);
           if (decoded.jti && decoded.exp) {
             await tokenBlacklist.revoke(decoded.jti, new Date(decoded.exp * 1000));
+            // Revoke session row in DB (non-fatal)
+            if (this.authService?.sessionService) {
+              this.authService.sessionService.revokeSession(req.user.id, decoded.jti).catch(() => {});
+            }
           }
         } catch (_err) {
           // Refresh token already expired or invalid — nothing to revoke
@@ -412,6 +443,25 @@ class UserController {
         });
       }
 
+      // 2b. Check session record in DB — reject if explicitly revoked (session-limiting)
+      if (this.authService?.sessionService) {
+        try {
+          const session = await this.authService.sessionService.checkSession(decoded.jti);
+          if (session?.revoked) {
+            return res.status(401).json({
+              success: false,
+              message: 'Session has been revoked'
+            });
+          }
+          // Update last_used_at (non-blocking)
+          if (session !== null) {
+            this.authService.sessionService.updateLastUsed(decoded.jti).catch(() => {});
+          }
+        } catch (_err) {
+          // DB error checking session — fail open to avoid locking users out
+        }
+      }
+
       // 3. Retrieve user
       const user = await this.userModel.getById(decoded.sub);
 
@@ -419,7 +469,8 @@ class UserController {
       const accessTokenResult = this.authService.jwtService.generateAccessToken(user.id, {
         email: user.email,
         role: user.role,
-        schoolId: user.school_id
+        schoolId: user.school_id,
+        twoFaEnabled: !!user.two_fa_enabled
       });
 
       // 4. Return new access token
@@ -501,13 +552,17 @@ class UserController {
       const accessTokenResult = this.authService.jwtService.generateAccessToken(user.id, {
         email: user.email,
         role: user.role,
-        schoolId: user.school_id
+        schoolId: user.school_id,
+        twoFaEnabled: true
       });
 
       const refreshTokenResult = this.authService.jwtService.generateRefreshToken(user.id);
 
       // 4. Update last login
       await this.userModel.updateLastLogin(user.id);
+
+      // 4b. Session tracking
+      await this._createSessionRecord(user.id, refreshTokenResult.jti, req);
 
       // 5. Return tokens with user info for the frontend
       return res.json({
@@ -681,6 +736,38 @@ class UserController {
 
     if (process.env.NODE_ENV !== 'test') {
       console.log(`[DEV] Parental consent link for ${parentEmail} (child: ${childFirstName}): ${consentUrl}`);
+    }
+  }
+
+  /**
+   * Create a session row in user_sessions for the refresh token just issued.
+   * Non-fatal: any error is caught and swallowed so login/verify2FA still succeed.
+   * If the oldest session was evicted to make room, its JTI is added to the blacklist.
+   *
+   * @param {string} userId
+   * @param {string} refreshJti - JTI from the newly generated refresh token
+   * @param {Object} req - Express request (for IP + user-agent)
+   */
+  async _createSessionRecord(userId, refreshJti, req) {
+    if (!this.authService?.sessionService) return;
+    try {
+      const refreshExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const sessionResult = await this.authService.sessionService.createSession(userId, {
+        tokenJti: refreshJti,
+        tokenType: 'REFRESH',
+        expiresAt: refreshExpiry,
+        ipAddress: req?.ip || null,
+        userAgent: req?.headers?.['user-agent'] || null,
+        deviceFingerprint: null,
+        twoFAVerified: false
+      });
+      // Evicted oldest session — add its JTI to the blacklist
+      if (sessionResult?.revokedJti) {
+        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+        await tokenBlacklist.revoke(sessionResult.revokedJti, new Date(Date.now() + sevenDaysMs));
+      }
+    } catch (_err) {
+      // Session tracking failure is non-fatal
     }
   }
 }

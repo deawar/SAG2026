@@ -6,9 +6,32 @@
 
 const express  = require('express');
 const bcrypt   = require('bcrypt');
+const jwt      = require('jsonwebtoken');
 const { UserModel } = require('../models');
-const authenticationService = require('../services/authenticationService');
+const { JWTService, TwoFactorService, RBACService, SessionService, tokenBlacklist } = require('../services/authenticationService');
 const UserController = require('../controllers/userController');
+
+/** Mask the last segment of an IPv4 address or last 4 groups of IPv6. */
+function maskIp(ip) {
+  if (!ip) return null;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(ip)) return ip.replace(/\.\d+$/, '.xxx');
+  if (ip.includes(':')) {
+    const parts = ip.split(':');
+    return parts.slice(0, 4).join(':') + ':xxxx:xxxx:xxxx:xxxx';
+  }
+  return ip;
+}
+
+/** Return a short human-readable description from a raw User-Agent string. */
+function summarizeUserAgent(ua) {
+  if (!ua) return 'Unknown device';
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS device';
+  if (/Android/i.test(ua)) return 'Android device';
+  if (/Windows/i.test(ua)) return 'Windows device';
+  if (/Macintosh|Mac OS/i.test(ua)) return 'Mac device';
+  if (/Linux/i.test(ua)) return 'Linux device';
+  return ua.substring(0, 60);
+}
 
 /**
  * Validate and return a base64 image data URL for direct DB storage.
@@ -26,7 +49,22 @@ module.exports = (db) => {
   const router = express.Router();
 
   const userModel      = new UserModel(db);
-  const userController = new UserController(userModel, authenticationService);
+  const sessionService = new SessionService({ db });
+
+  const jwtService = new JWTService({
+    accessTokenSecret: process.env.JWT_ACCESS_SECRET || 'dev-secret',
+    refreshTokenSecret: process.env.JWT_REFRESH_SECRET || 'dev-secret',
+    accessTokenExpiry: '15m',
+    refreshTokenExpiry: '7d'
+  });
+  const authService = {
+    jwtService,
+    twoFactorService: new TwoFactorService({ db, jwtService }),
+    rbacService: new RBACService(),
+    sessionService
+  };
+
+  const userController = new UserController(userModel, authService);
 
   // ---------------------------------------------------------------------------
   // GET /api/user/profile
@@ -452,6 +490,106 @@ module.exports = (db) => {
   });
 
   // ---------------------------------------------------------------------------
+  // GET /api/user/sessions  — list the current user's active sessions
+  // ---------------------------------------------------------------------------
+  router.get('/sessions', async (req, res, next) => {
+    try {
+      const userId = req.user.id;
+      const sessions = await sessionService.getActiveSessions(userId);
+
+      return res.json({
+        success: true,
+        sessions: sessions.map(s => ({
+          id: s.id,
+          ipAddress: maskIp(s.ip_address),
+          device: summarizeUserAgent(s.user_agent),
+          createdAt: s.created_at,
+          lastUsedAt: s.last_used_at || null,
+          expiresAt: s.expires_at
+        }))
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // DELETE /api/user/sessions  — revoke all sessions (or all except current)
+  //   Body (optional): { currentRefreshToken: string }
+  //   If currentRefreshToken is provided, the session for that token is spared.
+  // ---------------------------------------------------------------------------
+  router.delete('/sessions', async (req, res, next) => {
+    try {
+      const userId = req.user.id;
+      let exceptJti = null;
+
+      // Decode the current refresh token to find its JTI so we can spare it
+      if (req.body?.currentRefreshToken) {
+        try {
+          const decoded = jwt.verify(
+            req.body.currentRefreshToken,
+            process.env.JWT_REFRESH_SECRET,
+            { algorithms: ['HS256'] }
+          );
+          if (decoded.sub === userId) {
+            exceptJti = decoded.jti;
+          }
+        } catch (_err) {
+          // Invalid refresh token — ignore, revoke all
+        }
+      }
+
+      const revokedJtis = await sessionService.revokeAllExcept(userId, exceptJti);
+
+      // Add all revoked JTIs to the blacklist
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      await Promise.all(
+        revokedJtis.map(jti =>
+          tokenBlacklist.revoke(jti, new Date(Date.now() + sevenDaysMs)).catch(() => {})
+        )
+      );
+
+      return res.json({
+        success: true,
+        revokedCount: revokedJtis.length,
+        message: exceptJti
+          ? `${revokedJtis.length} other session(s) revoked`
+          : `${revokedJtis.length} session(s) revoked`
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // DELETE /api/user/sessions/:id  — revoke a specific session by session row ID
+  // ---------------------------------------------------------------------------
+  router.delete('/sessions/:id', async (req, res, next) => {
+    try {
+      const userId = req.user.id;
+      const { id } = req.params;
+
+      let revokedJti;
+      try {
+        revokedJti = await sessionService.revokeSessionById(userId, id);
+      } catch (err) {
+        if (err.message === 'SESSION_NOT_FOUND') {
+          return res.status(404).json({ success: false, message: 'Session not found or already revoked' });
+        }
+        throw err;
+      }
+
+      // Blacklist the revoked JTI so any outstanding refresh token is immediately unusable
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      await tokenBlacklist.revoke(revokedJti, new Date(Date.now() + sevenDaysMs)).catch(() => {});
+
+      return res.json({ success: true, message: 'Session revoked' });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ---------------------------------------------------------------------------
   // DELETE /api/user  — soft-delete own account (GDPR right to erasure)
   // PII is anonymised; bids/payments/artworks are preserved for audit.
   // ---------------------------------------------------------------------------
@@ -500,7 +638,7 @@ module.exports = (db) => {
           const expiresAt = exp
             ? new Date(exp * 1000)
             : new Date(Date.now() + 15 * 60 * 1000);
-          await authenticationService.tokenBlacklist.revoke(jti, expiresAt);
+          await tokenBlacklist.revoke(jti, expiresAt);
         }
       } catch (_err) {
         // Non-blocking: token will expire naturally within 15 minutes

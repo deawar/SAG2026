@@ -5,6 +5,7 @@
  */
 
 const { pool } = require('../models/index');
+const { getSharedEmailProvider, notifyAuctionWon } = require('./notificationService');
 const QRCode = require('qrcode');
 
 class AuctionService {
@@ -598,6 +599,32 @@ class AuctionService {
       );
 
       await client.query('COMMIT');
+
+      // Notify winners non-blocking (after commit so DB state is consistent)
+      if (winners.length > 0) {
+        setImmediate(async () => {
+          const emailProvider = getSharedEmailProvider();
+          for (const winner of winners) {
+            try {
+              const userResult = await pool.query(
+                'SELECT id, email, first_name FROM users WHERE id = $1 AND deleted_at IS NULL',
+                [winner.winnerId]
+              );
+              if (userResult.rows.length === 0) continue;
+              const user = userResult.rows[0];
+              await notifyAuctionWon(emailProvider, pool, {
+                userId: user.id,
+                email: user.email,
+                firstName: user.first_name,
+                artworkTitle: winner.artworkTitle,
+                winningBidDollars: parseFloat(winner.winningBid) / 100
+              });
+            } catch (err) {
+              console.error('[notification] auction-won failed for winner %s: %s', winner.winnerId, err.message);
+            }
+          }
+        });
+      }
 
       return {
         success: true,

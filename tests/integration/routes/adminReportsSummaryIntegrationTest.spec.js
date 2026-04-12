@@ -58,7 +58,7 @@ describe('GET /api/admin/reports', () => {
   });
 
   test('SITE_ADMIN: returns summary with all four report types', async () => {
-    const token = makeToken({ userId: 'admin-1', role: 'SITE_ADMIN', schoolId: null });
+    const token = makeToken({ userId: 'admin-1', role: 'SITE_ADMIN', schoolId: null, twoFaEnabled: true });
 
     mockPool.query
       // verifyAdminAccess
@@ -89,7 +89,7 @@ describe('GET /api/admin/reports', () => {
   });
 
   test('SITE_ADMIN: count query has no school_id filter', async () => {
-    const token = makeToken({ userId: 'admin-1', role: 'SITE_ADMIN', schoolId: null });
+    const token = makeToken({ userId: 'admin-1', role: 'SITE_ADMIN', schoolId: null, twoFaEnabled: true });
 
     mockPool.query
       .mockResolvedValueOnce({ rows: [SITE_ADMIN_ROW], rowCount: 1 })
@@ -107,7 +107,7 @@ describe('GET /api/admin/reports', () => {
   });
 
   test('SCHOOL_ADMIN: count query scoped to own school', async () => {
-    const token = makeToken({ userId: 'sadmin-1', role: 'SCHOOL_ADMIN', schoolId: 'school-uuid-1' });
+    const token = makeToken({ userId: 'sadmin-1', role: 'SCHOOL_ADMIN', schoolId: 'school-uuid-1', twoFaEnabled: true });
 
     mockPool.query
       .mockResolvedValueOnce({ rows: [SCHOOL_ADMIN_ROW], rowCount: 1 })
@@ -128,7 +128,7 @@ describe('GET /api/admin/reports', () => {
   });
 
   test('each report entry has title, description, value', async () => {
-    const token = makeToken({ userId: 'admin-1', role: 'SITE_ADMIN', schoolId: null });
+    const token = makeToken({ userId: 'admin-1', role: 'SITE_ADMIN', schoolId: null, twoFaEnabled: true });
 
     mockPool.query
       .mockResolvedValueOnce({ rows: [SITE_ADMIN_ROW], rowCount: 1 })

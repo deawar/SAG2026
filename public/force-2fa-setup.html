@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Admin accounts must set up two-factor authentication before continuing">
+    <title>2FA Setup Required - Silent Auction Gallery</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,500;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap">
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+</head>
+<body>
+    <!-- Skip link -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <!-- Navigation Header (no links — admin is locked until 2FA is done) -->
+    <header class="navbar" role="banner">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="logo" aria-label="Silent Auction Gallery Home">
+                    <img src="/images/logo/SAGLive.png" alt="Silent Auction Gallery Logo" class="logo-img">
+                    <span class="logo-text">SAG</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content auth-page">
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h1>Two-Factor Authentication Required</h1>
+                    <p>Admin accounts must have 2FA enabled. Please set it up now to continue.</p>
+                </div>
+
+                <!-- Progress Indicator -->
+                <div id="progress-indicator" class="progress-indicator" role="progressbar"
+                     aria-valuenow="1" aria-valuemin="1" aria-valuemax="2"
+                     aria-label="2FA setup step 1 of 2">
+                    <span class="progress-step active" id="step-dot-1" aria-current="step">1</span>
+                    <span class="progress-line"></span>
+                    <span class="progress-step" id="step-dot-2">2</span>
+                </div>
+
+                <!-- Step 1: Scan QR Code -->
+                <div id="step-1">
+                    <div class="step-header">
+                        <h2>Step 1: Scan QR Code</h2>
+                        <p class="step-subtitle">Open your authenticator app (Google Authenticator, Authy, Microsoft Authenticator) and scan this code.</p>
+                    </div>
+
+                    <div class="qr-code-section">
+                        <div class="qr-code-container">
+                            <img id="qr-code" src="" alt="QR code for 2FA setup" class="qr-code" style="display:none;">
+                            <div id="qr-loading" aria-live="polite">Loading QR code&hellip;</div>
+                        </div>
+
+                        <div class="manual-entry" style="margin-top:1rem;">
+                            <details>
+                                <summary>Can't scan? Enter this code manually:</summary>
+                                <div class="secret-code" role="region" aria-label="Manual entry code">
+                                    <code id="secret-code">••••••••••••••••••••••••</code>
+                                    <button type="button" class="btn-icon" id="copy-secret-btn"
+                                            aria-label="Copy code to clipboard" title="Copy">
+                                        <span aria-hidden="true">&#x1F4CB;</span>
+                                    </button>
+                                </div>
+                            </details>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-primary btn-large btn-block" id="next-btn">
+                        I've Scanned the Code &rarr;
+                    </button>
+                </div>
+
+                <!-- Step 2: Verify + Backup Codes -->
+                <div id="step-2" style="display:none;">
+                    <div class="step-header">
+                        <h2>Step 2: Verify Your Code</h2>
+                        <p class="step-subtitle">Enter the 6-digit code shown in your authenticator app.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="totp-code">Verification Code <span aria-label="required">*</span></label>
+                        <input type="text" id="totp-code" name="totp_code"
+                               class="form-control verification-input"
+                               placeholder="000000" maxlength="6" inputmode="numeric"
+                               pattern="[0-9]{6}" required aria-required="true"
+                               aria-describedby="totp-error totp-help"
+                               autocomplete="one-time-code">
+                        <small id="totp-help" class="help-text">6 digits from your authenticator app</small>
+                        <small id="totp-error" class="error-message" role="alert"></small>
+                    </div>
+
+                    <!-- Backup Codes -->
+                    <div class="backup-codes-section">
+                        <h3>Backup Codes</h3>
+                        <p class="backup-help">Save these codes in a safe place. Use one if you lose access to your authenticator app. Each code can only be used once.</p>
+                        <div class="backup-codes-list" id="backup-codes-list" role="region" aria-label="Backup codes"></div>
+                        <div class="backup-actions">
+                            <button type="button" class="btn-icon" id="copy-codes-btn"
+                                    aria-label="Copy all backup codes" title="Copy all codes">
+                                <span aria-hidden="true">&#x1F4CB;</span> Copy Codes
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group checkbox">
+                        <input type="checkbox" id="codes-saved" name="codes_saved"
+                               class="checkbox-control" required aria-required="true"
+                               aria-describedby="codes-error">
+                        <label for="codes-saved">I have saved my backup codes in a safe place <span aria-label="required">*</span></label>
+                        <small id="codes-error" class="error-message" role="alert"></small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="back-btn">Back</button>
+                        <button type="button" class="btn btn-primary btn-large" id="enable-btn">
+                            Enable 2FA &amp; Continue
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Success -->
+                <div id="success-section" style="display:none;">
+                    <div class="success-message">
+                        <div class="success-icon" aria-hidden="true">&#x2713;</div>
+                        <h2>Two-Factor Authentication Enabled</h2>
+                        <p>Your admin account is now secured. Redirecting you to the dashboard&hellip;</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
+
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="/js/theme-manager.js"></script>
+    <script src="/js/accessibility.js"></script>
+    <script src="/js/api-client.js"></script>
+    <script src="/js/ui-components.js"></script>
+    <script>
+    (function () {
+      'use strict';
+
+      // Retrieve the setupToken placed by the login flow
+      const setupToken = sessionStorage.getItem('force_2fa_setup_token');
+
+      // If there is no setup token, the user has no business on this page
+      if (!setupToken) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      let currentSecret = '';
+      let currentBackupCodes = [];
+
+      // -----------------------------------------------------------------------
+      // Bootstrap: call /api/auth/2fa/force-setup to get QR + secret
+      // -----------------------------------------------------------------------
+      async function loadSetupData() {
+        try {
+          const res = await fetch('/api/auth/2fa/force-setup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ setupToken })
+          });
+          const json = await res.json();
+
+          if (!res.ok || !json.success) {
+            showError(json.message || 'Failed to start 2FA setup. Please log in again.');
+            setTimeout(() => { window.location.href = '/login.html'; }, 3000);
+            return;
+          }
+
+          const { qrCode, secret, backupCodes } = json.data;
+          currentSecret = secret;
+          currentBackupCodes = backupCodes || [];
+
+          // Display QR code
+          const qrImg = document.getElementById('qr-code');
+          qrImg.src = qrCode;
+          qrImg.style.display = 'block';
+          document.getElementById('qr-loading').style.display = 'none';
+
+          // Populate secret for manual entry
+          document.getElementById('secret-code').textContent = secret;
+
+          // Populate backup codes list
+          const list = document.getElementById('backup-codes-list');
+          list.innerHTML = currentBackupCodes.map(c =>
+            `<div class="backup-code"><code>${c}</code></div>`
+          ).join('');
+
+        } catch (err) {
+          showError('Network error. Please try again.');
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // Navigation
+      // -----------------------------------------------------------------------
+      document.getElementById('next-btn').addEventListener('click', () => {
+        document.getElementById('step-1').style.display = 'none';
+        document.getElementById('step-2').style.display = 'block';
+        document.getElementById('step-dot-1').classList.remove('active');
+        document.getElementById('step-dot-2').classList.add('active');
+        document.getElementById('progress-indicator').setAttribute('aria-valuenow', '2');
+        document.getElementById('progress-indicator').setAttribute('aria-label', '2FA setup step 2 of 2');
+      });
+
+      document.getElementById('back-btn').addEventListener('click', () => {
+        document.getElementById('step-2').style.display = 'none';
+        document.getElementById('step-1').style.display = 'block';
+        document.getElementById('step-dot-2').classList.remove('active');
+        document.getElementById('step-dot-1').classList.add('active');
+        document.getElementById('totp-error').textContent = '';
+      });
+
+      // -----------------------------------------------------------------------
+      // Copy helpers
+      // -----------------------------------------------------------------------
+      document.getElementById('copy-secret-btn').addEventListener('click', () => {
+        navigator.clipboard.writeText(currentSecret).catch(() => {});
+      });
+
+      document.getElementById('copy-codes-btn').addEventListener('click', () => {
+        navigator.clipboard.writeText(currentBackupCodes.join('\n')).catch(() => {});
+      });
+
+      // -----------------------------------------------------------------------
+      // Enable 2FA
+      // -----------------------------------------------------------------------
+      document.getElementById('enable-btn').addEventListener('click', async () => {
+        const code = document.getElementById('totp-code').value.trim();
+        const codesSaved = document.getElementById('codes-saved').checked;
+
+        document.getElementById('totp-error').textContent = '';
+        document.getElementById('codes-error').textContent = '';
+
+        if (!code || !/^\d{6}$/.test(code)) {
+          document.getElementById('totp-error').textContent = 'Please enter the 6-digit code from your authenticator app.';
+          return;
+        }
+        if (!codesSaved) {
+          document.getElementById('codes-error').textContent = 'Please confirm you have saved your backup codes.';
+          return;
+        }
+
+        const btn = document.getElementById('enable-btn');
+        btn.disabled = true;
+        btn.textContent = 'Verifying…';
+
+        try {
+          const res = await fetch('/api/auth/2fa/force-verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              setupToken,
+              secret: currentSecret,
+              code,
+              backupCodes: currentBackupCodes
+            })
+          });
+          const json = await res.json();
+
+          if (!res.ok || !json.success) {
+            document.getElementById('totp-error').textContent =
+              json.message || 'Verification failed. Please try again.';
+            btn.disabled = false;
+            btn.textContent = 'Enable 2FA & Continue';
+            return;
+          }
+
+          // Store session and clean up setup state
+          const { accessToken, refreshToken, userId, email, role, schoolId,
+                  firstName, lastName } = json.data;
+          localStorage.setItem('auth_token', accessToken);
+          if (refreshToken) { localStorage.setItem('refresh_token', refreshToken); }
+          localStorage.setItem('user', JSON.stringify({ id: userId, email, role, schoolId: schoolId || null }));
+          sessionStorage.removeItem('force_2fa_setup_token');
+          sessionStorage.removeItem('force_2fa_user_id');
+
+          // Show success, then redirect
+          document.getElementById('step-2').style.display = 'none';
+          document.getElementById('success-section').style.display = 'block';
+
+          setTimeout(() => {
+            window.location.href = '/admin-dashboard.html';
+          }, 2000);
+
+        } catch (err) {
+          showError('Network error. Please try again.');
+          btn.disabled = false;
+          btn.textContent = 'Enable 2FA & Continue';
+        }
+      });
+
+      // -----------------------------------------------------------------------
+      function showError(msg) {
+        const container = document.getElementById('alert-container');
+        container.innerHTML = `<div class="alert alert-error" role="alert">${msg}</div>`;
+      }
+
+      // Start
+      loadSetupData();
+    })();
+    </script>
+</body>
+</html>

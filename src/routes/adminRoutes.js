@@ -7,12 +7,25 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
-const { verifyToken, verifyRole } = require('../middleware/authMiddleware');
+const { verifyToken, verifyRole, requireAdmin2fa } = require('../middleware/authMiddleware');
+const { SessionService, tokenBlacklist } = require('../services/authenticationService');
+
+// Lazily-resolved session service — pool is not available at module load time
+// so we instantiate on first use inside route handlers.
+let _adminSessionService = null;
+function getAdminSessionService() {
+  if (!_adminSessionService) {
+    const { pool } = require('../models/index');
+    _adminSessionService = new SessionService({ db: pool });
+  }
+  return _adminSessionService;
+}
 
 /**
  * CRITICAL: All admin routes require:
  * 1. verifyToken (JWT validation)
- * 2. verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']) (RBAC check)
+ * 2. requireAdmin2fa (2FA enforcement — blocks admins whose token predates 2FA setup)
+ * 3. verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']) (RBAC check)
  */
 
 // ============================================================================
@@ -27,6 +40,7 @@ const { verifyToken, verifyRole } = require('../middleware/authMiddleware');
 router.get(
   '/users/:userId',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.getUserById
 );
@@ -39,6 +53,7 @@ router.get(
 router.get(
   '/users',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.listUsers
 );
@@ -52,6 +67,7 @@ router.get(
 router.put(
   '/users/:userId/profile',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.updateUserProfile
 );
@@ -65,6 +81,7 @@ router.put(
 router.put(
   '/users/:userId/status',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.updateUserStatus
 );
@@ -77,6 +94,7 @@ router.put(
 router.post(
   '/users/:userId/reset-mfa',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN']),
   adminController.resetUserMFA
 );
@@ -90,6 +108,7 @@ router.post(
 router.put(
   '/users/:userId/role',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN']),
   adminController.updateUserRole
 );
@@ -102,6 +121,7 @@ router.put(
 router.post(
   '/users/:userId/reset-password',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.resetUserPassword
 );
@@ -114,6 +134,7 @@ router.post(
 router.delete(
   '/users/:userId/permanent',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN']),
   adminController.deleteUser
 );
@@ -126,6 +147,7 @@ router.delete(
 router.delete(
   '/users/:userId',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.deactivateUser
 );
@@ -138,6 +160,7 @@ router.delete(
 router.get(
   '/users/:userId/data',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN']),
   adminController.exportUserData
 );
@@ -155,6 +178,7 @@ router.get(
 router.get(
   '/auctions/search',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.searchAuctions
 );
@@ -166,6 +190,7 @@ router.get(
 router.get(
   '/auctions/:auctionId',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.getAuctionById
 );
@@ -178,6 +203,7 @@ router.get(
 router.get(
   '/auctions',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.listAuctionsByStatus
 );
@@ -189,6 +215,7 @@ router.get(
 router.delete(
   '/auctions/:auctionId',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.deleteAuction
 );
@@ -200,6 +227,7 @@ router.delete(
 router.post(
   '/auctions/:auctionId/approve',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.approveAuction
 );
@@ -212,6 +240,7 @@ router.post(
 router.post(
   '/auctions/:auctionId/reject',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.rejectAuction
 );
@@ -224,6 +253,7 @@ router.post(
 router.put(
   '/auctions/:auctionId/fee',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.setAuctionFee
 );
@@ -236,6 +266,7 @@ router.put(
 router.put(
   '/auctions/:auctionId/extend',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.extendAuction
 );
@@ -248,6 +279,7 @@ router.put(
 router.post(
   '/auctions/:auctionId/close',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.closeForcibly
 );
@@ -263,6 +295,7 @@ router.post(
 router.get(
   '/payments/:paymentId',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.getPaymentById
 );
@@ -275,6 +308,7 @@ router.get(
 router.get(
   '/payments',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.listPayments
 );
@@ -287,6 +321,7 @@ router.get(
 router.post(
   '/payments/:paymentId/refund',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.processRefund
 );
@@ -299,6 +334,7 @@ router.post(
 router.get(
   '/payments/statistics',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.getPaymentStatistics
 );
@@ -315,6 +351,7 @@ router.get(
 router.get(
   '/reports',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.getReportsSummary
 );
@@ -328,6 +365,7 @@ router.get(
 router.get(
   '/reports/gdpr',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.generateGDPRReport
 );
@@ -341,6 +379,7 @@ router.get(
 router.get(
   '/reports/coppa',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.generateCOPPAReport
 );
@@ -354,6 +393,7 @@ router.get(
 router.get(
   '/reports/ferpa',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.generateFERPAReport
 );
@@ -367,6 +407,7 @@ router.get(
 router.get(
   '/reports/ccpa',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.generateCCPAReport
 );
@@ -384,6 +425,7 @@ router.get(
 router.get(
   '/audit-logs',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.getAuditLogs
 );
@@ -397,6 +439,7 @@ router.get(
 router.get(
   '/dashboard/stats',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.getDashboardStats
 );
@@ -409,6 +452,7 @@ router.get(
 router.get(
   '/dashboard/health',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   adminController.getSystemHealth
 );
@@ -426,6 +470,7 @@ router.get(
 router.post(
   '/schools/:schoolId/test-gateway',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   async (req, res) => {
     try {
@@ -498,6 +543,7 @@ router.post(
 router.get(
   '/schools/:schoolId/gateways',
   verifyToken,
+  requireAdmin2fa,
   verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
   async (req, res) => {
     try {
@@ -509,6 +555,54 @@ router.get(
         [schoolId]
       );
       return res.json({ success: true, gateways: result.rows });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+);
+
+// ============================================================================
+// Session Management (admin force-logout)
+// ============================================================================
+
+/**
+ * DELETE /api/admin/users/:userId/sessions
+ * Force-logout a user by revoking all of their active sessions.
+ * RBAC: SITE_ADMIN (any user), SCHOOL_ADMIN (own school users — ownership not checked here,
+ *       relies on the caller's audit responsibility).
+ */
+router.delete(
+  '/users/:userId/sessions',
+  verifyToken,
+  requireAdmin2fa,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const svc = getAdminSessionService();
+
+      const revokedJtis = await svc.revokeAllExcept(userId, null); // revoke ALL
+
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      await Promise.all(
+        revokedJtis.map(jti =>
+          tokenBlacklist.revoke(jti, new Date(Date.now() + sevenDaysMs)).catch(() => {})
+        )
+      );
+
+      // Audit log
+      const { pool } = require('../models/index');
+      await pool.query(
+        `INSERT INTO audit_logs (user_id, action_category, action_type, action_details)
+         VALUES ($1, 'ADMIN', 'FORCE_LOGOUT', $2)`,
+        [req.user.id, JSON.stringify({ targetUserId: userId, revokedCount: revokedJtis.length })]
+      ).catch(() => {});
+
+      return res.json({
+        success: true,
+        revokedCount: revokedJtis.length,
+        message: `Force-logged out user: ${revokedJtis.length} session(s) revoked`
+      });
     } catch (error) {
       return res.status(500).json({ success: false, message: error.message });
     }
