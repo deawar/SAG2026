@@ -131,7 +131,7 @@ describe('G16 — POST /api/auth/register (BIDDER)', () => {
     expect(res.status).toBe(400);
   });
 
-  test('BIDDER duplicate email → 409', async () => {
+  test('BIDDER duplicate email → 409 with already_registered_can_bid code', async () => {
     mockDb.query
       .mockResolvedValueOnce({ rows: [], rowCount: 0 })  // uniqueness check (first call)
       .mockRejectedValueOnce(Object.assign(new Error('duplicate key'), { code: '23505' })); // DB unique violation
@@ -141,7 +141,8 @@ describe('G16 — POST /api/auth/register (BIDDER)', () => {
       .send(bidderPayload());
 
     expect(res.status).toBe(409);
-    expect(res.body.message).toMatch(/already registered/i);
+    expect(res.body.code).toBe('already_registered_can_bid');
+    expect(res.body.message).toMatch(/already have an account/i);
   });
 
   test('student registration (accountType=student) still works', async () => {
