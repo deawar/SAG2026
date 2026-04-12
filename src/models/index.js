@@ -16,21 +16,28 @@ const uuidv4 = () => crypto.randomUUID();
 // 2.1 Database Connection Pool
 // ============================================================================
 
-// Create a shared pool instance for use in services
-const pool = new Pool({
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_NAME,
-  max: process.env.DB_POOL_MAX || 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000
-});
-
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-});
+// Create a shared pool instance for use in services.
+// Skipped in test mode — services are either unused or hit the real DB
+// through injected mocks, so creating a live pool would only cause auth
+// errors and keep Jest worker handles open.
+const pool = process.env.NODE_ENV === 'test'
+  ? null
+  : (() => {
+      const p = new Pool({
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT,
+        database: process.env.DB_NAME,
+        max: process.env.DB_POOL_MAX || 20,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 2000
+      });
+      p.on('error', (err) => {
+        console.error('Unexpected error on idle client', err);
+      });
+      return p;
+    })();
 
 class Database {
   constructor(config) {
