@@ -209,13 +209,13 @@ class AuctionDetail {
   async loadBidHistory() {
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`/api/bidding/artwork/${this.currentPiece?.id}/history`, {
+      const response = await fetch(`/api/auctions/${this.auctionId}/bids`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       const data = await response.json();
 
       if (response.ok) {
-        this.bidHistory = data.data || [];
+        this.bidHistory = data.bids || [];
         this.displayBidHistory();
       }
     } catch (error) {
