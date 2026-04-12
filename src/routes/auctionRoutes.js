@@ -68,6 +68,17 @@ router.get(
 );
 
 /**
+ * GET /api/auctions/:auctionId/bids
+ * Get all bids across every artwork in an auction (recent bids sidebar)
+ * Access: Authenticated users in the auction's school
+ */
+router.get(
+  '/:auctionId/bids',
+  authMiddleware.verifyToken,
+  (req, res) => auctionController.getBidsForAuction(req, res)
+);
+
+/**
  * GET /api/auctions/:auctionId/winner
  * Get auction winner information
  * Access: Public (authenticated users)
