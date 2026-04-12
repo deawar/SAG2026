@@ -450,14 +450,14 @@ class AdminDashboard {
 
       if (!response.ok) {
         console.error('Load auctions failed:', response.status, data);
-        if (tbody) {tbody.innerHTML = `<tr><td colspan="8" class="loading-message" style="color:var(--color-error,red)">Failed to load auctions (${response.status}: ${data.message || data.error || 'unknown error'})</td></tr>`;}
+        if (tbody) {tbody.innerHTML = `<tr><td colspan="9" class="loading-message" style="color:var(--color-error,red)">Failed to load auctions (${response.status}: ${data.message || data.error || 'unknown error'})</td></tr>`;}
         return;
       }
 
       this.displayAuctionsTable(data.auctions || []);
     } catch (error) {
       console.error('Load auctions error:', error);
-      if (tbody) {tbody.innerHTML = `<tr><td colspan="8" class="loading-message" style="color:var(--color-error,red)">Error loading auctions: ${this.escapeHtml(error.message)}</td></tr>`;}
+      if (tbody) {tbody.innerHTML = `<tr><td colspan="9" class="loading-message" style="color:var(--color-error,red)">Error loading auctions: ${this.escapeHtml(error.message)}</td></tr>`;}
     }
   }
 
@@ -471,7 +471,7 @@ class AdminDashboard {
     tbody.innerHTML = '';
 
     if (auctions.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8">No auctions found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9">No auctions found.</td></tr>';
       return;
     }
 
@@ -548,14 +548,14 @@ class AdminDashboard {
 
       if (!response.ok) {
         console.error('Load users failed:', response.status, data);
-        if (tbody) {tbody.innerHTML = `<tr><td colspan="8" class="loading-message" style="color:var(--color-error,red)">Failed to load users (${response.status}: ${data.message || data.error || 'unknown error'})</td></tr>`;}
+        if (tbody) {tbody.innerHTML = `<tr><td colspan="9" class="loading-message" style="color:var(--color-error,red)">Failed to load users (${response.status}: ${data.message || data.error || 'unknown error'})</td></tr>`;}
         return;
       }
 
       this.displayUsersTable(data.users || []);
     } catch (error) {
       console.error('Load users error:', error);
-      if (tbody) {tbody.innerHTML = `<tr><td colspan="8" class="loading-message" style="color:var(--color-error,red)">Error loading users: ${this.escapeHtml(error.message)}</td></tr>`;}
+      if (tbody) {tbody.innerHTML = `<tr><td colspan="9" class="loading-message" style="color:var(--color-error,red)">Error loading users: ${this.escapeHtml(error.message)}</td></tr>`;}
     }
   }
 
@@ -569,7 +569,7 @@ class AdminDashboard {
     tbody.innerHTML = '';
 
     if (users.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" class="loading-message">No users found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="loading-message">No users found.</td></tr>';
       return;
     }
 
@@ -599,6 +599,12 @@ class AdminDashboard {
                 <td class="col-hide-md">${this.escapeHtml(user.phone_number || '—')}</td>
                 <td class="col-hide-md">${this.escapeHtml(user.school_name || '—')}</td>
                 <td class="col-hide-md">${user.total_bids || 0}</td>
+                <td class="col-hide-sm">
+                    ${user.email_verified_at
+    ? `<span class="badge badge-success" title="Verified ${new Date(user.email_verified_at).toLocaleDateString()}">Verified</span>`
+    : '<span class="badge badge-warning">Pending</span>'
+}
+                </td>
                 <td style="white-space:nowrap;">
                     <button class="btn btn-sm btn-primary" data-edit-user="${user.id}">Edit</button>
                     <button class="btn btn-sm btn-warning" data-reset-pw-user="${user.id}" title="Generate password reset link">Reset PW</button>
