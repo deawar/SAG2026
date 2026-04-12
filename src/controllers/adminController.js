@@ -50,6 +50,7 @@ class AdminController {
     this.listPayments = this.listPayments.bind(this);
     this.processRefund = this.processRefund.bind(this);
     this.getPaymentStatistics = this.getPaymentStatistics.bind(this);
+    this.getReportsSummary = this.getReportsSummary.bind(this);
     this.generateGDPRReport = this.generateGDPRReport.bind(this);
     this.generateCOPPAReport = this.generateCOPPAReport.bind(this);
     this.generateFERPAReport = this.generateFERPAReport.bind(this);
@@ -693,6 +694,19 @@ class AdminController {
   /**
    * ========== COMPLIANCE ENDPOINTS (4 methods) ==========
    */
+
+  /**
+   * GET /api/admin/reports
+   * Lightweight summary of all compliance report types
+   */
+  async getReportsSummary(req, res) {
+    try {
+      const reports = await adminService.getReportsSummary(req.user.id);
+      return res.status(200).json({ success: true, reports });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
 
   /**
    * GET /api/admin/reports/gdpr
