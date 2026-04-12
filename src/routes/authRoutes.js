@@ -7,6 +7,7 @@
 
 const crypto = require('crypto');
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const authMiddleware = require('../middleware/authMiddleware');
 const UserController = require('../controllers/userController');
 const ValidationUtils = require('../utils/validationUtils');
@@ -326,6 +327,7 @@ module.exports = (db) => {
  * POST /api/auth/2fa/disable
  * Disable 2FA for the authenticated user
  * Auth: Required
+ * Note: blocked for SITE_ADMIN and SCHOOL_ADMIN — admins must always have 2FA.
  *
  * Body: none (auth token is sufficient proof of account control)
  * Response: 200 { ok: true }
@@ -333,6 +335,16 @@ module.exports = (db) => {
   router.post('/2fa/disable', authMiddleware.verifyToken, async (req, res, next) => {
     try {
       const userId = req.user.id;
+
+      // G5/G17: admins cannot disable 2FA — it is mandatory for their role
+      const adminRoles = ['SITE_ADMIN', 'SCHOOL_ADMIN'];
+      if (adminRoles.includes(req.user.role)) {
+        return res.status(403).json({
+          success: false,
+          error: 'admin_2fa_mandatory',
+          message: 'Admin accounts cannot disable 2FA. Two-factor authentication is mandatory for admin roles.'
+        });
+      }
 
       await db.query(
         `UPDATE users
@@ -344,6 +356,160 @@ module.exports = (db) => {
       await authenticationService._recordAuditLog(userId, 'SECURITY', '2FA_DISABLED', {});
 
       return res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+ * POST /api/auth/2fa/force-setup
+ * Begin mandatory 2FA setup for admin accounts.
+ * Auth: setupToken in request body (purpose: '2fa_force_setup')
+ *
+ * Body: { setupToken: string }
+ * Response: 200 { secret, qrCode (data URL), backupCodes, manualEntryKey }
+ */
+  router.post('/2fa/force-setup', async (req, res, next) => {
+    try {
+      const { setupToken } = req.body;
+      if (!setupToken) {
+        return res.status(400).json({ success: false, message: 'setupToken required' });
+      }
+
+      let decoded;
+      try {
+        decoded = jwt.verify(setupToken, process.env.JWT_ACCESS_SECRET, { algorithms: ['HS256'] });
+      } catch (err) {
+        return res.status(401).json({ success: false, message: 'Setup token invalid or expired' });
+      }
+
+      if (decoded.purpose !== '2fa_force_setup') {
+        return res.status(401).json({ success: false, message: 'Invalid token purpose' });
+      }
+
+      const userId = decoded.sub;
+      const userResult = await db.query(
+        'SELECT id, email, role FROM users WHERE id = $1 AND deleted_at IS NULL',
+        [userId]
+      );
+      if (userResult.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      const user = userResult.rows[0];
+      const QRCode = require('qrcode');
+      const secretData = await twoFactorService.generateSecret(userId, user.email);
+      const qrCodeDataUrl = await QRCode.toDataURL(secretData.qrCode);
+
+      return res.json({
+        success: true,
+        data: {
+          ...secretData,
+          qrCode: qrCodeDataUrl
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+ * POST /api/auth/2fa/force-verify
+ * Confirm mandatory 2FA setup: verify TOTP code, persist 2FA, issue full session tokens.
+ * Auth: setupToken in request body (purpose: '2fa_force_setup')
+ *
+ * Body: { setupToken, secret, code, backupCodes }
+ * Response: 200 with accessToken + refreshToken (same shape as /login success)
+ */
+  router.post('/2fa/force-verify', async (req, res, next) => {
+    try {
+      const { setupToken, secret, code, backupCodes: clientBackupCodes } = req.body;
+
+      if (!setupToken || !secret || !code) {
+        return res.status(400).json({ success: false, message: 'setupToken, secret, and code are required' });
+      }
+
+      let decoded;
+      try {
+        decoded = jwt.verify(setupToken, process.env.JWT_ACCESS_SECRET, { algorithms: ['HS256'] });
+      } catch (err) {
+        return res.status(401).json({ success: false, message: 'Setup token invalid or expired' });
+      }
+
+      if (decoded.purpose !== '2fa_force_setup') {
+        return res.status(401).json({ success: false, message: 'Invalid token purpose' });
+      }
+
+      const userId = decoded.sub;
+      const userResult = await db.query(
+        'SELECT id, email, first_name, last_name, role, school_id FROM users WHERE id = $1 AND deleted_at IS NULL',
+        [userId]
+      );
+      if (userResult.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+      const user = userResult.rows[0];
+
+      const backupCodes = Array.isArray(clientBackupCodes) && clientBackupCodes.length > 0
+        ? clientBackupCodes
+        : twoFactorService._generateBackupCodes(8);
+
+      // Verify TOTP and persist 2FA to DB
+      try {
+        await twoFactorService.confirmSetup(userId, secret, code, backupCodes);
+      } catch (err) {
+        if (err.message === 'INVALID_2FA_TOKEN') {
+          return res.status(400).json({ success: false, message: 'Invalid 2FA code' });
+        }
+        throw err;
+      }
+
+      await authenticationService._recordAuditLog(userId, 'SECURITY', '2FA_ENABLED', { forced: true });
+
+      // Issue full session tokens now that 2FA is confirmed
+      const accessTokenResult = jwtService.generateAccessToken(userId, {
+        email: user.email,
+        role: user.role,
+        schoolId: user.school_id,
+        twoFaEnabled: true
+      });
+      const refreshTokenResult = jwtService.generateRefreshToken(userId);
+
+      await userModel.updateLastLogin(userId);
+
+      // Create session row (non-fatal)
+      try {
+        const refreshExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        const sess = await sessionService.createSession(userId, {
+          tokenJti: refreshTokenResult.jti,
+          tokenType: 'REFRESH',
+          expiresAt: refreshExpiry,
+          ipAddress: req.ip || null,
+          userAgent: req.headers['user-agent'] || null,
+          deviceFingerprint: null,
+          twoFAVerified: true
+        });
+        if (sess?.revokedJti) {
+          const { tokenBlacklist: bl } = require('../services/authenticationService');
+          await bl.revoke(sess.revokedJti, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+        }
+      } catch (_err) { /* non-fatal */ }
+
+      return res.json({
+        success: true,
+        message: '2FA setup complete. You are now logged in.',
+        data: {
+          userId: user.id,
+          email: user.email,
+          firstName: user.first_name || '',
+          lastName: user.last_name || '',
+          role: user.role,
+          schoolId: user.school_id || null,
+          accessToken: accessTokenResult.token,
+          refreshToken: refreshTokenResult.token,
+          expiresIn: accessTokenResult.expiresIn
+        }
+      });
     } catch (error) {
       next(error);
     }

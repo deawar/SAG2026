@@ -65,7 +65,7 @@ describe('GET /api/admin/auctions/search', () => {
   });
 
   test('SITE_ADMIN: empty q returns all auctions (no ILIKE filter)', async () => {
-    const token = makeToken({ userId: 'admin-1', role: 'SITE_ADMIN', schoolId: null });
+    const token = makeToken({ userId: 'admin-1', role: 'SITE_ADMIN', schoolId: null, twoFaEnabled: true });
 
     mockPool.query
       // verifyAdminAccess
@@ -90,7 +90,7 @@ describe('GET /api/admin/auctions/search', () => {
   });
 
   test('SITE_ADMIN: ?q=art adds ILIKE clause with parameterised value', async () => {
-    const token = makeToken({ userId: 'admin-1', role: 'SITE_ADMIN', schoolId: null });
+    const token = makeToken({ userId: 'admin-1', role: 'SITE_ADMIN', schoolId: null, twoFaEnabled: true });
 
     mockPool.query
       .mockResolvedValueOnce({ rows: [SITE_ADMIN_ROW], rowCount: 1 })
@@ -113,7 +113,7 @@ describe('GET /api/admin/auctions/search', () => {
   });
 
   test('SCHOOL_ADMIN: results scoped to own school', async () => {
-    const token = makeToken({ userId: 'sadmin-1', role: 'SCHOOL_ADMIN', schoolId: 'school-uuid-1' });
+    const token = makeToken({ userId: 'sadmin-1', role: 'SCHOOL_ADMIN', schoolId: 'school-uuid-1', twoFaEnabled: true });
 
     mockPool.query
       .mockResolvedValueOnce({ rows: [SCHOOL_ADMIN_ROW], rowCount: 1 })
@@ -135,7 +135,7 @@ describe('GET /api/admin/auctions/search', () => {
   });
 
   test('SCHOOL_ADMIN: no school_id scope for SITE_ADMIN', async () => {
-    const token = makeToken({ userId: 'admin-1', role: 'SITE_ADMIN', schoolId: null });
+    const token = makeToken({ userId: 'admin-1', role: 'SITE_ADMIN', schoolId: null, twoFaEnabled: true });
 
     mockPool.query
       .mockResolvedValueOnce({ rows: [SITE_ADMIN_ROW], rowCount: 1 })

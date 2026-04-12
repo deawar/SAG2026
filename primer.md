@@ -21,220 +21,291 @@ Start date: 2026-01-26 | Target: Q2 2026
 | 4 | Payment Processing | Complete |
 | 5 | Auction Management API | Complete |
 | 6 | Frontend Development | Partial - auctions list wired, detail/teacher stubs remain |
-| 7 | Notification System | Pending - service file exists, no email wired |
+| 7 | Notification System | Complete - email wired for outbid, won, artwork status |
 | 8 | Admin Dashboard | Partial - HTML/CSS/JS exists, backend incomplete |
 | 9 | Deployment & Testing | Pending |
 | 10 | Data Migration | Pending |
-| 11 | Security Audit | Pending |
+| 11 | Security Audit | Partial - G1–G17, G19, G13 applied |
 | 12 | UI/UX Testing | Pending |
 | 13 | API Documentation | Pending |
 | 14 | Monitoring & Logging | Pending |
 
 ---
 
-## Grading Fixes Completed (Prompt Series G1–G12)
+## Grading Fixes Completed (Prompt Series)
 
-| Fix | Commit | Description |
-|-----|--------|-------------|
-| G7  | dec8199 | GET /api/admin/auctions/search |
-| G8  | fb2fb0d | GET /api/admin/reports summary endpoint |
-| G9  | ed9f1d4 | Replace PaymentController(null) with NullPaymentService stub |
-| G10 | b0b0f3c | Checkout page + payment UI end-to-end |
-| G11 | 20b3726 | Require email verification before login |
-| G12 | c0e4c86 | COPPA parental consent flow (see below) |
-
----
-
-## What Was Done Last Session (2026-04-12)
-
-### Commit c0e4c86 — G12 COPPA compliance
-
-**Migration:** `db/migrations/20260412000000_add_coppa_fields.up.sql`
-- Added to `users` table: `requires_parental_consent BOOLEAN DEFAULT FALSE`,
-  `parental_consent_status VARCHAR(32) DEFAULT 'not_required'`,
-  `parent_email VARCHAR(255) NULL`, `parent_consent_token TEXT NULL`,
-  `parent_consent_expires_at TIMESTAMPTZ NULL`, `parent_consent_granted_at TIMESTAMPTZ NULL`
-- Made `last_name` nullable (for data minimization on under-13 accounts)
-- Index on `parental_consent_status WHERE requires_parental_consent = TRUE`
-
-**Registration flow (src/controllers/userController.js):**
-- `dateOfBirth` required for STUDENT and BIDDER paths
-- Age computed in controller; if < 13: require `parentEmail`, null `lastName`/`phone` (data minimization),
-  create user with `requires_parental_consent=true`, `parental_consent_status='pending'`, store token hash
-- Send parental consent email via `_sendParentConsentEmail()` (same SMTP pattern as verify email)
-- Return `{ ok: true, requiresParentalConsent: true }` — no JWT
-
-**Login guard (src/controllers/userController.js):**
-- If `requires_parental_consent=true AND parental_consent_status != 'granted'` → 403
-  `{ error: 'parental_consent_required' }` (checked before email_verified_at guard)
-
-**New endpoint: POST /api/auth/parental-consent (src/routes/authRoutes.js)**
-- Body: `{ uid, token, granted: boolean }`
-- Verifies sha256 token hash and expiry (7-day window)
-- `granted=true`: sets `parental_consent_status='granted'`, activates account (email_verified_at + ACTIVE)
-- `granted=false`: sets status='denied', soft-deletes account
-
-**COPPA report rewrite (src/services/adminService.js):**
-- `generateCOPPAReport` now queries `users` table directly (was querying non-existent `coppa_verifications`)
-- Returns `{ totalUnder13, pending, granted, denied }` in summary
-
-**New page:** `public/parental-consent.html`
-- Shows data collection notice (what is collected, how used, third-party sharing)
-- Grant and Deny buttons; calls `/api/auth/parental-consent`
-
-**Tests:** `tests/unit/coppa.test.js` (16 tests covering full flow)
-- Updated `tests/unit/models/userModel.spec.js` (COPPA now in controller, not model validator)
-- Updated `tests/unit/services/adminService.test.js` (new summary shape)
-
-**Key architectural note:** `_validateUserData` no longer throws `COPPA_PARENTAL_CONSENT_REQUIRED`.
-The COPPA age check lives in `userController.register()`. The model accepts `null` lastName.
+| Fix | Description |
+|-----|-------------|
+| G7  | GET /api/admin/auctions/search |
+| G8  | GET /api/admin/reports summary endpoint |
+| G9  | Replace PaymentController(null) with NullPaymentService stub |
+| G10 | Checkout page + payment UI end-to-end |
+| G11 | Require email verification before login |
+| G12 | COPPA parental consent flow |
+| G13 | Wire email notifications (outbid, auction won, artwork status) |
+| G17 | Mandatory 2FA for admin accounts |
+| G19 | Concurrent session limiting (MAX_SESSIONS_PER_USER) |
 
 ---
 
-## Active Work / In Progress
-Nothing mid-flight. G12 committed and tests passing (482/482).
+## What Was Done This Session (2026-04-12)
+
+### G13 — Email Notifications Not Wired
+
+**Goal:** Wire `notificationService` into the bid placement, auction close, and artwork approval flows so users actually receive emails.
 
 ---
 
-## Known Issues / Blockers (Prioritised)
+#### `src/services/notificationService.js` changes
 
-P2 - Homepage Re-engineering (index.html)
-- The homepage body content (Featured Auctions, How It Works, CTA section) renders as
-  plain unstyled text — no hero gradient, no cards, no branded colours or spacing
-- "Failed to load auctions" error showing in Featured Auctions section (API call failing
-  or no active auctions seeded in live DB)
-- How It Works step numbers (1-4) are unstyled — should use .step-number styled circles
-- "Get Started" CTA button renders full-width grey — should be btn-primary with correct width
+**New template** — `EmailTemplateService.artworkStatusChangedTemplate(data)`:
+- Takes `{ firstName, artworkTitle, newStatus, reason }`
+- Renders a distinct "approved" vs "not approved" email
+- Registered in `generateTemplate` as `'artwork-status-changed'`
 
-P2 - Frontend Wiring (remaining)
-- auction-detail.js - bidding flow needs end-to-end test against live API
-- teacher-dashboard.js - artwork submission and student management are stubs
+**New `provider: 'json'` transport** in `EmailProvider.initializeTransporter()`:
+- Uses `nodemailer.createTransport({ jsonTransport: true })`
+- Logs `[Email dev transport] to=... subject=...` to stdout
+- Used automatically in dev/test so no SMTP server is required
 
-P3 - Dark Mode Breaks Theming
-- responsive.css:559+ dark mode uses hardcoded hex values, bypassing CSS variable school-theme system
+**`EmailProvider.send()` updated** to log when using json transport.
 
-P3 - Housekeeping
-- public/test-registration.html - test file is publicly served, should be deleted
-- 80+ .md files in project root should move to /docs/
-- README.md API docs are stale (lists /users, /auctions - actual routes are /api/auth/*, /api/auctions/*)
-- main.css has ~7 duplicate selectors (tabs-list, tab-button, text-center, text-muted, text-success)
-  at lines 1719+ vs 1125+
+**New exports at the bottom of the file:**
 
-P4 - Unimplemented Features
-- Section 7 Notifications: notificationService.js exists but no email provider configured
-- Admin dashboard backend: user management, reporting, compliance endpoints incomplete
-- /images/placeholder-art.svg does not exist yet - needed for auction cards without artwork
+```js
+// createEmailProvider() — factory from env vars
+// - Production: requires SMTP_HOST (throws if missing), uses SMTP_PORT/USER/PASS/FROM
+// - Dev/test: json transport (no real SMTP)
+createEmailProvider()
 
----
+// getSharedEmailProvider() — lazy singleton used by services
+getSharedEmailProvider()
 
-## Key Files Changed Recently
-
-| File | Change |
-|------|--------|
-| db/migrations/20260412000000_add_coppa_fields.up/down.sql | New - COPPA DB columns |
-| schema.sql | users table: last_name nullable + 6 new COPPA columns |
-| src/controllers/userController.js | COPPA age check in register(), login guard, _sendParentConsentEmail |
-| src/models/index.js | create() accepts COPPA params; _validateUserData allows null lastName |
-| src/routes/authRoutes.js | New POST /api/auth/parental-consent endpoint |
-| src/services/adminService.js | generateCOPPAReport uses real users table data |
-| public/parental-consent.html | New consent notice + grant/deny UI |
-| tests/unit/coppa.test.js | New - 16 COPPA flow tests |
-| tests/unit/models/userModel.spec.js | Updated COPPA tests (logic moved to controller) |
-| tests/unit/services/adminService.test.js | Updated COPPA report test (new summary shape) |
-
----
-
-## Architecture Snapshot
-- Entry point: src/index.js | App config: src/app.js
-- Frontend pages: index, auctions, auction-detail, login, register, user-dashboard,
-  teacher-dashboard, admin-dashboard, password-reset, 2fa-setup, 2fa-verify,
-  verify-email, parental-consent
-- CSS load order: theme.css > main.css > responsive.css > accessibility.css
-- JS convention: theme-manager.js loads first; UIComponents.initializeNavbar() called
-  in every page DOMContentLoaded
-- API base: /api/ - README says /api/v1/ but actual routes do NOT use v1 prefix
-- Auth flow: JWT (15min access) + refresh token (7 days)
-  localStorage keys: auth_token / refresh_token
-- Role hierarchy: SITE_ADMIN > SCHOOL_ADMIN > TEACHER > STUDENT > BIDDER
-- Rate limiters: authLimiter (20/min), apiLimiter (100/min), bidLimiter (30/min), paymentLimiter (10/min)
-
----
-
-## COPPA Account Lifecycle
-
-```
-register (STUDENT/BIDDER, age < 13)
-  → account_status=PENDING, requires_parental_consent=TRUE, parental_consent_status='pending'
-  → parent consent email sent (link expires 7 days)
-  → login blocked until consent granted
-
-parent visits /parental-consent.html → POST /api/auth/parental-consent
-  grant → parental_consent_status='granted', email_verified_at=NOW(), account_status=ACTIVE
-  deny  → parental_consent_status='denied', deleted_at=NOW()
+// Standalone notification functions (each checks prefs, fail-open)
+notifyOutbid(emailProvider, db, { userId, email, firstName, artworkTitle, newBidDollars, auctionEndsAt })
+notifyAuctionWon(emailProvider, db, { userId, email, firstName, artworkTitle, winningBidDollars })
+notifyArtworkStatusChanged(emailProvider, db, { userId, email, firstName, artworkTitle, newStatus, reason })
 ```
 
-Data minimization for under-13: last_name=NULL, phone_number=NULL at registration.
+**`_checkEmailPref(db, userId, prefKey)`** — internal helper; queries `notification_preferences`; fails open (returns true) on DB error or missing row. Preference keys: `email_outbid`, `email_winner`, `email_artwork_status`.
 
 ---
 
-## Theming System
-- Fonts: Cormorant Garant (headings) + DM Sans (body) via Google Fonts
-- School color vars: --school-primary / --school-secondary in :root (main.css)
-- ThemeManager.apply(school) / .reset() / .getCurrent() - persists to localStorage
-- Custom event: schoolThemeChanged | Preset classes: .school-theme-navy-gold etc. in theme.css
+#### `src/services/biddingService.js` changes
+
+- Imports `{ getSharedEmailProvider, notifyOutbid }` from notificationService
+- `placeBid()` UPDATE now uses `RETURNING placed_by_user_id` (safe: `?.` on `.rows`)
+- After commit: if previous bidder exists and is not the new bidder, fetch their user row and fire:
+  ```js
+  setImmediate(() => notifyOutbid(getSharedEmailProvider(), pool, {...}).catch(...))
+  ```
+- Non-blocking: response is already sent before `setImmediate` fires
 
 ---
 
-## Responsive Breakpoints
-- Mobile base:   0-640px    (.menu-toggle shown, single column)
-- Tablet:        641-768px  (2-col grids, auth forms 2-col)
-- Tablet Large:  769-1024px (desktop nav shown, sidebar appears)
-- Desktop:       1025-1280px (3-col auction grid, sticky filters)
-- XL:            1281-1440px (4-col grid, max-width 1280px)
-- Ultra-wide:    1440px+    (5-col grid, max-width 1400px)
+#### `src/services/auctionService.js` changes
+
+- Imports `{ getSharedEmailProvider, notifyAuctionWon }` from notificationService
+- `endAuction()` after commit: iterates `winners` array, fetches each user by id, fires:
+  ```js
+  setImmediate(async () => {
+    for (const winner of winners) { await notifyAuctionWon(...) }
+  })
+  ```
+- Non-blocking; each individual winner error is caught and logged without stopping others
 
 ---
 
-## Test Coverage
-- Framework: Jest | npm test | npm run test:unit | npm run test:integration
-- Target: 80%+ overall, 100% security-critical
-- Last known run: 482 unit/security tests passing (2026-04-12)
-- Lint: npm run lint (ESLint v9, 0 errors as of fcd2a3d)
+#### `src/controllers/teacherController.js` changes
+
+- Adds `{ getSharedEmailProvider, notifyArtworkStatusChanged }` to existing import
+- `approveSubmission()`: after successful UPDATE, fires:
+  ```js
+  setImmediate(async () => {
+    // SELECT artwork.title, user.id/email/first_name WHERE artwork.id = $1
+    await notifyArtworkStatusChanged(..., { newStatus: 'APPROVED', reason: null })
+  })
+  ```
+- `rejectSubmission()`: same, `{ newStatus: 'REJECTED', reason: rejection_reason }`
+- Both use the pool from `models/index` (same pool as the rest of teacherController)
 
 ---
 
-## Environment & Infra
-- Dev: npm run dev (nodemon, port 3000)
-- DB: PostgreSQL - schema.sql, seeds.sql
-- Docker: docker-compose.yml (dev) / docker-compose.prod.yml (prod)
-- Live: https://sag.live (Apache reverse proxy to Node app on VPS 15.204.210.161)
-- Payments: Stripe + Square - tokenisation only, no card data stored
-- WebSocket: ws library, initialised at server start in realtimeService.js
+#### Tests: `tests/integration/routes/emailNotificationsIntegrationTest.spec.js` — 12 tests
+
+Key patterns:
+- `jest.mock('nodemailer', ...)` with `mockSendMail = jest.fn()` captures all `sendMail` calls
+- `jest.mock('../../../src/models/index', ...)` provides `mockPool` for tokenBlacklist + teacher pool queries
+- Notification function tests: create `new EmailProvider({ provider: 'json' })` and a custom db stub
+- Teacher route tests: mock `mockPool.query` in sequence: isRevoked → _resolveSchoolId → UPDATE → (notification)
+- Preference disabled: mock db returns `{ rows: [{ email_outbid: false }] }` → `sendMail` NOT called
+- Fail-open test: db.query throws → `sendMail` IS called anyway
 
 ---
 
-## What To Do Next Session
-1. Create /images/placeholder-art.svg so auction cards render cleanly when no artwork exists
-2. Test auction list page end-to-end at https://sag.live - verify cards render with bid counts
-3. Test auction-detail.js bidding flow end-to-end
-4. Fix dark mode hardcoded hex values in responsive.css (P3)
-5. Delete public/test-registration.html (P3)
+## Test Suite Status
+
+| Suites | Tests |
+|--------|-------|
+| 42 pass, 4 skipped | 612 pass |
+
+No failures. The pre-existing `owasp-top-10.test.js` ETIMEDOUT resolved this session.
 
 ---
 
-## Decisions Made / Conventions To Remember
-- Mobile menu toggle handler lives exclusively in UIComponents.setupNavbarEventListeners() -
-  never duplicate in page-specific JS files
-- Refresh token localStorage key is always refresh_token (snake_case) -
-  always call this.setRefreshToken(), never raw localStorage.setItem
-- Auction/bidding/payment route files are NOT factory functions - require() directly
-  (unlike auth/user/school routes which receive a db param)
-- API routes are /api/* not /api/v1/* - README is wrong, do not follow it for route paths
-- auctionService.listAuctions returns id (not auctionId) - changed in fcd2a3d
-- ESLint config is eslint.config.js (v9 flat config) - do not create .eslintrc files
-- Prefix unused-but-intentional variables with _ to satisfy ESLint varsIgnorePattern
-- Use Number.parseInt / Number.parseFloat not global parseInt/parseFloat (SonarLint S7773)
-- Use globalThis instead of window for cross-env globals (SonarLint S7764)
-- COPPA logic lives in userController.register(), NOT in UserModel._validateUserData()
-- UserModel._validateUserData() allows null lastName (for under-13 data minimization)
-- Parental consent token stored as sha256 hash in parent_consent_token column, raw token in email URL
+## Critical Architecture Notes
+
+### Email Transport Architecture
+
+```
+createEmailProvider()
+  → NODE_ENV=production: SMTP via nodemailer (requires SMTP_HOST)
+  → otherwise: jsonTransport (logs to stdout)
+
+getSharedEmailProvider()
+  → lazy singleton, created on first call
+  → used by biddingService, auctionService, teacherController
+
+notifyXxx(emailProvider, db, data)
+  → checks notification_preferences.email_xxx (fail-open)
+  → calls emailProvider.send(to, subject, html, text)
+  → caller wraps in setImmediate() to not block HTTP response
+```
+
+### Notification Preference Keys (notification_preferences table)
+
+| Event | DB Column |
+|-------|-----------|
+| Outbid alert | `email_outbid` |
+| Auction won | `email_winner` |
+| Artwork status changed | `email_artwork_status` |
+
+Default: enabled (true) if no preferences row exists.
+
+### Where Notifications Fire
+
+| Event | Source file | Trigger point |
+|-------|-------------|---------------|
+| Outbid | `src/services/biddingService.js` | After `placeBid` COMMIT |
+| Auction won | `src/services/auctionService.js` | After `endAuction` COMMIT |
+| Artwork approved | `src/controllers/teacherController.js` | After `approveSubmission` UPDATE |
+| Artwork rejected | `src/controllers/teacherController.js` | After `rejectSubmission` UPDATE |
+
+---
+
+### JWT Token Shapes
+
+**Access token payload:**
+```json
+{
+  "sub": "uuid",
+  "email": "...",
+  "role": "SITE_ADMIN",
+  "schoolId": "uuid|null",
+  "twoFaEnabled": true,
+  "jti": "uuid",
+  "iat": 1234, "exp": 1234,
+  "iss": "silent-auction-gallery",
+  "aud": "silent-auction-users"
+}
+```
+
+**Refresh token payload:**
+```json
+{
+  "sub": "uuid",
+  "jti": "uuid",
+  "type": "refresh",
+  "iat": 1234, "exp": 1234,
+  "iss": "silent-auction-gallery",
+  "aud": "silent-auction-users"
+}
+```
+
+**Special-purpose tokens:** `purpose: '2fa_force_setup'` or `purpose: '2fa_challenge'`
+- Verified with `jwt.verify(token, ACCESS_SECRET, { algorithms: ['HS256'] })` NOT `jwtService.verifyAccessToken` (which enforces issuer/audience)
+
+### Session Tracking (user_sessions table)
+
+- Only `token_type = 'REFRESH'` rows count toward MAX_SESSIONS_PER_USER
+- `checkSession` is fail-open: missing row = legacy token = allow
+- `last_used_at` updated non-blocking on every token refresh
+- `SessionService.createSession` uses PG subquery pattern for eviction (ORDER BY LIMIT in UPDATE is invalid PG)
+
+### Admin 2FA Flow
+
+```
+POST /api/auth/login (admin, no 2FA)
+  → 200 { requiresTwoFactorSetup: true, setupToken, userId }
+
+POST /api/auth/2fa/force-setup (body: { setupToken })
+  → 200 { qrCodeUrl, secret, backupCodes }
+
+POST /api/auth/2fa/force-verify (body: { setupToken, code })
+  → 200 { accessToken, refreshToken, user }
+```
+
+Frontend stores `force_2fa_setup_token` in `sessionStorage`, redirects to `/force-2fa-setup.html`.
+
+### Middleware Chain for Admin Routes
+
+```
+verifyToken → requireAdmin2fa → verifyRole([...]) → handler
+```
+
+`requireAdmin2fa` returns 403 `admin_2fa_required` if `req.user.role` is admin but `req.user.twoFaEnabled` is falsy.
+
+### TokenBlacklist / Pool in Tests
+
+- `TokenBlacklistService` lazily loads `pool` from `require('../models/index').pool`
+- `pool` is `null` in test mode (`NODE_ENV=test`) unless mocked
+- Admin route tests and teacher route tests that need `pool.query` mocked must use:
+  ```js
+  jest.mock('../../../src/models/index', () => ({
+    ...jest.requireActual('../../../src/models/index'),
+    pool: { query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }) }
+  }));
+  const { pool: mockPool } = require('../../../src/models/index');
+  ```
+- **Mock query order matters:** `tokenBlacklist.isRevoked` (in `verifyToken`) fires BEFORE handler queries — put its mock FIRST in `mockPool.query` sequence
+
+### Routes Architecture
+
+| Route module | Factory? | DB source |
+|---|---|---|
+| `authRoutes(db)` | Yes | injected `db` (mockDb in tests) |
+| `userRoutes(db)` | Yes | injected `db` + pool via SessionService |
+| `adminRoutes` | No | lazy pool from `models/index` |
+| `teacherRoutes` | No | pool from `models/index` |
+
+### Schema Column Naming (key pitfalls)
+
+- `users.account_status` (not `status`)
+- `auctions.auction_status`, `starts_at`/`ends_at`, `created_by_user_id`
+- `bids.bid_status`, `bid_amount`, `placed_by_user_id`, `placed_at`
+- `artwork.artwork_status`, `starting_bid_amount`, `reserve_bid_amount`, `created_by_user_id`
+- `transactions` table (not `payments`): `transaction_status`, `hammer_amount`, `buyer_user_id`
+- Status values are UPPERCASE: ACTIVE, DRAFT, LIVE, ENDED, CANCELLED, OUTBID, ACCEPTED
+
+---
+
+## Key File Map
+
+| File | Role |
+|------|------|
+| `src/services/notificationService.js` | Email templates, EmailProvider, notification functions, createEmailProvider |
+| `src/services/biddingService.js` | Bid placement with outbid notification |
+| `src/services/auctionService.js` | Auction lifecycle with winner notification |
+| `src/controllers/teacherController.js` | Artwork approve/reject with status notifications |
+| `src/services/authenticationService.js` | JWTService, TwoFactorService, RBACService, SessionService, AuthenticationService, TokenBlacklistService |
+| `src/controllers/userController.js` | Login, logout, register, 2FA verify, refresh, password, profile |
+| `src/middleware/authMiddleware.js` | verifyToken, optionalVerifyToken, requireAdmin2fa, verifyRole |
+| `src/routes/authRoutes.js` | /api/auth/* including /2fa/force-setup and /2fa/force-verify |
+| `src/routes/userRoutes.js` | /api/user/* including /sessions endpoints |
+| `src/routes/adminRoutes.js` | /api/admin/* including /users/:id/sessions force-logout |
+| `public/force-2fa-setup.html` | Forced admin 2FA setup UI |
+| `public/user-dashboard.html` | User dashboard with sessions management in Account tab |
+| `db/migrations/` | All schema migrations |
+| `tests/integration/routes/` | Integration tests (mock DB) |
+| `tests/helpers/createTestApp.js` | Creates Express app with mockDb |
+| `tests/helpers/mockDb.js` | jest.fn() mock for injected db |

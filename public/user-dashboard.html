@@ -676,6 +676,124 @@
           _galleryCarousel.init();
         });
       });
+
+      // -----------------------------------------------------------------------
+      // Active Sessions management — loads when the Account tab is shown
+      // -----------------------------------------------------------------------
+      (function () {
+        let _sessionsLoaded = false;
+
+        function formatDate(iso) {
+          if (!iso) return 'Never';
+          return new Date(iso).toLocaleString();
+        }
+
+        async function loadSessions() {
+          const list = document.getElementById('sessions-list');
+          if (!list) return;
+          list.innerHTML = '<p class="loading-message">Loading sessions...</p>';
+          try {
+            const token = localStorage.getItem('auth_token');
+            const res = await fetch('/api/user/sessions', {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load sessions');
+
+            if (!data.sessions || data.sessions.length === 0) {
+              list.innerHTML = '<p class="empty-state-small">No active sessions found.</p>';
+              return;
+            }
+
+            list.innerHTML = '';
+
+            // "Sign out all other sessions" button
+            const revokeAllBtn = document.createElement('button');
+            revokeAllBtn.className = 'btn btn-danger btn-sm';
+            revokeAllBtn.textContent = 'Sign out all other sessions';
+            revokeAllBtn.style.marginBottom = '12px';
+            revokeAllBtn.addEventListener('click', async () => {
+              if (!confirm('Sign out all other active sessions?')) return;
+              revokeAllBtn.disabled = true;
+              try {
+                const refreshToken = localStorage.getItem('refresh_token');
+                const r = await fetch('/api/user/sessions', {
+                  method: 'DELETE',
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ currentRefreshToken: refreshToken || undefined })
+                });
+                const d = await r.json();
+                if (r.ok && d.success) {
+                  _sessionsLoaded = false;
+                  loadSessions();
+                } else {
+                  alert(d.message || 'Failed to revoke sessions');
+                  revokeAllBtn.disabled = false;
+                }
+              } catch (err) {
+                alert('Error: ' + err.message);
+                revokeAllBtn.disabled = false;
+              }
+            });
+            list.appendChild(revokeAllBtn);
+
+            data.sessions.forEach(session => {
+              const item = document.createElement('div');
+              item.className = 'session-item';
+              item.innerHTML = `
+                <div class="session-info">
+                  <strong>${session.device || 'Unknown device'}</strong>
+                  <span class="session-ip">${session.ipAddress || 'Unknown IP'}</span>
+                  <span class="session-date">Last active: ${formatDate(session.lastUsedAt || session.createdAt)}</span>
+                </div>
+                <button class="btn btn-secondary btn-sm btn-revoke-session" data-session-id="${session.id}">Revoke</button>
+              `;
+              list.appendChild(item);
+            });
+
+            list.querySelectorAll('.btn-revoke-session').forEach(btn => {
+              btn.addEventListener('click', async () => {
+                const id = btn.dataset.sessionId;
+                if (!confirm('Revoke this session?')) return;
+                btn.disabled = true;
+                try {
+                  const r = await fetch(`/api/user/sessions/${id}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+                  });
+                  const d = await r.json();
+                  if (r.ok && d.success) {
+                    _sessionsLoaded = false;
+                    loadSessions();
+                  } else {
+                    alert(d.message || 'Failed to revoke session');
+                    btn.disabled = false;
+                  }
+                } catch (err) {
+                  alert('Error: ' + err.message);
+                  btn.disabled = false;
+                }
+              });
+            });
+
+          } catch (err) {
+            list.innerHTML = `<p class="error-message">Could not load sessions: ${err.message}</p>`;
+          }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+          const accountTab = document.getElementById('tab-account');
+          if (!accountTab) return;
+          accountTab.addEventListener('click', () => {
+            if (_sessionsLoaded) return;
+            _sessionsLoaded = true;
+            loadSessions();
+          });
+        });
+      })();
     </script>
 </body>
 </html>
