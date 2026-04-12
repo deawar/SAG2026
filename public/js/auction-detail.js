@@ -209,13 +209,13 @@ class AuctionDetail {
   async loadBidHistory() {
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`/api/auctions/${this.auctionId}/bids`, {
+      const response = await fetch(`/api/bidding/artwork/${this.currentPiece?.id}/history`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       const data = await response.json();
 
       if (response.ok) {
-        this.bidHistory = data.bids || [];
+        this.bidHistory = data.data || [];
         this.displayBidHistory();
       }
     } catch (error) {
@@ -374,15 +374,15 @@ class AuctionDetail {
     try {
       const loader = UIComponents.showLoading('Placing bid...');
 
-      const response = await fetch(`/api/auctions/${this.auctionId}/bid`, {
+      const response = await fetch('/api/bidding/place', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
         body: JSON.stringify({
-          amount: Number.parseFloat(bidAmount),
-          paymentMethod
+          artworkId: this.currentPiece?.id,
+          bidAmount: Number.parseFloat(bidAmount)
         })
       });
 
@@ -400,8 +400,8 @@ class AuctionDetail {
       });
 
       // Update auction with new bid
-      this.auction.currentBid = data.currentBid;
-      this.auction.totalBids = data.bidCount ?? data.totalBids ?? this.auction.totalBids;
+      this.auction.currentBid = data.biddingState?.currentBid ?? this.auction.currentBid;
+      this.auction.totalBids = data.biddingState?.totalBids ?? this.auction.totalBids;
       this.updateBidInfo();
 
       // Clear form
