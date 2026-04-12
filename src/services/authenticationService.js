@@ -881,6 +881,58 @@ class AuthenticationService {
   }
 
   /**
+   * Verify 6-digit reset code and set a new password (step 2 of code-based reset)
+   * @param {string} email - User email (pre-sanitised, lowercase)
+   * @param {string} code  - 6-digit code from email
+   * @param {string} newPassword - New plaintext password (already validated by caller)
+   * @throws {Error} 'INVALID_OR_EXPIRED_CODE' on bad/expired/missing code
+   */
+  async verifyPasswordResetCode(email, code, newPassword) {
+    const user = await this.userModel.getByEmail(email);
+    if (!user) {
+      // Prevent email enumeration — return the same error as a bad code
+      throw new Error('INVALID_OR_EXPIRED_CODE');
+    }
+
+    const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+
+    const tokenResult = await this.db.query(
+      `SELECT 1 FROM password_reset_tokens
+       WHERE user_id = $1 AND token_hash = $2
+         AND expires_at > CURRENT_TIMESTAMP AND used_at IS NULL
+       LIMIT 1`,
+      [user.id, codeHash]
+    );
+
+    if (tokenResult.rows.length === 0) {
+      throw new Error('INVALID_OR_EXPIRED_CODE');
+    }
+
+    // Hash the new password
+    const bcrypt = require('bcrypt');
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+
+    // Update user's password
+    await this.db.query(
+      `UPDATE users SET password_hash = $1, password_changed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2`,
+      [passwordHash, user.id]
+    );
+
+    // Mark token as used (clears the code)
+    await this.db.query(
+      `UPDATE password_reset_tokens SET used_at = CURRENT_TIMESTAMP
+       WHERE user_id = $1 AND token_hash = $2`,
+      [user.id, codeHash]
+    );
+
+    // Invalidate all active sessions for this user
+    await this.sessionService.revokeAllSessions(user.id);
+
+    await this._recordAuditLog(user.id, 'AUTH', 'PASSWORD_RESET_COMPLETED', { method: 'code' });
+  }
+
+  /**
    * Send a 6-digit password reset code to the user's email (step 1 of code-based reset)
    * Always returns silently — caller must return 200 regardless (prevents email enumeration)
    * @param {string} email - User email (pre-sanitised, lowercase)

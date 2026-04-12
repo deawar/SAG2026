@@ -322,6 +322,47 @@ module.exports = (db) => {
   });
 
   /**
+ * POST /api/auth/password-reset
+ * Verify 6-digit reset code and set a new password (step 2 of code-based reset)
+ * Auth: Not required | Rate-limited by authLimiter (applied at app level)
+ *
+ * Body: { email, code, newPassword }
+ * Response: 200 { ok: true }
+ *           400 { error: 'invalid_or_expired_code' } on bad/expired code
+ *           400 { success: false, message: string } on validation failure
+ */
+  router.post('/password-reset', async (req, res, next) => {
+    try {
+      const { email, code, newPassword } = req.body;
+
+      if (!email || !code || !newPassword) {
+        return res.status(400).json({ success: false, message: 'Email, code, and new password required' });
+      }
+
+      if (!ValidationUtils.validateEmail(email)) {
+        return res.status(400).json({ success: false, message: 'Valid email required' });
+      }
+
+      if (!ValidationUtils.validatePassword(newPassword)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password does not meet requirements: 12+ chars, uppercase, lowercase, number, special character'
+        });
+      }
+
+      const sanitizedEmail = ValidationUtils.sanitizeString(email, 254).toLowerCase();
+      await authenticationService.verifyPasswordResetCode(sanitizedEmail, String(code), newPassword);
+
+      return res.json({ ok: true });
+    } catch (error) {
+      if (error.message === 'INVALID_OR_EXPIRED_CODE') {
+        return res.status(400).json({ success: false, error: 'invalid_or_expired_code', message: 'The code is invalid or has expired' });
+      }
+      next(error);
+    }
+  });
+
+  /**
  * POST /api/auth/password-reset/send-code
  * Request a 6-digit password reset code sent to the user's email
  * Auth: Not required | Rate-limited by authLimiter (applied at app level)
