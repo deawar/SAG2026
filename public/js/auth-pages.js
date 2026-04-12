@@ -670,6 +670,18 @@ class AuthPages {
       UIComponents.hideLoading(loader);
 
       if (!response.ok) {
+        // Student already has an account and tried to register as bidder
+        if (data.code === 'already_registered_can_bid') {
+          const alertEl = UIComponents.showAlert(data.message, 'warning', 0);
+          if (alertEl) {
+            const link = document.createElement('a');
+            link.href = '/login.html?returnTo=/auctions.html';
+            link.textContent = ' Log in now →';
+            link.style.cssText = 'color:inherit;font-weight:600;text-decoration:underline;margin-left:0.25rem;';
+            alertEl.querySelector('p').appendChild(link);
+          }
+          return;
+        }
         const errorMessage = data.message || 'Registration failed';
         UIComponents.createToast({ message: errorMessage, type: 'error' });
         UIComponents.showAlert(errorMessage, 'error');

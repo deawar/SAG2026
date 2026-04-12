@@ -192,6 +192,18 @@ class UserController {
       });
     } catch (error) {
       // Map model/validation error codes to user-facing 400/409 responses
+      // Bidder duplicate: student already has an account and can bid without re-registering
+      if (
+        (error.message === 'EMAIL_ALREADY_EXISTS' || error.code === '23505') &&
+        req.body.accountType === 'bidder'
+      ) {
+        return res.status(409).json({
+          success: false,
+          code: 'already_registered_can_bid',
+          message: 'You already have an account. Students can bid directly — just log in with your existing credentials.'
+        });
+      }
+
       const validationErrors = {
         'EMAIL_ALREADY_EXISTS': { status: 409, message: 'Email already registered' },
         'INVALID_EMAIL': { status: 400, message: 'Invalid email format' },
