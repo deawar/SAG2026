@@ -1,5 +1,5 @@
 # Silent Auction Gallery — Session Primer
-**Last updated:** 2026-03-13
+**Last updated:** 2026-04-12
 **Project path:** `c:\Users\dwarren\OneDrive\projects\SAG2026\Silent-Auction-Gallery\`
 
 ---
@@ -32,47 +32,67 @@ Start date: 2026-01-26 | Target: Q2 2026
 
 ---
 
-## What Was Done Last Session (2026-03-13)
+## Grading Fixes Completed (Prompt Series G1–G12)
 
-### Commit 81c051f — Hamburger menu fix
-- responsive.css: .menu-toggle was display:flex with no flex-direction, causing 3 spans
-  to lay out side-by-side (single thin line). Fixed with flex-direction:column; gap:5px.
-- main.css: span height bumped to 3px, border-radius:2px, margin removed (gap handles spacing).
+| Fix | Commit | Description |
+|-----|--------|-------------|
+| G7  | dec8199 | GET /api/admin/auctions/search |
+| G8  | fb2fb0d | GET /api/admin/reports summary endpoint |
+| G9  | ed9f1d4 | Replace PaymentController(null) with NullPaymentService stub |
+| G10 | b0b0f3c | Checkout page + payment UI end-to-end |
+| G11 | 20b3726 | Require email verification before login |
+| G12 | c0e4c86 | COPPA parental consent flow (see below) |
 
-### Commit fcd2a3d — P2 Responsive polish + ESLint + Auction card wiring
+---
 
-**ESLint setup:**
-- Created eslint.config.js (flat config for ESLint v9 — no .eslintrc needed)
-- Covers src/**/*.js (node globals), public/js/**/*.js (browser globals + UIComponents etc.),
-  tests/**/*.js (jest globals)
-- varsIgnorePattern: ^_ so _prefixed vars do not trigger no-unused-vars
-- Fixed all 70 lint errors: dead imports removed, unused destructured vars prefixed with _,
-  no-useless-escape fixed in 5 files, intentional control-char regex suppressed,
-  incomplete test stubs suppressed with file-level eslint-disable
+## What Was Done Last Session (2026-04-12)
 
-**CSS P2 fixes:**
-- Mobile .btn width:100% scoped to .form-actions/.card-actions/.page-actions only
-- .hero gets display:flex on desktop (content + image side-by-side), collapses to
-  flex-direction:column on mobile with hero-image capped at 180px
-- Added .hero-content, .hero-image, .hero-img baseline styles
+### Commit c0e4c86 — G12 COPPA compliance
 
-**Auction list API + card rendering:**
-- auctionService.listAuctions: query now LEFT JOINs schools, adds subqueries for
-  current_bid, bid_count, and cover_image (first approved artwork per auction)
-- Response fields changed: now returns id (was auctionId), school (name), currentBid,
-  bidCount, image
-- auctions-page.js: added normaliseStatus() mapping LIVE to active, DRAFT to draft,
-  ENDED/CANCELLED to ended; status filter compares normalised values;
-  image falls back to /images/placeholder-art.svg
+**Migration:** `db/migrations/20260412000000_add_coppa_fields.up.sql`
+- Added to `users` table: `requires_parental_consent BOOLEAN DEFAULT FALSE`,
+  `parental_consent_status VARCHAR(32) DEFAULT 'not_required'`,
+  `parent_email VARCHAR(255) NULL`, `parent_consent_token TEXT NULL`,
+  `parent_consent_expires_at TIMESTAMPTZ NULL`, `parent_consent_granted_at TIMESTAMPTZ NULL`
+- Made `last_name` nullable (for data minimization on under-13 accounts)
+- Index on `parental_consent_status WHERE requires_parental_consent = TRUE`
 
-**index.js cleanup:**
-- handleVerify2FA exposed on globalThis for HTML onsubmit handlers
-- Dead functions (handleLogout, show2FAForm) removed; updateAuthUI bug eliminated
+**Registration flow (src/controllers/userController.js):**
+- `dateOfBirth` required for STUDENT and BIDDER paths
+- Age computed in controller; if < 13: require `parentEmail`, null `lastName`/`phone` (data minimization),
+  create user with `requires_parental_consent=true`, `parental_consent_status='pending'`, store token hash
+- Send parental consent email via `_sendParentConsentEmail()` (same SMTP pattern as verify email)
+- Return `{ ok: true, requiresParentalConsent: true }` — no JWT
+
+**Login guard (src/controllers/userController.js):**
+- If `requires_parental_consent=true AND parental_consent_status != 'granted'` → 403
+  `{ error: 'parental_consent_required' }` (checked before email_verified_at guard)
+
+**New endpoint: POST /api/auth/parental-consent (src/routes/authRoutes.js)**
+- Body: `{ uid, token, granted: boolean }`
+- Verifies sha256 token hash and expiry (7-day window)
+- `granted=true`: sets `parental_consent_status='granted'`, activates account (email_verified_at + ACTIVE)
+- `granted=false`: sets status='denied', soft-deletes account
+
+**COPPA report rewrite (src/services/adminService.js):**
+- `generateCOPPAReport` now queries `users` table directly (was querying non-existent `coppa_verifications`)
+- Returns `{ totalUnder13, pending, granted, denied }` in summary
+
+**New page:** `public/parental-consent.html`
+- Shows data collection notice (what is collected, how used, third-party sharing)
+- Grant and Deny buttons; calls `/api/auth/parental-consent`
+
+**Tests:** `tests/unit/coppa.test.js` (16 tests covering full flow)
+- Updated `tests/unit/models/userModel.spec.js` (COPPA now in controller, not model validator)
+- Updated `tests/unit/services/adminService.test.js` (new summary shape)
+
+**Key architectural note:** `_validateUserData` no longer throws `COPPA_PARENTAL_CONSENT_REQUIRED`.
+The COPPA age check lives in `userController.register()`. The model accepts `null` lastName.
 
 ---
 
 ## Active Work / In Progress
-Nothing mid-flight. All P2 priorities addressed and pushed.
+Nothing mid-flight. G12 committed and tests passing (482/482).
 
 ---
 
@@ -85,10 +105,6 @@ P2 - Homepage Re-engineering (index.html)
   or no active auctions seeded in live DB)
 - How It Works step numbers (1-4) are unstyled — should use .step-number styled circles
 - "Get Started" CTA button renders full-width grey — should be btn-primary with correct width
-- Root cause is likely a combination of: missing CSS classes on index.html elements,
-  loadFeaturedAuctions() calling a different endpoint than /api/auctions/active/list,
-  and the page not inheriting the site theme correctly
-- ENTIRE homepage sections need a design audit against auctions.html as the reference page
 
 P2 - Frontend Wiring (remaining)
 - auction-detail.js - bidding flow needs end-to-end test against live API
@@ -106,7 +122,6 @@ P3 - Housekeeping
 
 P4 - Unimplemented Features
 - Section 7 Notifications: notificationService.js exists but no email provider configured
-- Payment UI: winner checkout flow has no HTML page
 - Admin dashboard backend: user management, reporting, compliance endpoints incomplete
 - /images/placeholder-art.svg does not exist yet - needed for auction cards without artwork
 
@@ -116,21 +131,24 @@ P4 - Unimplemented Features
 
 | File | Change |
 |------|--------|
-| public/css/responsive.css | Hamburger flex-direction, .btn scoping, hero mobile stack |
-| public/css/main.css | .menu-toggle span height/radius, .hero flex layout + image styles |
-| public/js/auctions-page.js | normaliseStatus(), field mapping fix, image fallback |
-| src/services/auctionService.js | listAuctions extended with school JOIN + bid/image subqueries |
-| eslint.config.js | New file - ESLint v9 flat config |
-| public/js/index.js | handleVerify2FA on globalThis, dead code removed |
-| src/app.js | Dead rate limiter imports removed |
-| Multiple src/ files | Dead imports and unused vars cleaned up |
+| db/migrations/20260412000000_add_coppa_fields.up/down.sql | New - COPPA DB columns |
+| schema.sql | users table: last_name nullable + 6 new COPPA columns |
+| src/controllers/userController.js | COPPA age check in register(), login guard, _sendParentConsentEmail |
+| src/models/index.js | create() accepts COPPA params; _validateUserData allows null lastName |
+| src/routes/authRoutes.js | New POST /api/auth/parental-consent endpoint |
+| src/services/adminService.js | generateCOPPAReport uses real users table data |
+| public/parental-consent.html | New consent notice + grant/deny UI |
+| tests/unit/coppa.test.js | New - 16 COPPA flow tests |
+| tests/unit/models/userModel.spec.js | Updated COPPA tests (logic moved to controller) |
+| tests/unit/services/adminService.test.js | Updated COPPA report test (new summary shape) |
 
 ---
 
 ## Architecture Snapshot
 - Entry point: src/index.js | App config: src/app.js
 - Frontend pages: index, auctions, auction-detail, login, register, user-dashboard,
-  teacher-dashboard, admin-dashboard, password-reset, 2fa-setup, 2fa-verify
+  teacher-dashboard, admin-dashboard, password-reset, 2fa-setup, 2fa-verify,
+  verify-email, parental-consent
 - CSS load order: theme.css > main.css > responsive.css > accessibility.css
 - JS convention: theme-manager.js loads first; UIComponents.initializeNavbar() called
   in every page DOMContentLoaded
@@ -139,6 +157,23 @@ P4 - Unimplemented Features
   localStorage keys: auth_token / refresh_token
 - Role hierarchy: SITE_ADMIN > SCHOOL_ADMIN > TEACHER > STUDENT > BIDDER
 - Rate limiters: authLimiter (20/min), apiLimiter (100/min), bidLimiter (30/min), paymentLimiter (10/min)
+
+---
+
+## COPPA Account Lifecycle
+
+```
+register (STUDENT/BIDDER, age < 13)
+  → account_status=PENDING, requires_parental_consent=TRUE, parental_consent_status='pending'
+  → parent consent email sent (link expires 7 days)
+  → login blocked until consent granted
+
+parent visits /parental-consent.html → POST /api/auth/parental-consent
+  grant → parental_consent_status='granted', email_verified_at=NOW(), account_status=ACTIVE
+  deny  → parental_consent_status='denied', deleted_at=NOW()
+```
+
+Data minimization for under-13: last_name=NULL, phone_number=NULL at registration.
 
 ---
 
@@ -163,7 +198,7 @@ P4 - Unimplemented Features
 ## Test Coverage
 - Framework: Jest | npm test | npm run test:unit | npm run test:integration
 - Target: 80%+ overall, 100% security-critical
-- Last known run: Section 11 security tests passing (Feb 2026)
+- Last known run: 482 unit/security tests passing (2026-04-12)
 - Lint: npm run lint (ESLint v9, 0 errors as of fcd2a3d)
 
 ---
@@ -200,3 +235,6 @@ P4 - Unimplemented Features
 - Prefix unused-but-intentional variables with _ to satisfy ESLint varsIgnorePattern
 - Use Number.parseInt / Number.parseFloat not global parseInt/parseFloat (SonarLint S7773)
 - Use globalThis instead of window for cross-env globals (SonarLint S7764)
+- COPPA logic lives in userController.register(), NOT in UserModel._validateUserData()
+- UserModel._validateUserData() allows null lastName (for under-13 data minimization)
+- Parental consent token stored as sha256 hash in parent_consent_token column, raw token in email URL
