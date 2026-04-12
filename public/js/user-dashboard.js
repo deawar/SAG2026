@@ -368,12 +368,18 @@ class UserDashboard {
     wins.forEach(win => {
       const item = document.createElement('li');
       item.className = 'win-item';
+      const payAction = win.shipped
+        ? `<div class="win-status">📦 Shipped</div>`
+        : `<div class="win-status">
+             <a href="/checkout.html?auctionId=${encodeURIComponent(win.auctionId)}"
+                class="btn btn-primary btn-sm">Pay now</a>
+           </div>`;
       item.innerHTML = `
                 <div class="win-info">
                     <h4><a href="/auction-detail.html?id=${win.auctionId}">${this.escapeHtml(win.auctionTitle)}</a></h4>
                     <p class="win-amount">Winning bid: <strong>${UIComponents.formatCurrency(win.winningBid)}</strong></p>
                 </div>
-                <div class="win-status">${win.shipped ? '📦 Shipped' : '⏳ Processing'}</div>
+                ${payAction}
             `;
       list.appendChild(item);
     });

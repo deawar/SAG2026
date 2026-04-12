@@ -171,6 +171,13 @@ function createApp(db) {
   app.use('/api/bidding', biddingRoutes);
 
   // ==========================================================================
+  // PUBLIC CONFIG (no auth required — only non-secret values)
+  // ==========================================================================
+  app.get('/api/config/stripe-key', (req, res) => {
+    res.json({ publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '' });
+  });
+
+  // ==========================================================================
   // ERROR HANDLING (must be last)
   // ==========================================================================
 
