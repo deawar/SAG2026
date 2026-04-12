@@ -308,6 +308,18 @@ router.get(
 // ============================================================================
 
 /**
+ * GET /api/admin/reports
+ * Lightweight summary of all compliance report types
+ * Must be declared before /reports/:type to avoid param capture
+ */
+router.get(
+  '/reports',
+  verifyToken,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  adminController.getReportsSummary
+);
+
+/**
  * GET /api/admin/reports/gdpr
  * Generate GDPR compliance report
  * Query: startDate, endDate, schoolId (optional)

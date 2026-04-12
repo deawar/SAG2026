@@ -1253,6 +1253,45 @@ class AdminService {
   }
 
   /**
+   * Get lightweight reports summary (counts per type, no full report generation)
+   */
+  async getReportsSummary(adminId) {
+    const admin = await this.verifyAdminAccess(adminId);
+
+    const params = [];
+    let whereClause = 'WHERE 1=1';
+    if (admin.role === 'SCHOOL_ADMIN') {
+      params.push(admin.school_id);
+      whereClause += ` AND school_id = $${params.length}`;
+    }
+
+    const countResult = await pool.query(
+      `SELECT report_type, COUNT(*) AS count FROM compliance_reports ${whereClause} GROUP BY report_type`,
+      params
+    );
+
+    const counts = {};
+    for (const row of countResult.rows) {
+      counts[row.report_type.toLowerCase()] = parseInt(row.count);
+    }
+
+    const labels = {
+      gdpr:  { title: 'GDPR Compliance',  description: 'User data privacy and deletion requests' },
+      coppa: { title: 'COPPA Compliance', description: 'Child online privacy protection' },
+      ferpa: { title: 'FERPA Compliance', description: 'Student educational records privacy' },
+      ccpa:  { title: 'CCPA Compliance',  description: 'California consumer privacy rights' },
+    };
+
+    const reports = {};
+    for (const [key, meta] of Object.entries(labels)) {
+      const count = counts[key] || 0;
+      reports[key] = { ...meta, value: count === 1 ? '1 report generated' : `${count} reports generated` };
+    }
+
+    return reports;
+  }
+
+  /**
    * Get audit log with filtering
    */
   async getAuditLog(filters) {
