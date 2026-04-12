@@ -5,6 +5,7 @@
  * ============================================================================
  */
 
+const crypto = require('crypto');
 const ValidationUtils = require('../utils/validationUtils');
 const { tokenBlacklist } = require('../services/authenticationService');
 
@@ -77,28 +78,20 @@ class UserController {
         role: finalRole
       });
 
-      // 7. Generate tokens
-      const accessTokenResult = this.authService.jwtService.generateAccessToken(user.id, {
-        email: user.email,
-        role: user.role,
-        schoolId: user.school_id
-      });
+      // 7. Generate and store email verification token (24h expiry)
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await this.userModel.setVerificationToken(user.id, tokenHash, expiresAt);
 
-      const refreshTokenResult = this.authService.jwtService.generateRefreshToken(user.id);
+      // 8. Send verification email (best-effort; suppressed in test mode)
+      await this._sendVerificationEmail(user.email, user.first_name || 'User', user.id, rawToken);
 
-      // 8. Return success response (NO password data)
+      // 9. Return success — no JWT until email is verified
       return res.status(201).json({
-        success: true,
-        message: 'User registered successfully',
-        data: {
-          userId: user.id,
-          email: user.email,
-          firstName: user.first_name,
-          lastName: user.last_name,
-          role: user.role,
-          accessToken: accessTokenResult.token,
-          refreshToken: refreshTokenResult.token
-        }
+        ok: true,
+        requiresVerification: true,
+        message: 'Registration successful. Please check your email to verify your account.'
       });
     } catch (error) {
       // Map model/validation error codes to user-facing 400/409 responses
@@ -173,7 +166,16 @@ class UserController {
         });
       }
 
-      // 4. Check if account is active
+      // 4. Check email verification before account status
+      if (!user.email_verified_at) {
+        return res.status(403).json({
+          success: false,
+          error: 'email_not_verified',
+          message: 'Please verify your email address before logging in.'
+        });
+      }
+
+      // 4b. Check if account is active
       if (user.account_status !== 'ACTIVE') {
         return res.status(403).json({
           success: false,
@@ -506,6 +508,41 @@ class UserController {
         });
       }
       next(error);
+    }
+  }
+  /**
+   * Send an email verification link. Suppressed in test mode.
+   * Uses the same SMTP pattern as authenticationService._sendResetCodeEmail.
+   */
+  async _sendVerificationEmail(email, firstName, userId, rawToken) {
+    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+    const verifyUrl = `${appUrl}/verify-email.html?uid=${encodeURIComponent(userId)}&token=${encodeURIComponent(rawToken)}`;
+
+    const smtpHost = process.env.SMTP_HOST;
+    if (smtpHost) {
+      try {
+        const { EmailProvider } = require('../services/notificationService');
+        const emailProvider = new EmailProvider({
+          provider: 'smtp',
+          host: smtpHost,
+          port: parseInt(process.env.SMTP_PORT || '587', 10),
+          secure: process.env.SMTP_SECURE === 'true',
+          user: process.env.SMTP_USER,
+          password: process.env.SMTP_PASSWORD,
+          fromEmail: process.env.EMAIL_FROM || `noreply@${smtpHost}`
+        });
+        const subject = 'Verify your Silent Auction Gallery account';
+        const text = `Hi ${firstName},\n\nPlease verify your email by clicking:\n${verifyUrl}\n\nThis link expires in 24 hours.`;
+        const html = `<h2>Verify Your Email</h2><p>Hi ${firstName},</p><p>Click below to activate your account:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p><p>This link expires in 24 hours.</p>`;
+        await emailProvider.send(email, subject, html, text);
+        return;
+      } catch (err) {
+        console.error('Verification email send failed:', err.message);
+      }
+    }
+
+    if (process.env.NODE_ENV !== 'test') {
+      console.log(`[DEV] Email verification link for ${email}: ${verifyUrl}`);
     }
   }
 }
