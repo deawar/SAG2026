@@ -22,6 +22,7 @@ const VALID_USER = {
   password: 'SecurePass123!',
   firstName: 'Alice',
   lastName: 'Tester',
+  dateOfBirth: '2000-01-01',
 };
 
 const NEW_USER_ROW = {
