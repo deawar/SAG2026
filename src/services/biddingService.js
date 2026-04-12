@@ -5,6 +5,7 @@
  */
 
 const { pool } = require('../models/index');
+const { getSharedEmailProvider, notifyOutbid } = require('./notificationService');
 
 class BiddingService {
   /**
@@ -83,12 +84,14 @@ class BiddingService {
         throw new Error('User account is not active');
       }
 
-      // Mark previous highest bid as OUTBID
-      await client.query(
+      // Mark previous highest bid as OUTBID, capturing the previous bidder's id
+      const outbidResult = await client.query(
         `UPDATE bids SET bid_status = 'OUTBID'
-         WHERE artwork_id = $1 AND bid_status = 'ACTIVE'`,
+         WHERE artwork_id = $1 AND bid_status = 'ACTIVE'
+         RETURNING placed_by_user_id`,
         [artworkId]
       );
+      const prevBidderId = outbidResult.rows?.length > 0 ? outbidResult.rows[0].placed_by_user_id : null;
 
       // Create bid record
       const bidResult = await client.query(
@@ -100,6 +103,16 @@ class BiddingService {
 
       const bid = bidResult.rows[0];
 
+      // Fetch previous bidder details for notification (within transaction, before commit)
+      let prevBidder = null;
+      if (prevBidderId && prevBidderId !== userId) {
+        const prevUserResult = await client.query(
+          'SELECT id, email, first_name FROM users WHERE id = $1 AND deleted_at IS NULL',
+          [prevBidderId]
+        );
+        if (prevUserResult.rows.length > 0) prevBidder = prevUserResult.rows[0];
+      }
+
       // Log bid activity for compliance
       await client.query(
         `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details, user_id)
@@ -108,6 +121,20 @@ class BiddingService {
       );
 
       await client.query('COMMIT');
+
+      // Fire outbid notification non-blocking (after commit so DB state is visible)
+      if (prevBidder) {
+        setImmediate(() => {
+          notifyOutbid(getSharedEmailProvider(), pool, {
+            userId: prevBidder.id,
+            email: prevBidder.email,
+            firstName: prevBidder.first_name,
+            artworkTitle: artwork.title,
+            newBidDollars: bidAmount / 100,
+            auctionEndsAt: artwork.ends_at
+          }).catch(err => console.error('[notification] outbid failed:', err.message));
+        });
+      }
 
       return {
         success: true,

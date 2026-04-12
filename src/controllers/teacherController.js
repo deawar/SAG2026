@@ -8,7 +8,7 @@ const { v4: uuidv4 } = require('uuid');
 const logger = require('../utils/logger');
 const ValidationUtils = require('../utils/validationUtils');
 const { pool } = require('../models/index');
-const { EmailProvider, EmailTemplateService } = require('../services/notificationService');
+const { EmailProvider, EmailTemplateService, getSharedEmailProvider, notifyArtworkStatusChanged } = require('../services/notificationService');
 
 const _smtpPort = Number.parseInt(process.env.SMTP_PORT, 10) || 587;
 const emailProvider = new EmailProvider({
@@ -219,6 +219,28 @@ class TeacherController {
         return res.status(404).json({ success: false, message: 'Submission not found or already reviewed' });
       }
 
+      // Notify the student artist non-blocking
+      setImmediate(async () => {
+        try {
+          const artworkRow = await pool.query(
+            `SELECT aw.title, u.id AS student_id, u.email, u.first_name
+             FROM artwork aw
+             JOIN users u ON aw.created_by_user_id = u.id
+             WHERE aw.id = $1`,
+            [id]
+          );
+          if (artworkRow.rows.length > 0) {
+            const { student_id, email, first_name, title } = artworkRow.rows[0];
+            await notifyArtworkStatusChanged(getSharedEmailProvider(), pool, {
+              userId: student_id, email, firstName: first_name,
+              artworkTitle: title, newStatus: 'APPROVED', reason: null
+            });
+          }
+        } catch (err) {
+          logger.error('artwork-approved notification failed', { error: err.message, artworkId: id });
+        }
+      });
+
       return res.json({ success: true, message: 'Artwork approved' });
     } catch (error) {
       logger.error('Approve submission error', { error: error.message, userId: req.user?.id });
@@ -255,6 +277,28 @@ class TeacherController {
       if (result.rowCount === 0) {
         return res.status(404).json({ success: false, message: 'Submission not found or already reviewed' });
       }
+
+      // Notify the student artist non-blocking
+      setImmediate(async () => {
+        try {
+          const artworkRow = await pool.query(
+            `SELECT aw.title, aw.rejection_reason, u.id AS student_id, u.email, u.first_name
+             FROM artwork aw
+             JOIN users u ON aw.created_by_user_id = u.id
+             WHERE aw.id = $1`,
+            [id]
+          );
+          if (artworkRow.rows.length > 0) {
+            const { student_id, email, first_name, title, rejection_reason } = artworkRow.rows[0];
+            await notifyArtworkStatusChanged(getSharedEmailProvider(), pool, {
+              userId: student_id, email, firstName: first_name,
+              artworkTitle: title, newStatus: 'REJECTED', reason: rejection_reason
+            });
+          }
+        } catch (err) {
+          logger.error('artwork-rejected notification failed', { error: err.message, artworkId: id });
+        }
+      });
 
       return res.json({ success: true, message: 'Artwork rejected' });
     } catch (error) {

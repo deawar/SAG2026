@@ -85,7 +85,8 @@ class AuthMiddleware {
         schoolId: decoded.schoolId,
         email: decoded.email,
         jti: decoded.jti,
-        exp: decoded.exp
+        exp: decoded.exp,
+        twoFaEnabled: decoded.twoFaEnabled
       };
 
       next();
@@ -140,7 +141,8 @@ class AuthMiddleware {
             schoolId: decoded.schoolId,
             email: decoded.email,
             jti: decoded.jti,
-            exp: decoded.exp
+            exp: decoded.exp,
+            twoFaEnabled: decoded.twoFaEnabled
           };
         }
       }
@@ -148,6 +150,23 @@ class AuthMiddleware {
       // Invalid/expired/revoked token — proceed without user (public access)
     }
 
+    next();
+  }
+
+  /**
+   * Defense-in-depth: block admin routes for admin users who have not enabled 2FA.
+   * Placed after verifyToken so req.user is populated.
+   * Rejects with 403 if the token was issued without twoFaEnabled=true for an admin role.
+   */
+  requireAdmin2fa(req, res, next) {
+    const adminRoles = ['SITE_ADMIN', 'SCHOOL_ADMIN'];
+    if (adminRoles.includes(req.user?.role) && !req.user?.twoFaEnabled) {
+      return res.status(403).json({
+        success: false,
+        error: 'admin_2fa_required',
+        message: 'Admin accounts must have 2FA enabled. Please complete 2FA setup at /force-2fa-setup.html'
+      });
+    }
     next();
   }
 

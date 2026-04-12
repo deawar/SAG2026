@@ -79,7 +79,8 @@ class EmailTemplateService {
       'password-reset': EmailTemplateService.passwordResetTemplate,
       'security-alert': EmailTemplateService.securityAlertTemplate,
       'auction-approved': EmailTemplateService.auctionApprovedTemplate,
-      'student-registration-invite': EmailTemplateService.studentRegistrationInviteTemplate
+      'student-registration-invite': EmailTemplateService.studentRegistrationInviteTemplate,
+      'artwork-status-changed': EmailTemplateService.artworkStatusChangedTemplate
     };
 
     const templateFn = templates[templateId];
@@ -249,6 +250,35 @@ class EmailTemplateService {
     };
   }
 
+  static artworkStatusChangedTemplate(data) {
+    const { firstName, artworkTitle, newStatus, reason } = data;
+    const dashboardLink = `${process.env.APP_URL || 'https://ssccbogart.com'}/user-dashboard.html`;
+    const approved = newStatus === 'APPROVED';
+    return {
+      subject: approved
+        ? `✅ Your artwork "${artworkTitle}" has been approved`
+        : `Your artwork "${artworkTitle}" was not approved`,
+      html: approved
+        ? `
+        <h2>Great news, ${this.escapeHtml(firstName)}!</h2>
+        <p>Your artwork submission <strong>${this.escapeHtml(artworkTitle)}</strong> has been <strong>approved</strong> and will be included in the auction.</p>
+        <p><a href="${dashboardLink}" style="background-color:#28a745;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;">View My Dashboard</a></p>
+        <hr/><p style="font-size:0.85em;color:#888;">Silent Auction Gallery &mdash; <a href="${dashboardLink}">Manage notification preferences</a></p>
+        `
+        : `
+        <h2>Hi ${this.escapeHtml(firstName)},</h2>
+        <p>Unfortunately, your artwork submission <strong>${this.escapeHtml(artworkTitle)}</strong> was <strong>not approved</strong> for the auction.</p>
+        ${reason ? `<p><strong>Reason:</strong> ${this.escapeHtml(reason)}</p>` : ''}
+        <p>Please contact your teacher if you have questions.</p>
+        <p><a href="${dashboardLink}" style="background-color:#6c757d;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;">View My Dashboard</a></p>
+        <hr/><p style="font-size:0.85em;color:#888;">Silent Auction Gallery &mdash; <a href="${dashboardLink}">Manage notification preferences</a></p>
+        `,
+      text: approved
+        ? `Your artwork "${artworkTitle}" has been approved for the auction. View dashboard: ${dashboardLink}`
+        : `Your artwork "${artworkTitle}" was not approved.${reason ? ` Reason: ${reason}` : ''} Contact your teacher for details.`
+    };
+  }
+
   static studentRegistrationInviteTemplate(data) {
     const { studentName, teacherName, schoolName, registrationLink } = data;
     const escapedStudent = this.escapeHtml(studentName);
@@ -337,6 +367,9 @@ class EmailProvider {
           region: this.config.region
         })
       });
+    } else if (this.config.provider === 'json') {
+      // Dev/test: JSON transport — logs the mail object to stdout, no real SMTP needed
+      this.transporter = nodemailer.createTransport({ jsonTransport: true });
     }
   }
 
@@ -353,8 +386,8 @@ class EmailProvider {
       throw new Error('Email transporter not initialized');
     }
 
-    return this.transporter.sendMail({
-      from: this.config.fromEmail,
+    const info = await this.transporter.sendMail({
+      from: this.config.fromEmail || 'noreply@ssccbogart.com',
       to,
       subject,
       html,
@@ -364,6 +397,10 @@ class EmailProvider {
         'List-Unsubscribe': '<mailto:unsubscribe@SAG.live>'
       }
     });
+    if (this.config.provider === 'json') {
+      console.log('[Email dev transport] to=%s subject=%s', to, subject);
+    }
+    return info;
   }
 
   /**
@@ -754,10 +791,134 @@ class NotificationService {
   }
 }
 
+// ============================================================================
+// 7.6 Event Email Helpers — fire-and-forget notifications for domain events
+// ============================================================================
+
+/**
+ * Create an EmailProvider from environment variables.
+ * - Production: requires SMTP_HOST; throws if missing.
+ * - Dev/test: falls back to JSON transport (logs to stdout, no real SMTP needed).
+ */
+function createEmailProvider() {
+  if (process.env.NODE_ENV === 'production') {
+    if (!process.env.SMTP_HOST) {
+      throw new Error('SMTP_HOST environment variable is required in production');
+    }
+    const port = parseInt(process.env.SMTP_PORT || '587', 10);
+    return new EmailProvider({
+      provider: 'smtp',
+      host: process.env.SMTP_HOST,
+      port,
+      secure: port === 465,
+      user: process.env.SMTP_USER,
+      password: process.env.SMTP_PASS || process.env.SMTP_PASSWORD,
+      fromEmail: process.env.SMTP_FROM || process.env.MAIL_FROM || process.env.SMTP_USER
+    });
+  }
+  // Dev / test
+  return new EmailProvider({ provider: 'json' });
+}
+
+/**
+ * Check whether a user has a given notification preference enabled.
+ * Fail-open: returns true if DB unavailable or no preferences row.
+ * @param {object} db - pg Pool or Client
+ * @param {string} userId
+ * @param {string} prefKey - column name in notification_preferences (e.g. 'email_outbid')
+ * @returns {Promise<boolean>}
+ */
+async function _checkEmailPref(db, userId, prefKey) {
+  try {
+    if (!db || !userId) return true;
+    const r = await db.query(
+      'SELECT * FROM notification_preferences WHERE user_id = $1',
+      [userId]
+    );
+    if (r.rows.length === 0) return true; // default enabled
+    return r.rows[0][prefKey] !== false;
+  } catch (_err) {
+    return true; // fail-open
+  }
+}
+
+/**
+ * Notify previous high bidder that they have been outbid.
+ * Non-blocking: caller should wrap in setImmediate.
+ *
+ * @param {object} emailProvider - EmailProvider instance
+ * @param {object} db - pg Pool for preference lookup
+ * @param {object} data - { userId, email, firstName, artworkTitle, newBidDollars, auctionEndsAt }
+ */
+async function notifyOutbid(emailProvider, db, data) {
+  const { userId, email, firstName, artworkTitle, newBidDollars, auctionEndsAt } = data;
+  if (!await _checkEmailPref(db, userId, 'email_outbid')) return;
+  const tmpl = EmailTemplateService.generateTemplate('outbid-alert', {
+    firstName,
+    artworkTitle,
+    currentBid: newBidDollars,
+    auctionEndTime: auctionEndsAt ? new Date(auctionEndsAt).toLocaleString() : 'unknown',
+    auctionLink: `${process.env.APP_URL || 'https://ssccbogart.com'}/auction-detail.html`
+  });
+  await emailProvider.send(email, tmpl.subject, tmpl.html, tmpl.text);
+}
+
+/**
+ * Notify the winner of an auction.
+ * Non-blocking: caller should wrap in setImmediate.
+ *
+ * @param {object} emailProvider - EmailProvider instance
+ * @param {object} db - pg Pool for preference lookup
+ * @param {object} data - { userId, email, firstName, artworkTitle, winningBidDollars }
+ */
+async function notifyAuctionWon(emailProvider, db, data) {
+  const { userId, email, firstName, artworkTitle, winningBidDollars } = data;
+  if (!await _checkEmailPref(db, userId, 'email_winner')) return;
+  const dashboardLink = `${process.env.APP_URL || 'https://ssccbogart.com'}/user-dashboard.html`;
+  const tmpl = EmailTemplateService.generateTemplate('winner-notification', {
+    firstName,
+    artworkTitle,
+    winningBid: winningBidDollars,
+    paymentLink: dashboardLink
+  });
+  await emailProvider.send(email, tmpl.subject, tmpl.html, tmpl.text);
+}
+
+/**
+ * Notify the student artist that their artwork status changed (APPROVED or REJECTED).
+ * Non-blocking: caller should wrap in setImmediate.
+ *
+ * @param {object} emailProvider - EmailProvider instance
+ * @param {object} db - pg Pool for preference lookup
+ * @param {object} data - { userId, email, firstName, artworkTitle, newStatus, reason }
+ */
+async function notifyArtworkStatusChanged(emailProvider, db, data) {
+  const { userId, email, firstName, artworkTitle, newStatus, reason } = data;
+  if (!await _checkEmailPref(db, userId, 'email_artwork_status')) return;
+  const tmpl = EmailTemplateService.generateTemplate('artwork-status-changed', {
+    firstName, artworkTitle, newStatus, reason
+  });
+  await emailProvider.send(email, tmpl.subject, tmpl.html, tmpl.text);
+}
+
+// Lazy shared provider — instantiated on first use so NODE_ENV is evaluated at runtime
+let _sharedEmailProvider = null;
+function getSharedEmailProvider() {
+  if (!_sharedEmailProvider) {
+    _sharedEmailProvider = createEmailProvider();
+  }
+  return _sharedEmailProvider;
+}
+
 module.exports = {
   NotificationService,
   EmailTemplateService,
   EmailProvider,
   SMSProvider,
-  TwilioSMSProvider
+  TwilioSMSProvider,
+  createEmailProvider,
+  getSharedEmailProvider,
+  notifyOutbid,
+  notifyAuctionWon,
+  notifyArtworkStatusChanged
 };
