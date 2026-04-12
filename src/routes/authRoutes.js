@@ -8,6 +8,7 @@
 const express = require('express');
 const authMiddleware = require('../middleware/authMiddleware');
 const UserController = require('../controllers/userController');
+const ValidationUtils = require('../utils/validationUtils');
 
 // Import services and models
 const { JWTService, TwoFactorService, RBACService, SessionService, AuthenticationService } = require('../services/authenticationService');
@@ -316,6 +317,32 @@ module.exports = (db) => {
       if (error.message === 'INVALID_2FA_TOKEN') {
         return res.status(400).json({ success: false, message: 'Invalid 2FA code' });
       }
+      next(error);
+    }
+  });
+
+  /**
+ * POST /api/auth/password-reset/send-code
+ * Request a 6-digit password reset code sent to the user's email
+ * Auth: Not required | Rate-limited by authLimiter (applied at app level)
+ * Always returns 200 to prevent email enumeration
+ *
+ * Body: { email: string }
+ * Response: 200 { ok: true }
+ */
+  router.post('/password-reset/send-code', async (req, res, next) => {
+    try {
+      const { email } = req.body;
+
+      if (!email || !ValidationUtils.validateEmail(email)) {
+        return res.status(400).json({ success: false, message: 'Valid email required' });
+      }
+
+      const sanitizedEmail = ValidationUtils.sanitizeString(email, 254).toLowerCase();
+      await authenticationService.sendPasswordResetCode(sanitizedEmail);
+
+      return res.json({ ok: true });
+    } catch (error) {
       next(error);
     }
   });
