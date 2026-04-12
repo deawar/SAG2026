@@ -63,6 +63,7 @@ class AdminService {
 
     let query = `SELECT u.id, u.email, u.first_name, u.last_name, u.phone_number, u.role,
       u.account_status, u.school_id, s.name AS school_name, u.two_fa_enabled, u.created_at,
+      u.email_verified_at,
       (SELECT COUNT(*) FROM bids b WHERE b.placed_by_user_id = u.id) AS total_bids
       FROM users u
       LEFT JOIN schools s ON u.school_id = s.id
