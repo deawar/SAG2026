@@ -444,6 +444,76 @@ module.exports = (db) => {
   });
 
   /**
+   * POST /api/auth/parental-consent
+   * Parent submits consent decision via the token link.
+   * Body: { uid, token, granted: boolean }
+   */
+  router.post('/parental-consent', async (req, res, next) => {
+    try {
+      const { uid, token, granted } = req.body;
+      if (!uid || !token || granted === undefined) {
+        return res.status(400).json({ success: false, message: 'uid, token, and granted are required' });
+      }
+
+      const tokenHash = crypto.createHash('sha256').update(String(token)).digest('hex');
+
+      const result = await db.query(
+        `SELECT id, requires_parental_consent, parental_consent_status,
+                parent_consent_token, parent_consent_expires_at
+         FROM users WHERE id = $1 AND deleted_at IS NULL`,
+        [uid]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(400).json({ success: false, message: 'Invalid consent link' });
+      }
+
+      const user = result.rows[0];
+
+      if (!user.requires_parental_consent || user.parental_consent_status !== 'pending') {
+        return res.status(400).json({ success: false, message: 'No pending consent request for this account' });
+      }
+
+      if (user.parent_consent_token !== tokenHash) {
+        return res.status(400).json({ success: false, message: 'Invalid or expired consent token' });
+      }
+
+      if (user.parent_consent_expires_at && new Date(user.parent_consent_expires_at) < new Date()) {
+        return res.status(400).json({ success: false, message: 'Consent link has expired' });
+      }
+
+      if (granted) {
+        await db.query(
+          `UPDATE users SET
+             parental_consent_status   = 'granted',
+             parent_consent_granted_at = NOW(),
+             parent_consent_token      = NULL,
+             parent_consent_expires_at = NULL,
+             email_verified_at         = NOW(),
+             account_status            = 'ACTIVE',
+             updated_at                = NOW()
+           WHERE id = $1`,
+          [uid]
+        );
+        return res.json({ ok: true, message: 'Consent granted. The account is now active.' });
+      } else {
+        await db.query(
+          `UPDATE users SET
+             parental_consent_status = 'denied',
+             parent_consent_token    = NULL,
+             deleted_at              = NOW(),
+             updated_at              = NOW()
+           WHERE id = $1`,
+          [uid]
+        );
+        return res.json({ ok: true, message: 'Consent denied. The account has been removed.' });
+      }
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /**
    * GET /api/auth/verify-email?uid=<id>&token=<raw>
    * Verify email address from registration link.
    * Auth: Not required | Rate-limited by authLimiter (applied at app level)

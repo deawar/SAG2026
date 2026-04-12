@@ -273,20 +273,23 @@ describe('AdminService', () => {
       expect(report.summary.dataExportRequests).toBe(3);
     });
 
-    test('generateCOPPAReport - should track minor users and consents', async () => {
+    test('generateCOPPAReport - should track minor users and consent breakdown', async () => {
       const adminId = 'admin-123';
 
+      // New query returns aggregated consent counts in a single row
       mockPool.query
         .mockResolvedValueOnce({ rows: [{ role: 'SITE_ADMIN', school_id: null }] }) // verifyAdminAccess
-        .mockResolvedValueOnce({ rows: [{ count: '8' }] }) // minors
-        .mockResolvedValueOnce({ rows: [{ count: '8' }] }) // consents
+        .mockResolvedValueOnce({ rows: [{ total_under13: '8', pending: '3', granted: '4', denied: '1' }] }) // counts query
         .mockResolvedValueOnce({ rows: [{ id: 'report-123' }] }) // INSERT report
         .mockResolvedValueOnce(undefined); // logAdminAction
 
       const report = await adminService.generateCOPPAReport(new Date(), new Date(), null, adminId);
 
       expect(report.reportType).toBe('COPPA');
-      expect(report.summary.minorUsersIdentified).toBe(8);
+      expect(report.summary.totalUnder13).toBe(8);
+      expect(report.summary.pending).toBe(3);
+      expect(report.summary.granted).toBe(4);
+      expect(report.summary.denied).toBe(1);
     });
 
     test('getAuditLog - should support filtering by action and resource type', async () => {
