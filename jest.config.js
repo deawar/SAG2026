@@ -113,4 +113,12 @@ module.exports = {
    * Stop running tests after first failure (useful for debugging)
    */
   bail: false,
+
+  /**
+   * Force Exit
+   * Terminate worker processes after all tests complete.
+   * Prevents open pg.Pool handles (from services that manage their own DB
+   * connections) from keeping Jest alive indefinitely.
+   */
+  forceExit: true,
 };
