@@ -10,8 +10,21 @@ const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const PaymentController = require('../controllers/paymentController');
 
-// Placeholder payment service (will be injected in production)
-const paymentController = new PaymentController(null);
+/**
+ * NullPaymentService — safe stand-in until a real PaymentService is wired up.
+ * Every method throws a clear error instead of crashing on null dereference.
+ */
+class NullPaymentService {
+  _notConfigured() {
+    throw new Error('PaymentService not configured');
+  }
+  async processPayment()   { this._notConfigured(); }
+  async getPaymentStatus() { this._notConfigured(); }
+  async processRefund()    { this._notConfigured(); }
+  async handleWebhook()    { this._notConfigured(); }
+}
+
+const paymentController = new PaymentController(new NullPaymentService());
 
 /**
  * POST /api/payments
