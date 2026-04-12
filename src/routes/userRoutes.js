@@ -415,6 +415,74 @@ module.exports = (db) => {
   });
 
   // ---------------------------------------------------------------------------
+  // DELETE /api/user  — soft-delete own account (GDPR right to erasure)
+  // PII is anonymised; bids/payments/artworks are preserved for audit.
+  // ---------------------------------------------------------------------------
+  router.delete('/', async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+
+      // Anonymise PII and mark account deleted
+      const result = await db.query(
+        `UPDATE users
+         SET deleted_at    = NOW(),
+             email         = CONCAT('deleted-', id, '@deleted.local'),
+             first_name    = NULL,
+             last_name     = NULL,
+             phone_number  = NULL,
+             address       = NULL,
+             two_fa_secret = NULL,
+             backup_codes  = NULL,
+             updated_at    = NOW()
+         WHERE id = $1 AND deleted_at IS NULL
+         RETURNING id`,
+        [userId]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      // Revoke all active sessions
+      await db.query(
+        `UPDATE user_sessions SET revoked_at = NOW()
+         WHERE user_id = $1 AND revoked_at IS NULL`,
+        [userId]
+      );
+
+      // Remove any pending password reset tokens
+      await db.query(
+        'DELETE FROM password_reset_tokens WHERE user_id = $1',
+        [userId]
+      );
+
+      // Blacklist the current access token (best-effort; expires in ≤15 min anyway)
+      try {
+        const { jti, exp } = req.user;
+        if (jti) {
+          const expiresAt = exp
+            ? new Date(exp * 1000)
+            : new Date(Date.now() + 15 * 60 * 1000);
+          await authenticationService.tokenBlacklist.revoke(jti, expiresAt);
+        }
+      } catch (_err) {
+        // Non-blocking: token will expire naturally within 15 minutes
+      }
+
+      // Audit log
+      await db.query(
+        `INSERT INTO audit_logs (user_id, action_category, action_type, action_details)
+         VALUES ($1, 'USER', 'SELF_DELETED', $2)`,
+        [userId, JSON.stringify({})]
+      );
+
+      return res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ---------------------------------------------------------------------------
   // DELETE /api/user/artwork/:id  — withdraw a submission (own artwork only)
   // ---------------------------------------------------------------------------
   router.delete('/artwork/:id', async (req, res, next) => {
