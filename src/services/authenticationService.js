@@ -880,6 +880,84 @@ class AuthenticationService {
     await this._recordAuditLog(userId, 'AUTH', 'PASSWORD_RESET_COMPLETED', {});
   }
 
+  /**
+   * Send a 6-digit password reset code to the user's email (step 1 of code-based reset)
+   * Always returns silently — caller must return 200 regardless (prevents email enumeration)
+   * @param {string} email - User email (pre-sanitised, lowercase)
+   */
+  async sendPasswordResetCode(email) {
+    const user = await this.userModel.getByEmail(email);
+    if (!user) {
+      return; // Silent: don't reveal whether the email exists
+    }
+
+    // Generate a 6-digit numeric code
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+
+    // Remove any existing unused codes for this user
+    await this.db.query(
+      `DELETE FROM password_reset_tokens WHERE user_id = $1 AND used_at IS NULL`,
+      [user.id]
+    );
+
+    // Store the hashed code with a 15-minute expiry
+    await this.db.query(
+      `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+       VALUES ($1, $2, NOW() + INTERVAL '15 minutes')`,
+      [user.id, codeHash]
+    );
+
+    await this._recordAuditLog(user.id, 'AUTH', 'PASSWORD_RESET_CODE_SENT', {});
+
+    // Attempt email delivery; fall back to console log in dev
+    await this._sendResetCodeEmail(user.email, user.first_name || 'User', code);
+  }
+
+  /**
+   * Deliver the 6-digit reset code via email.
+   * Falls back to console.log when SMTP is not configured (dev/test).
+   */
+  async _sendResetCodeEmail(email, firstName, code) {
+    const smtpHost = process.env.SMTP_HOST;
+
+    if (smtpHost) {
+      try {
+        const { EmailProvider } = require('./notificationService');
+        const emailProvider = new EmailProvider({
+          provider: 'smtp',
+          host: smtpHost,
+          port: parseInt(process.env.SMTP_PORT || '587', 10),
+          secure: process.env.SMTP_SECURE === 'true',
+          user: process.env.SMTP_USER,
+          password: process.env.SMTP_PASSWORD,
+          fromEmail: process.env.EMAIL_FROM || `noreply@${smtpHost}`
+        });
+
+        const subject = 'Your Silent Auction Gallery Password Reset Code';
+        const text = `Hi ${firstName},\n\nYour password reset code is: ${code}\n\nThis code expires in 15 minutes. If you didn't request this, please ignore this email.`;
+        const html = `
+          <h2>Password Reset Code</h2>
+          <p>Hi ${firstName},</p>
+          <p>Your password reset code is:</p>
+          <h1 style="letter-spacing:8px;font-size:36px;font-family:monospace;">${code}</h1>
+          <p>This code expires in 15 minutes.</p>
+          <p>If you didn't request this, you can safely ignore this email.</p>
+        `;
+
+        await emailProvider.send(email, subject, html, text);
+        return;
+      } catch (err) {
+        console.error('Password reset code email failed:', err.message);
+      }
+    }
+
+    // Dev fallback: print code to stdout (gated on NODE_ENV)
+    if (process.env.NODE_ENV !== 'test') {
+      console.log(`[DEV] Password reset code for ${email}: ${code}`);
+    }
+  }
+
   // ========================================================================
   // Private Helper Methods
   // ========================================================================
