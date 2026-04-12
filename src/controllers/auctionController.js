@@ -378,6 +378,60 @@ class AuctionController {
   }
 
   /**
+   * GET /api/auctions/:auctionId/bids
+   * Get all bids across every artwork in an auction (recent bids sidebar)
+   * Access: any authenticated user in the auction's school (SITE_ADMIN: all)
+   */
+  async getBidsForAuction(req, res) {
+    try {
+      const { auctionId } = req.params;
+
+      // Verify auction exists and get school
+      const auctionResult = await pool.query(
+        'SELECT id, school_id FROM auctions WHERE id = $1',
+        [auctionId]
+      );
+      if (auctionResult.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Auction not found' });
+      }
+      const auction = auctionResult.rows[0];
+
+      // School-scoped access: non-SITE_ADMINs must belong to the auction's school
+      if (req.user.role !== 'SITE_ADMIN' && req.user.schoolId !== auction.school_id) {
+        return res.status(403).json({ success: false, message: 'You do not have permission to view bids for this auction' });
+      }
+
+      const bidsResult = await pool.query(
+        `SELECT b.id, b.artwork_id, aw.title AS artwork_title,
+                b.bid_amount, b.placed_at,
+                u.first_name, u.last_name
+         FROM bids b
+         JOIN artwork aw ON aw.id = b.artwork_id
+         JOIN users u ON u.id = b.placed_by_user_id
+         WHERE aw.auction_id = $1 AND b.bid_status = 'ACTIVE'
+         ORDER BY b.placed_at DESC
+         LIMIT 50`,
+        [auctionId]
+      );
+
+      return res.status(200).json({
+        success: true,
+        bids: bidsResult.rows.map(row => ({
+          id: row.id,
+          artworkId: row.artwork_id,
+          artworkTitle: row.artwork_title,
+          bidderName: `${row.first_name} ${row.last_name}`,
+          amount: row.bid_amount,
+          createdAt: row.placed_at
+        }))
+      });
+    } catch (error) {
+      console.error('Error retrieving bids for auction:', error);
+      return res.status(500).json({ success: false, message: error.message || 'Error retrieving bids' });
+    }
+  }
+
+  /**
    * GET /api/auctions/:auctionId/artwork
    * Get all artwork in an auction
    * VISIBILITY: Filtered by approval status
