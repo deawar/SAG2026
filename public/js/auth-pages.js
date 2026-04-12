@@ -48,9 +48,13 @@ class AuthPages {
     emailInput.addEventListener('blur', () => this.validateEmail(emailInput));
     passwordInput.addEventListener('blur', () => this.validatePassword(passwordInput));
 
-    // Remove error message when user starts typing
-    emailInput.addEventListener('input', () => this.clearFieldError(emailInput));
-    passwordInput.addEventListener('input', () => this.clearFieldError(passwordInput));
+    // Remove error messages when user starts typing
+    const clearBanner = () => {
+      const banner = document.getElementById('login-error-banner');
+      if (banner) { banner.hidden = true; banner.textContent = ''; }
+    };
+    emailInput.addEventListener('input', () => { this.clearFieldError(emailInput); clearBanner(); });
+    passwordInput.addEventListener('input', () => { this.clearFieldError(passwordInput); clearBanner(); });
   }
 
   /**
@@ -84,7 +88,16 @@ class AuthPages {
       UIComponents.hideLoading(loader);
 
       if (!response.ok) {
-        UIComponents.showAlert(data.message || 'Login failed', 'error');
+        const msg = data.message || 'Login failed. Please check your credentials.';
+        // Show inline banner (dedicated login page)
+        const banner = document.getElementById('login-error-banner');
+        if (banner) {
+          banner.textContent = msg;
+          banner.removeAttribute('hidden');
+        } else {
+          // Fallback for modal-based login contexts
+          UIComponents.showAlert(msg, 'error');
+        }
         return;
       }
 
