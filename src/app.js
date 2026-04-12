@@ -114,13 +114,15 @@ function createApp(db) {
   // ==========================================================================
   // UTILITY ENDPOINTS
   // ==========================================================================
-  app.get('/health', (req, res) => {
+  const healthHandler = (req, res) => {
     res.status(200).json({
       status: 'OK',
       timestamp: new Date().toISOString(),
       uptime: process.uptime()
     });
-  });
+  };
+  app.get('/health', healthHandler);
+  app.get('/api/health', healthHandler);
 
   app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
