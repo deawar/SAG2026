@@ -215,16 +215,19 @@ describe('User Model', () => {
   describe('COPPA age verification', () => {
     const today = new Date();
 
-    test('should throw COPPA_PARENTAL_CONSENT_REQUIRED for STUDENT under 13', () => {
+    // COPPA consent logic was moved to the controller; _validateUserData only
+    // validates the DOB format, not the age.  Under-13 accounts are created with
+    // requiresParentalConsent=true and parental_consent_status='pending'.
+    test('should NOT throw for STUDENT under 13 — COPPA is enforced by the controller', () => {
       const under13 = new Date(today.getFullYear() - 12, today.getMonth(), today.getDate());
       expect(() => userModel._validateUserData({ ...BASE_USER, role: 'STUDENT', dateOfBirth: under13 }))
-        .toThrow('COPPA_PARENTAL_CONSENT_REQUIRED');
+        .not.toThrow();
     });
 
-    test('should throw COPPA_PARENTAL_CONSENT_REQUIRED for BIDDER under 13', () => {
+    test('should NOT throw for BIDDER under 13 — COPPA is enforced by the controller', () => {
       const under13 = new Date(today.getFullYear() - 10, today.getMonth(), today.getDate());
       expect(() => userModel._validateUserData({ ...BASE_USER, role: 'BIDDER', dateOfBirth: under13 }))
-        .toThrow('COPPA_PARENTAL_CONSENT_REQUIRED');
+        .not.toThrow();
     });
 
     test('should allow STUDENT who is exactly 13', () => {

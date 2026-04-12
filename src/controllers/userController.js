@@ -25,14 +25,14 @@ class UserController {
    */
   async register(req, res, next) {
     try {
-      const { email, password, firstName, lastName, dateOfBirth, schoolId, phone, accountType } = req.body;
+      const { email, password, firstName, lastName, dateOfBirth, parentEmail, schoolId, phone, accountType } = req.body;
 
       // 1. Validate required fields
-      if (!email || !password || !firstName || !lastName) {
+      if (!email || !password || !firstName) {
         return res.status(400).json({
           success: false,
           message: 'Missing required fields',
-          errors: ['email', 'password', 'firstName', 'lastName']
+          errors: ['email', 'password', 'firstName']
         });
       }
 
@@ -57,8 +57,6 @@ class UserController {
       // 4. Sanitize inputs
       const sanitizedEmail = ValidationUtils.sanitizeString(email, 254).toLowerCase();
       const sanitizedFirstName = ValidationUtils.sanitizeString(firstName, 100);
-      const sanitizedLastName = ValidationUtils.sanitizeString(lastName, 100);
-      const sanitizedPhone = phone ? ValidationUtils.sanitizeString(phone, 20) : null;
 
       // 5. Determine role based on account type
       let finalRole = 'STUDENT'; // Default to student
@@ -66,7 +64,76 @@ class UserController {
         finalRole = 'TEACHER';
       }
 
-      // 6. Create user in database
+      // 6. COPPA age check for STUDENT / BIDDER paths
+      const isMinorPath = (finalRole === 'STUDENT' || finalRole === 'BIDDER');
+      if (isMinorPath && !dateOfBirth) {
+        return res.status(400).json({ success: false, message: 'dateOfBirth is required', errors: ['dateOfBirth'] });
+      }
+
+      let isUnder13 = false;
+      if (dateOfBirth) {
+        const dob = new Date(dateOfBirth);
+        if (isNaN(dob.getTime())) {
+          return res.status(400).json({ success: false, message: 'Invalid date of birth', errors: ['dateOfBirth'] });
+        }
+        // Compute age
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const m = today.getMonth() - dob.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+        isUnder13 = age < 13;
+      }
+
+      if (isUnder13) {
+        // --- Under-13 path: require parentEmail, data minimization, consent flow ---
+        if (!parentEmail || !ValidationUtils.validateEmail(parentEmail)) {
+          return res.status(400).json({
+            success: false,
+            message: 'parentEmail is required and must be valid for users under 13',
+            errors: ['parentEmail']
+          });
+        }
+        const sanitizedParentEmail = ValidationUtils.sanitizeString(parentEmail, 254).toLowerCase();
+
+        // Data minimization: do not store last name or phone
+        const rawConsentToken = crypto.randomBytes(32).toString('hex');
+        const consentTokenHash = crypto.createHash('sha256').update(rawConsentToken).digest('hex');
+        const consentExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+        const user = await this.userModel.create({
+          email: sanitizedEmail,
+          password,
+          firstName: sanitizedFirstName,
+          lastName: null,       // data minimization
+          phoneNumber: null,    // data minimization
+          dateOfBirth,
+          schoolId,
+          role: finalRole,
+          requiresParentalConsent: true,
+          parentalConsentStatus: 'pending',
+          parentEmail: sanitizedParentEmail,
+          parentConsentToken: consentTokenHash,
+          parentConsentExpiresAt: consentExpiresAt
+        });
+
+        // Send consent email to parent (best-effort)
+        await this._sendParentConsentEmail(sanitizedParentEmail, sanitizedFirstName, user.id, rawConsentToken);
+
+        return res.status(201).json({
+          ok: true,
+          requiresParentalConsent: true,
+          message: 'Registration received. A parental consent email has been sent to the provided address.'
+        });
+      }
+
+      // --- Adult path ---
+      if (!lastName) {
+        return res.status(400).json({ success: false, message: 'Missing required fields', errors: ['lastName'] });
+      }
+      const sanitizedLastName = ValidationUtils.sanitizeString(lastName, 100);
+      const sanitizedPhone = phone ? ValidationUtils.sanitizeString(phone, 20) : null;
+
+      // 7. Create user in database
       const user = await this.userModel.create({
         email: sanitizedEmail,
         password,
@@ -78,16 +145,16 @@ class UserController {
         role: finalRole
       });
 
-      // 7. Generate and store email verification token (24h expiry)
+      // 8. Generate and store email verification token (24h expiry)
       const rawToken = crypto.randomBytes(32).toString('hex');
       const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
       await this.userModel.setVerificationToken(user.id, tokenHash, expiresAt);
 
-      // 8. Send verification email (best-effort; suppressed in test mode)
+      // 9. Send verification email (best-effort; suppressed in test mode)
       await this._sendVerificationEmail(user.email, user.first_name || 'User', user.id, rawToken);
 
-      // 9. Return success — no JWT until email is verified
+      // 10. Return success — no JWT until email is verified
       return res.status(201).json({
         ok: true,
         requiresVerification: true,
@@ -166,7 +233,16 @@ class UserController {
         });
       }
 
-      // 4. Check email verification before account status
+      // 4. COPPA guard: block login if parental consent is still pending or denied
+      if (user.requires_parental_consent && user.parental_consent_status !== 'granted') {
+        return res.status(403).json({
+          success: false,
+          error: 'parental_consent_required',
+          message: 'This account requires parental consent before you can log in.'
+        });
+      }
+
+      // 4b. Check email verification before account status
       if (!user.email_verified_at) {
         return res.status(403).json({
           success: false,
@@ -175,7 +251,7 @@ class UserController {
         });
       }
 
-      // 4b. Check if account is active
+      // 4c. Check if account is active
       if (user.account_status !== 'ACTIVE') {
         return res.status(403).json({
           success: false,
@@ -543,6 +619,68 @@ class UserController {
 
     if (process.env.NODE_ENV !== 'test') {
       console.log(`[DEV] Email verification link for ${email}: ${verifyUrl}`);
+    }
+  }
+
+  /**
+   * Send parental consent request email. Suppressed in test mode.
+   */
+  async _sendParentConsentEmail(parentEmail, childFirstName, userId, rawToken) {
+    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+    const consentUrl = `${appUrl}/parental-consent.html?token=${encodeURIComponent(rawToken)}&uid=${encodeURIComponent(userId)}`;
+
+    const smtpHost = process.env.SMTP_HOST;
+    if (smtpHost) {
+      try {
+        const { EmailProvider } = require('../services/notificationService');
+        const emailProvider = new EmailProvider({
+          provider: 'smtp',
+          host: smtpHost,
+          port: parseInt(process.env.SMTP_PORT || '587', 10),
+          secure: process.env.SMTP_SECURE === 'true',
+          user: process.env.SMTP_USER,
+          password: process.env.SMTP_PASSWORD,
+          fromEmail: process.env.EMAIL_FROM || `noreply@${smtpHost}`
+        });
+        const subject = 'Parental Consent Required — Silent Auction Gallery';
+        const text = [
+          `Your child ${childFirstName} has registered on Silent Auction Gallery, a school art fundraising platform.`,
+          '',
+          'What data we collect: first name, email address, date of birth, and school affiliation.',
+          'How it is used: to allow your child to view and bid on student artwork at school auctions.',
+          'We do not sell or share this data with third parties.',
+          '',
+          `To grant consent, visit: ${consentUrl}`,
+          '',
+          'If you did not expect this email or wish to deny consent, use the same link and choose "Deny".',
+          'This link expires in 7 days.'
+        ].join('\n');
+        const html = `
+          <h2>Parental Consent Required</h2>
+          <p>Your child <strong>${childFirstName}</strong> has registered on <strong>Silent Auction Gallery</strong>,
+          a school art fundraising platform.</p>
+          <h3>Data we collect</h3>
+          <ul>
+            <li>First name</li>
+            <li>Email address</li>
+            <li>Date of birth</li>
+            <li>School affiliation</li>
+          </ul>
+          <h3>How it is used</h3>
+          <p>To allow your child to view and bid on student artwork at school auctions.
+          We do not sell or share this data with third parties.</p>
+          <p><a href="${consentUrl}" style="display:inline-block;padding:12px 24px;background:#4f46e5;color:#fff;border-radius:6px;text-decoration:none;font-weight:bold;">Review &amp; Grant Consent</a></p>
+          <p>If you did not expect this email, click the link above and choose <strong>Deny</strong>.</p>
+          <p><small>This link expires in 7 days.</small></p>`;
+        await emailProvider.send(parentEmail, subject, html, text);
+        return;
+      } catch (err) {
+        console.error('Parent consent email send failed:', err.message);
+      }
+    }
+
+    if (process.env.NODE_ENV !== 'test') {
+      console.log(`[DEV] Parental consent link for ${parentEmail} (child: ${childFirstName}): ${consentUrl}`);
     }
   }
 }

@@ -115,7 +115,12 @@ class UserModel {
       phoneNumber,
       dateOfBirth,
       role,
-      schoolId
+      schoolId,
+      requiresParentalConsent = false,
+      parentalConsentStatus = 'not_required',
+      parentEmail = null,
+      parentConsentToken = null,
+      parentConsentExpiresAt = null
     } = userData;
 
     // Check if email already exists (exclude soft-deleted users)
@@ -137,10 +142,22 @@ class UserModel {
 
     // Insert user — account_status starts as PENDING until email is verified
     const result = await this.db.query(
-      `INSERT INTO users (id, email, password_hash, first_name, last_name, phone_number, date_of_birth, role, school_id, account_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING')
-       RETURNING id, email, first_name, last_name, phone_number, role, school_id, created_at, account_status`,
-      [userId, email.toLowerCase(), passwordHash, firstName, lastName, phoneNumber, dateOfBirth, role, schoolId]
+      `INSERT INTO users (
+         id, email, password_hash, first_name, last_name, phone_number,
+         date_of_birth, role, school_id, account_status,
+         requires_parental_consent, parental_consent_status,
+         parent_email, parent_consent_token, parent_consent_expires_at
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING',
+               $10, $11, $12, $13, $14)
+       RETURNING id, email, first_name, last_name, phone_number, role, school_id,
+                 created_at, account_status, requires_parental_consent, parental_consent_status`,
+      [
+        userId, email.toLowerCase(), passwordHash, firstName, lastName, phoneNumber,
+        dateOfBirth, role, schoolId,
+        requiresParentalConsent, parentalConsentStatus,
+        parentEmail, parentConsentToken, parentConsentExpiresAt
+      ]
     );
 
     return result.rows[0];
@@ -510,8 +527,11 @@ class UserModel {
       throw new Error('INVALID_FIRST_NAME');
     }
 
-    if (!lastName || lastName.length < 2 || lastName.length > 100) {
-      throw new Error('INVALID_LAST_NAME');
+    // lastName is omitted for under-13 accounts (data minimization); only validate when provided
+    if (lastName !== null && lastName !== undefined) {
+      if (!lastName || lastName.length < 2 || lastName.length > 100) {
+        throw new Error('INVALID_LAST_NAME');
+      }
     }
 
     // Role validation
@@ -520,22 +540,14 @@ class UserModel {
       throw new Error('INVALID_ROLE');
     }
 
-    // COPPA: Age verification for students
-    if ((role === 'STUDENT' || role === 'BIDDER') && dateOfBirth) {
-      // Convert string to Date if needed
+    // Validate dateOfBirth format if provided
+    if (dateOfBirth) {
       let dateObj = dateOfBirth;
       if (typeof dateOfBirth === 'string') {
         dateObj = new Date(dateOfBirth);
       }
-
-      // Validate date is valid
       if (!(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
         throw new Error('INVALID_DATE_OF_BIRTH');
-      }
-
-      const age = this._calculateAge(dateObj);
-      if (age < 13) {
-        throw new Error('COPPA_PARENTAL_CONSENT_REQUIRED');
       }
     }
   }

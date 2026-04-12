@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Parental consent for child account registration">
+    <title>Parental Consent — Silent Auction Gallery</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,500;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap">
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+
+    <style>
+        .consent-box {
+            max-width: 560px;
+            margin: 4rem auto;
+            background: var(--color-surface, #fff);
+            border: 1px solid var(--color-border, #e2e2e2);
+            border-radius: 8px;
+            padding: 3rem 2rem;
+        }
+        .consent-icon { font-size: 3rem; margin-bottom: 1rem; text-align: center; }
+        .consent-box h1 { margin-bottom: 1rem; }
+        .consent-notice {
+            background: var(--color-surface-alt, #f8f8f8);
+            border: 1px solid var(--color-border, #e2e2e2);
+            border-radius: 6px;
+            padding: 1.25rem 1.5rem;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+        .consent-notice h2 { font-size: 1rem; margin-bottom: 0.5rem; }
+        .consent-notice ul { margin: 0.5rem 0 0 1.25rem; }
+        .consent-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        .consent-actions button {
+            flex: 1;
+            padding: 0.85rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        #btn-grant {
+            background: #4f46e5;
+            color: #fff;
+        }
+        #btn-grant:hover { background: #4338ca; }
+        #btn-deny {
+            background: transparent;
+            border: 2px solid var(--color-danger, #dc2626);
+            color: var(--color-danger, #dc2626);
+        }
+        #btn-deny:hover { background: var(--color-danger, #dc2626); color: #fff; }
+        #result-msg {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 6px;
+            display: none;
+            font-weight: 500;
+        }
+        #result-msg.success { background: #d1fae5; color: #065f46; }
+        #result-msg.error   { background: #fee2e2; color: #991b1b; }
+        .loading { opacity: 0.6; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <header class="navbar" role="banner">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="logo" aria-label="Silent Auction Gallery Home">
+                    <img src="/images/logo/SAGLive.png" alt="Silent Auction Gallery Logo" class="logo-img">
+                    <span class="logo-text">SAG</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main id="main-content" class="main-content">
+        <div class="container">
+            <div class="consent-box" id="consent-box">
+                <div class="consent-icon" aria-hidden="true" id="consent-icon">📋</div>
+                <h1 id="consent-title">Parental Consent Request</h1>
+                <p id="consent-body">
+                    Your child has registered on <strong>Silent Auction Gallery</strong>, a school art
+                    fundraising platform. Please review the information below and grant or deny consent.
+                </p>
+
+                <div class="consent-notice" id="consent-notice">
+                    <h2>What data we collect</h2>
+                    <ul>
+                        <li>First name</li>
+                        <li>Email address</li>
+                        <li>Date of birth</li>
+                        <li>School affiliation</li>
+                    </ul>
+
+                    <h2 style="margin-top:1rem;">How it is used</h2>
+                    <ul>
+                        <li>To allow your child to view and bid on student artwork at school auctions</li>
+                        <li>To send auction activity notifications to your child's email address</li>
+                    </ul>
+
+                    <h2 style="margin-top:1rem;">Data protection</h2>
+                    <ul>
+                        <li>We do not sell or share your child's data with third parties</li>
+                        <li>Your child's last name and phone number are <strong>not</strong> collected</li>
+                        <li>You may request deletion of all data at any time by contacting us</li>
+                    </ul>
+                </div>
+
+                <div class="consent-actions" id="consent-actions">
+                    <button id="btn-grant" type="button">Grant Consent</button>
+                    <button id="btn-deny"  type="button">Deny Consent</button>
+                </div>
+
+                <div id="result-msg" role="alert" aria-live="polite"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            const uid   = params.get('uid');
+            const token = params.get('token');
+
+            const iconEl    = document.getElementById('consent-icon');
+            const titleEl   = document.getElementById('consent-title');
+            const bodyEl    = document.getElementById('consent-body');
+            const noticeEl  = document.getElementById('consent-notice');
+            const actionsEl = document.getElementById('consent-actions');
+            const resultEl  = document.getElementById('result-msg');
+
+            if (!uid || !token) {
+                showError('This consent link is invalid. Please check your email and try again.');
+                actionsEl.style.display = 'none';
+                noticeEl.style.display  = 'none';
+                return;
+            }
+
+            document.getElementById('btn-grant').addEventListener('click', () => submitConsent(true));
+            document.getElementById('btn-deny').addEventListener('click',  () => submitConsent(false));
+
+            async function submitConsent(granted) {
+                actionsEl.classList.add('loading');
+                resultEl.style.display = 'none';
+
+                try {
+                    const res = await fetch('/api/auth/parental-consent', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ uid, token, granted })
+                    });
+                    const data = await res.json();
+
+                    actionsEl.classList.remove('loading');
+
+                    if (res.ok && data.ok) {
+                        if (granted) {
+                            iconEl.textContent  = '✓';
+                            titleEl.textContent = 'Consent Granted';
+                            bodyEl.textContent  = 'Thank you. Your child\'s account is now active.';
+                        } else {
+                            iconEl.textContent  = '✗';
+                            titleEl.textContent = 'Consent Denied';
+                            bodyEl.textContent  = 'The account has been removed. No further action is required.';
+                        }
+                        noticeEl.style.display  = 'none';
+                        actionsEl.style.display = 'none';
+                    } else {
+                        showError(data.message || 'An error occurred. Please try again.');
+                    }
+                } catch (err) {
+                    actionsEl.classList.remove('loading');
+                    showError('Network error. Please check your connection and try again.');
+                }
+            }
+
+            function showError(msg) {
+                resultEl.textContent   = msg;
+                resultEl.className     = 'error';
+                resultEl.style.display = 'block';
+            }
+        }());
+    </script>
+</body>
+</html>
