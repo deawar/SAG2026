@@ -46,6 +46,17 @@ router.get(
 );
 
 /**
+ * GET /api/auctions/:auctionId/public
+ * Public read-only preview — no auth required.
+ * Returns title, description, status, end time, and artworks (current high bid only).
+ * No bidder identities, no bid history.
+ */
+router.get(
+  '/:auctionId/public',
+  (req, res) => auctionController.getAuctionPublic(req, res)
+);
+
+/**
  * GET /api/auctions/:auctionId
  * Get auction details
  * Access: Authenticated users only

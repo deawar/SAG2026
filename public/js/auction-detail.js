@@ -40,13 +40,18 @@ class AuctionDetail {
   }
 
   /**
-     * Load auction details from API
+     * Load auction details from API.
+     * Unauthenticated visitors are served the public preview endpoint; the
+     * bid form is hidden and an auth-wall banner is shown instead.
      */
   async loadAuction() {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      return this._loadPublicPreview();
+    }
     try {
-      const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/auctions/${this.auctionId}`, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
 
@@ -61,6 +66,37 @@ class AuctionDetail {
       this.loadBidHistory();
     } catch (error) {
       console.error('Load auction error:', error);
+      this.showError('Failed to load auction');
+    }
+  }
+
+  /**
+     * Public (unauthenticated) preview — calls /public endpoint.
+     */
+  async _loadPublicPreview() {
+    try {
+      const response = await fetch(`/api/auctions/${this.auctionId}/public`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        this.showError(data.message || 'Auction not found');
+        return;
+      }
+
+      this.auction = data.auction;
+      this.isVisitor = true;
+      this.displayAuction();
+
+      if (data.artworks && data.artworks.length > 0) {
+        this.displayArtworkPiece(data.artworks[0]);
+      }
+
+      const historyContainer = document.getElementById('bid-history-container');
+      if (historyContainer) {
+        historyContainer.innerHTML = '<p class="text-muted">Log in to see bid history</p>';
+      }
+    } catch (error) {
+      console.error('Load public auction error:', error);
       this.showError('Failed to load auction');
     }
   }
@@ -340,10 +376,19 @@ class AuctionDetail {
       if (e.target === qrModal) {qrModal.style.display = 'none';}
     });
 
-    // Auth required login button
+    // Auth wall buttons — include returnTo so the user lands back here after login/register
+    const returnTo = encodeURIComponent(globalThis.location.pathname + globalThis.location.search);
     const loginBtn = document.getElementById('login-from-auction');
     if (loginBtn) {
-      loginBtn.addEventListener('click', () => { globalThis.location.href = '/login.html'; });
+      loginBtn.addEventListener('click', () => {
+        globalThis.location.href = `/login.html?returnTo=${returnTo}`;
+      });
+    }
+    const registerBtn = document.getElementById('register-from-auction');
+    if (registerBtn) {
+      registerBtn.addEventListener('click', () => {
+        globalThis.location.href = `/register.html?returnTo=${returnTo}`;
+      });
     }
   }
 

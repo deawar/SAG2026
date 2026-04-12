@@ -117,8 +117,15 @@ class AuthPages {
         UIComponents.createToast({ message: 'Logged in successfully!', type: 'success' });
         const role = data.data?.role;
         const adminRoles = ['SUPER_ADMIN', 'SITE_ADMIN', 'SCHOOL_ADMIN'];
+        const rawReturnTo = new URLSearchParams(window.location.search).get('returnTo') || '';
+        // Safety: only honour same-origin paths (no protocol, no host, must start with /)
+        const returnTo = /^\/[^/\\]/.test(rawReturnTo) ? rawReturnTo : null;
         setTimeout(() => {
-          window.location.href = adminRoles.includes(role) ? '/admin-dashboard.html' : '/index.html';
+          if (returnTo) {
+            window.location.href = returnTo;
+          } else {
+            window.location.href = adminRoles.includes(role) ? '/admin-dashboard.html' : '/index.html';
+          }
         }, 1000);
       }
     } catch (error) {
@@ -135,6 +142,7 @@ class AuthPages {
     this.totalSteps = 3;
     this.inviteToken = null;
     this.isStudentInvite = false;
+    this.isBidderMode = false;
 
     const form = document.getElementById('register-form');
     if (!form) {return;}
@@ -143,6 +151,7 @@ class AuthPages {
     const urlParams = new URLSearchParams(window.location.search);
     const inviteToken = urlParams.get('token');
     const inviteEmail = urlParams.get('email');
+    const roleParam = (urlParams.get('role') || '').toUpperCase();
 
     if (inviteToken && inviteEmail) {
       this.isStudentInvite = true;
@@ -183,10 +192,26 @@ class AuthPages {
         this.showStep(form, this.currentStep);
         window.scrollTo(0, 0);
       });
-    } else {
-      // Non-invite flow: remove payment fieldset so it doesn't affect step indexing
+    } else if (roleParam === 'BIDDER') {
+      // Direct BIDDER link — apply bidder mode immediately, skip chooser
+      this._applyBidderMode(form);
       const paymentFieldset = document.getElementById('step-payment-fieldset');
       if (paymentFieldset) {paymentFieldset.remove();}
+    } else {
+      // Non-invite, non-BIDDER flow: show role chooser, remove payment fieldset
+      const paymentFieldset = document.getElementById('step-payment-fieldset');
+      if (paymentFieldset) {paymentFieldset.remove();}
+
+      const chooser = document.getElementById('role-chooser');
+      if (chooser) {chooser.style.display = '';}
+
+      document.getElementById('choose-student')?.addEventListener('click', () => {
+        chooser.style.display = 'none';
+      });
+      document.getElementById('choose-bidder')?.addEventListener('click', () => {
+        chooser.style.display = 'none';
+        this._applyBidderMode(form);
+      });
     }
 
     const nextBtn = form.querySelector('#next-step-btn') || form.querySelector('.btn-next');
@@ -354,6 +379,52 @@ class AuthPages {
   }
 
   /**
+     * Switch the registration form into BIDDER mode:
+     * - Hides school and DOB fields (not needed for adults)
+     * - Shows the 18+ confirmation checkbox
+     * - Hides the student/teacher account-type radio group
+     * - Updates heading copy
+     * - Sets the hidden role-mode input so submitRegister knows which payload to build
+     */
+  _applyBidderMode(form) {
+    this.isBidderMode = true;
+
+    // Mark hidden input
+    const roleModeInput = document.getElementById('role-mode-input');
+    if (roleModeInput) {roleModeInput.value = 'bidder';}
+
+    // Hide school-specific fields
+    const schoolGroup = document.getElementById('school-fields-group');
+    if (schoolGroup) {schoolGroup.style.display = 'none';}
+    // Disable required attrs so step validation doesn't block
+    const schoolSelect = form.querySelector('select[name="school_id"]');
+    if (schoolSelect) {schoolSelect.required = false; schoolSelect.removeAttribute('aria-required');}
+    const schoolSearch = form.querySelector('#school-search');
+    if (schoolSearch) {schoolSearch.required = false;}
+
+    // Hide DOB field, show age confirmation instead
+    const dobGroup = document.getElementById('dob-group');
+    if (dobGroup) {dobGroup.style.display = 'none';}
+    const dobInput = form.querySelector('input[name="date_of_birth"]');
+    if (dobInput) {dobInput.required = false; dobInput.removeAttribute('aria-required');}
+
+    const ageGroup = document.getElementById('age-confirmation-group');
+    if (ageGroup) {ageGroup.style.display = '';}
+
+    // Hide student/teacher radio group
+    const accountTypeGroup = document.getElementById('account-type-group');
+    if (accountTypeGroup) {accountTypeGroup.style.display = 'none';}
+
+    // Update header copy
+    const heading = document.getElementById('step1-heading');
+    if (heading) {heading.textContent = 'Bidder Account';}
+    const subtitle = document.getElementById('step1-subtitle');
+    if (subtitle) {subtitle.textContent = 'Create your free bidder account to start placing bids';}
+    const authHeaderP = document.querySelector('.auth-header p');
+    if (authHeaderP) {authHeaderP.textContent = 'Join as a parent or collector — bid on student artwork';}
+  }
+
+  /**
      * Validate current register step
      */
   validateRegisterStep(form) {
@@ -372,8 +443,15 @@ class AuthPages {
       if (!fullName?.value.trim()) {errors.fullname = 'Full name is required';}
       if (!email?.value.trim()) {errors.email = 'Email is required';}
       else if (!UIComponents.validateEmail(email.value)) {errors.email = 'Invalid email format';}
-      if (!dob?.value) {errors.dob = 'Date of birth is required';}
-      if (!school?.value) {errors.school = 'School is required';}
+
+      if (this.isBidderMode) {
+        // BIDDER: require 18+ confirmation instead of DOB + school
+        const ageConfirm = form.querySelector('input[name="age_confirmation"]');
+        if (!ageConfirm?.checked) {errors.age = 'You must confirm you are 18 or older to create a bidder account';}
+      } else {
+        if (!dob?.value) {errors.dob = 'Date of birth is required';}
+        if (!school?.value) {errors.school = 'School is required';}
+      }
       if (!password?.value) {
         errors.password = 'Password is required';
       } else {
@@ -403,9 +481,11 @@ class AuthPages {
 
       if (Object.keys(errors).length > 0) {
         UIComponents.displayFormErrors(form, errors);
-        // Also show a toast for the password error
         if (errors.password) {
           UIComponents.createToast({ message: errors.password, type: 'error' });
+        }
+        if (errors.age) {
+          UIComponents.createToast({ message: errors.age, type: 'error' });
         }
         return false;
       }
@@ -543,14 +623,23 @@ class AuthPages {
     const firstName = nameParts[0] || '';
     const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : firstName;
 
+    let accountType;
+    if (this.isStudentInvite) {
+      accountType = 'student';
+    } else if (this.isBidderMode) {
+      accountType = 'bidder';
+    } else {
+      accountType = this.formData.account_type;
+    }
+
     const payload = {
       email: this.formData.email,
       password: this.formData.password,
       firstName,
       lastName,
-      dateOfBirth: this.formData.date_of_birth,
-      schoolId: this.formData.school_id,
-      accountType: this.isStudentInvite ? 'student' : this.formData.account_type,
+      ...(accountType !== 'bidder' && { dateOfBirth: this.formData.date_of_birth }),
+      ...(accountType !== 'bidder' && { schoolId: this.formData.school_id }),
+      accountType,
       ...(this.inviteToken && { registrationToken: this.inviteToken }),
       ...(this.isStudentInvite && { canBid: !this.formData.skipPayment })
     };

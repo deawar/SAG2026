@@ -62,10 +62,40 @@ class UserController {
       let finalRole = 'STUDENT'; // Default to student
       if (accountType === 'teacher') {
         finalRole = 'TEACHER';
+      } else if (accountType === 'bidder') {
+        finalRole = 'BIDDER';
       }
 
-      // 6. COPPA age check for STUDENT / BIDDER paths
-      const isMinorPath = (finalRole === 'STUDENT' || finalRole === 'BIDDER');
+      // BIDDER path: adults only, no COPPA check, no schoolId required
+      if (finalRole === 'BIDDER') {
+        if (!lastName) {
+          return res.status(400).json({ success: false, message: 'Missing required fields', errors: ['lastName'] });
+        }
+        const sanitizedLastName = ValidationUtils.sanitizeString(lastName, 100);
+        const user = await this.userModel.create({
+          email: sanitizedEmail,
+          password,
+          firstName: sanitizedFirstName,
+          lastName: sanitizedLastName,
+          phoneNumber: null,
+          dateOfBirth: null,
+          schoolId: null,
+          role: 'BIDDER'
+        });
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        await this.userModel.setVerificationToken(user.id, tokenHash, expiresAt);
+        await this._sendVerificationEmail(user.email, user.first_name || 'User', user.id, rawToken);
+        return res.status(201).json({
+          ok: true,
+          requiresVerification: true,
+          message: 'Registration successful. Please check your email to verify your account.'
+        });
+      }
+
+      // 6. COPPA age check for STUDENT path
+      const isMinorPath = finalRole === 'STUDENT';
       if (isMinorPath && !dateOfBirth) {
         return res.status(400).json({ success: false, message: 'dateOfBirth is required', errors: ['dateOfBirth'] });
       }

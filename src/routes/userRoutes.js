@@ -244,16 +244,22 @@ module.exports = (db) => {
       const { auctionId } = req.params;
 
       const result = await db.query(
-        `SELECT b.id           AS "bidId",
-                b.bid_amount   AS "winningBid",
-                a.id           AS "auctionId",
-                a.title        AS "auctionTitle",
-                aw.title       AS "artworkTitle",
-                aw.id          AS "artworkId",
-                FALSE          AS shipped
+        `SELECT b.id                   AS "bidId",
+                b.bid_amount           AS "winningBid",
+                a.id                   AS "auctionId",
+                a.title                AS "auctionTitle",
+                aw.title               AS "artworkTitle",
+                aw.id                  AS "artworkId",
+                b.shipped_at IS NOT NULL               AS shipped,
+                b.shipped_at           AS "shippedAt",
+                b.tracking_carrier     AS "trackingCarrier",
+                b.tracking_number      AS "trackingNumber",
+                b.delivered_at IS NOT NULL             AS delivered,
+                b.delivered_at         AS "deliveredAt",
+                b.fulfillment_notes    AS "fulfillmentNotes"
          FROM   bids b
          JOIN   auctions a  ON a.id  = b.auction_id
-         LEFT JOIN artwork aw ON aw.auction_id = a.id AND aw.deleted_at IS NULL
+         JOIN   artwork  aw ON aw.id = b.artwork_id
          WHERE  b.placed_by_user_id = $1
            AND  b.bid_status        = 'ACCEPTED'
            AND  a.id                = $2
@@ -280,12 +286,22 @@ module.exports = (db) => {
       const userId = req.user?.id;
 
       const result = await db.query(
-        `SELECT b.bid_amount   AS "winningBid",
-                a.id           AS "auctionId",
-                a.title        AS "auctionTitle",
-                FALSE          AS shipped
+        `SELECT b.id                   AS "bidId",
+                b.bid_amount           AS "winningBid",
+                a.id                   AS "auctionId",
+                a.title                AS "auctionTitle",
+                aw.id                  AS "artworkId",
+                aw.title               AS "artworkTitle",
+                b.shipped_at IS NOT NULL               AS shipped,
+                b.shipped_at           AS "shippedAt",
+                b.tracking_carrier     AS "trackingCarrier",
+                b.tracking_number      AS "trackingNumber",
+                b.delivered_at IS NOT NULL             AS delivered,
+                b.delivered_at         AS "deliveredAt",
+                b.fulfillment_notes    AS "fulfillmentNotes"
          FROM   bids b
-         JOIN   auctions a ON a.id = b.auction_id
+         JOIN   auctions a  ON a.id = b.auction_id
+         JOIN   artwork  aw ON aw.id = b.artwork_id
          WHERE  b.placed_by_user_id = $1
            AND  b.bid_status        = 'ACCEPTED'
            AND  a.deleted_at        IS NULL

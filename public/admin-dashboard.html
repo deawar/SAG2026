@@ -150,11 +150,21 @@
                     >
                         Payments
                     </button>
-                    <button 
-                        role="tab" 
-                        aria-selected="false" 
-                        aria-controls="reports-tab" 
-                        class="tab-button" 
+                    <button
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="fulfillment-tab"
+                        class="tab-button"
+                        id="tab-fulfillment"
+                        tabindex="-1"
+                    >
+                        Fulfillment
+                    </button>
+                    <button
+                        role="tab"
+                        aria-selected="false"
+                        aria-controls="reports-tab"
+                        class="tab-button"
                         id="tab-reports"
                         tabindex="-1"
                     >
@@ -359,6 +369,26 @@
                 </section>
 
                 <!-- Reports Tab -->
+                <!-- Fulfillment Tab -->
+                <section role="tabpanel" id="fulfillment-tab" aria-labelledby="tab-fulfillment" class="tab-content" style="display:none;">
+                    <h2>Fulfillment</h2>
+                    <p class="section-help">Mark won artwork as shipped and record tracking information.</p>
+
+                    <div class="section-box">
+                        <div class="filter-row" style="margin-bottom:12px;">
+                            <label for="fulfillment-status-filter">Show:</label>
+                            <select id="fulfillment-status-filter" class="form-control" style="width:auto;display:inline-block;margin-left:8px;">
+                                <option value="unshipped">Unshipped wins</option>
+                                <option value="all">All wins</option>
+                            </select>
+                            <button class="btn btn-secondary btn-sm" id="fulfillment-refresh-btn" style="margin-left:8px;">Refresh</button>
+                        </div>
+                        <div id="fulfillment-list">
+                            <p class="loading-message">Select the Fulfillment tab to load wins.</p>
+                        </div>
+                    </div>
+                </section>
+
                 <section role="tabpanel" id="reports-tab" aria-labelledby="tab-reports" class="tab-content" style="display:none;">
                     <h2>Reports</h2>
 
@@ -434,5 +464,148 @@
     <script src="/js/auth-manager.js"></script>
     <script src="/js/ui-components.js"></script>
     <script src="/js/admin-dashboard.js"></script>
+    <script>
+      // -----------------------------------------------------------------------
+      // Fulfillment tab — loads on first click, refreshes on demand
+      // -----------------------------------------------------------------------
+      (function () {
+        let _loaded = false;
+
+        function escHtml(str) {
+          if (!str) return '';
+          return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+        }
+
+        async function loadFulfillment() {
+          const list    = document.getElementById('fulfillment-list');
+          const filter  = document.getElementById('fulfillment-status-filter');
+          const status  = filter ? filter.value : 'unshipped';
+          if (!list) return;
+
+          list.innerHTML = '<p class="loading-message">Loading...</p>';
+
+          try {
+            const token = localStorage.getItem('auth_token');
+            const res   = await fetch(`/api/admin/wins?status=${status}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            const data  = await res.json();
+
+            if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load wins');
+
+            if (!data.wins || data.wins.length === 0) {
+              list.innerHTML = '<p class="empty-state-small">No wins found.</p>';
+              return;
+            }
+
+            list.innerHTML = '';
+            const table = document.createElement('table');
+            table.className = 'admin-table';
+            table.innerHTML = `
+              <thead>
+                <tr>
+                  <th>Winner</th>
+                  <th>Artwork</th>
+                  <th>Auction</th>
+                  <th>Winning Bid</th>
+                  <th>Status</th>
+                  <th>Carrier</th>
+                  <th>Tracking #</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="fulfillment-tbody"></tbody>
+            `;
+            list.appendChild(table);
+            const tbody = document.getElementById('fulfillment-tbody');
+
+            data.wins.forEach(win => {
+              const isShipped   = !!win.shippedAt;
+              const isDelivered = !!win.deliveredAt;
+              const statusBadge = isDelivered ? '✅ Delivered' : isShipped ? '📦 Shipped' : '⏳ Unshipped';
+              const rowId       = `row-${win.bidId}`;
+
+              const tr = document.createElement('tr');
+              tr.id = rowId;
+              tr.innerHTML = `
+                <td>${escHtml(win.winnerFirstName)} ${escHtml(win.winnerLastName)}<br>
+                    <small>${escHtml(win.winnerEmail)}</small></td>
+                <td>${escHtml(win.artworkTitle)}</td>
+                <td>${escHtml(win.auctionTitle)}</td>
+                <td>$${(parseFloat(win.winningBid || 0) / 100).toFixed(2)}</td>
+                <td>${statusBadge}</td>
+                <td><input type="text" class="form-control form-control-sm carrier-input"
+                           value="${escHtml(win.trackingCarrier || '')}"
+                           placeholder="e.g. UPS" style="min-width:80px;"></td>
+                <td><input type="text" class="form-control form-control-sm tracking-input"
+                           value="${escHtml(win.trackingNumber || '')}"
+                           placeholder="Tracking number" style="min-width:120px;"></td>
+                <td class="fulfillment-actions">
+                  ${!isShipped ? `<button class="btn btn-primary btn-sm btn-mark-shipped" data-bid-id="${escHtml(win.bidId)}">Mark Shipped</button>` : ''}
+                  ${isShipped && !isDelivered ? `<button class="btn btn-secondary btn-sm btn-mark-delivered" data-bid-id="${escHtml(win.bidId)}">Mark Delivered</button>` : ''}
+                </td>
+              `;
+              tbody.appendChild(tr);
+            });
+
+            // Wire up buttons
+            tbody.querySelectorAll('.btn-mark-shipped').forEach(btn => {
+              btn.addEventListener('click', () => updateFulfillment(btn.dataset.bidId, { shipped: true }, btn));
+            });
+            tbody.querySelectorAll('.btn-mark-delivered').forEach(btn => {
+              btn.addEventListener('click', () => updateFulfillment(btn.dataset.bidId, { delivered: true }, btn));
+            });
+
+          } catch (err) {
+            list.innerHTML = `<p class="error-message">Failed to load: ${escHtml(err.message)}</p>`;
+          }
+        }
+
+        async function updateFulfillment(bidId, extra, btn) {
+          const row      = document.getElementById(`row-${bidId}`);
+          const carrier  = row ? row.querySelector('.carrier-input')?.value  : undefined;
+          const tracking = row ? row.querySelector('.tracking-input')?.value : undefined;
+
+          btn.disabled = true;
+          try {
+            const token = localStorage.getItem('auth_token');
+            const body  = { ...extra };
+            if (carrier  !== undefined) body.trackingCarrier = carrier;
+            if (tracking !== undefined) body.trackingNumber  = tracking;
+
+            const res  = await fetch(`/api/admin/wins/${bidId}/fulfillment`, {
+              method:  'PATCH',
+              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body:    JSON.stringify(body)
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.message || 'Update failed');
+            _loaded = false;
+            loadFulfillment();
+          } catch (err) {
+            alert('Error: ' + err.message);
+            btn.disabled = false;
+          }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+          const tab     = document.getElementById('tab-fulfillment');
+          const refresh = document.getElementById('fulfillment-refresh-btn');
+          const filter  = document.getElementById('fulfillment-status-filter');
+
+          if (tab) {
+            tab.addEventListener('click', () => {
+              if (!_loaded) { _loaded = true; loadFulfillment(); }
+            });
+          }
+          if (refresh) {
+            refresh.addEventListener('click', () => { _loaded = false; loadFulfillment(); });
+          }
+          if (filter) {
+            filter.addEventListener('change', () => { _loaded = false; loadFulfillment(); });
+          }
+        });
+      })();
+    </script>
 </body>
 </html>
