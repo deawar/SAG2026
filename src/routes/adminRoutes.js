@@ -147,6 +147,19 @@ router.get(
 // ============================================================================
 
 /**
+ * GET /api/admin/auctions/search?q=
+ * Search auctions by title or school name
+ * SITE_ADMIN: all schools; SCHOOL_ADMIN: own school only
+ * Must be declared before /auctions/:auctionId to avoid param capture
+ */
+router.get(
+  '/auctions/search',
+  verifyToken,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  adminController.searchAuctions
+);
+
+/**
  * GET /api/admin/auctions/:auctionId
  * Get auction details
  */
