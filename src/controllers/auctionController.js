@@ -94,6 +94,82 @@ class AuctionController {
   }
 
   /**
+   * GET /api/auctions/:auctionId/public
+   * Unauthenticated read-only preview.
+   * Returns title, description, status, times, schoolName, and a safe artwork list
+   * (image, title, medium, dimensions, startingPrice, currentHighBid only).
+   * Never exposes bidder identities or bid history.
+   */
+  async getAuctionPublic(req, res) {
+    try {
+      const { auctionId } = req.params;
+
+      const auctionResult = await pool.query(
+        `SELECT a.id, a.title, a.description, a.auction_status,
+                a.starts_at, a.ends_at, a.school_id,
+                s.name AS school_name
+         FROM   auctions a
+         LEFT JOIN schools s ON s.id = a.school_id
+         WHERE  a.id = $1 AND a.deleted_at IS NULL`,
+        [auctionId]
+      );
+
+      if (auctionResult.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Auction not found' });
+      }
+
+      const a = auctionResult.rows[0];
+      const now = new Date();
+      const endTime = new Date(a.ends_at);
+
+      const artworkResult = await pool.query(
+        `SELECT aw.id, aw.title, aw.image_url, aw.medium,
+                aw.dimensions_width_cm, aw.dimensions_height_cm,
+                aw.starting_bid_amount,
+                (SELECT MAX(bid_amount) FROM bids
+                 WHERE artwork_id = aw.id AND bid_status = 'ACTIVE') AS current_high_bid
+         FROM   artwork aw
+         WHERE  aw.auction_id = $1
+           AND  aw.deleted_at IS NULL
+           AND  aw.artwork_status = 'APPROVED'
+         ORDER  BY aw.created_at ASC`,
+        [auctionId]
+      );
+
+      return res.json({
+        success: true,
+        auction: {
+          title:        a.title,
+          description:  a.description,
+          status:       a.auction_status,
+          startTime:    a.starts_at,
+          endTime:      a.ends_at,
+          timeRemaining: Math.max(0, endTime - now),
+          isActive:     a.auction_status === 'LIVE' && endTime > now,
+          schoolId:     a.school_id,
+          schoolName:   a.school_name || null,
+          totalBids:    0
+        },
+        artworks: artworkResult.rows.map(aw => ({
+          id:            aw.id,
+          title:         aw.title,
+          imageUrl:      aw.image_url,
+          medium:        aw.medium || null,
+          dimensions:    (aw.dimensions_width_cm && aw.dimensions_height_cm)
+            ? `${aw.dimensions_width_cm} × ${aw.dimensions_height_cm} cm`
+            : null,
+          startingPrice: aw.starting_bid_amount,
+          currentBid:    aw.current_high_bid || null,
+          bidCount:      null
+        }))
+      });
+    } catch (error) {
+      console.error('Error retrieving public auction:', error);
+      return res.status(500).json({ success: false, message: 'Failed to load auction' });
+    }
+  }
+
+  /**
    * GET /api/auctions/:auctionId
    * Get auction details
    * VISIBILITY: Filtered by user role (SITE_ADMIN > SCHOOL_ADMIN > TEACHER > STUDENT)

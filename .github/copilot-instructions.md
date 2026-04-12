@@ -102,7 +102,7 @@ Silent-Auction-Gallery/
 │   ├── routes/
 │   │   ├── index.js             # Aggregates all routes
 │   │   ├── auctionRoutes.js
-│   │   ├── bidRoutes.js
+│   │   ├── biddingRoutes.js
 │   │   ├── authRoutes.js
 │   │   └── [otherRoutes].js
 │   ├── middleware/

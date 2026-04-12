@@ -562,6 +562,180 @@ router.get(
 );
 
 // ============================================================================
+// Fulfillment Management
+// ============================================================================
+
+const { getSharedEmailProvider, notifyArtworkShipped } = require('../services/notificationService');
+
+/**
+ * GET /api/admin/wins
+ * List all unshipped (and recently shipped) wins, school-scoped for SCHOOL_ADMIN.
+ * Query params: ?status=unshipped|all  (default: unshipped)
+ */
+router.get(
+  '/wins',
+  verifyToken,
+  requireAdmin2fa,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  async (req, res) => {
+    try {
+      const { pool } = require('../models/index');
+      const adminRole     = req.user.role;
+      const adminSchoolId = req.user.schoolId;
+      const showAll       = req.query.status === 'all';
+
+      const schoolFilter = adminRole === 'SCHOOL_ADMIN'
+        ? `AND a.school_id = '${adminSchoolId}'`
+        : '';
+      const shippedFilter = showAll ? '' : 'AND b.shipped_at IS NULL';
+
+      const result = await pool.query(
+        `SELECT b.id              AS "bidId",
+                b.bid_amount      AS "winningBid",
+                b.shipped_at      AS "shippedAt",
+                b.tracking_carrier AS "trackingCarrier",
+                b.tracking_number  AS "trackingNumber",
+                b.delivered_at    AS "deliveredAt",
+                b.fulfillment_notes AS "fulfillmentNotes",
+                aw.id             AS "artworkId",
+                aw.title          AS "artworkTitle",
+                a.id              AS "auctionId",
+                a.title           AS "auctionTitle",
+                a.school_id       AS "schoolId",
+                u.id              AS "winnerId",
+                u.first_name      AS "winnerFirstName",
+                u.last_name       AS "winnerLastName",
+                u.email           AS "winnerEmail"
+         FROM   bids b
+         JOIN   auctions a  ON  a.id = b.auction_id
+         JOIN   artwork  aw ON aw.id = b.artwork_id
+         JOIN   users    u  ON  u.id = b.placed_by_user_id
+         WHERE  b.bid_status = 'ACCEPTED'
+           AND  a.deleted_at IS NULL
+           ${schoolFilter}
+           ${shippedFilter}
+         ORDER  BY b.placed_at DESC
+         LIMIT  200`
+      );
+
+      return res.json({ success: true, wins: result.rows });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+);
+
+/**
+ * PATCH /api/admin/wins/:id/fulfillment
+ * Mark a won bid as shipped, record tracking info, or confirm delivery.
+ * Body: { shipped?: bool, trackingCarrier?, trackingNumber?, delivered?: bool, notes? }
+ * RBAC: SITE_ADMIN (any win), SCHOOL_ADMIN (own school only).
+ */
+router.patch(
+  '/wins/:id/fulfillment',
+  verifyToken,
+  requireAdmin2fa,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { shipped, trackingCarrier, trackingNumber, delivered, notes } = req.body;
+      const adminRole     = req.user.role;
+      const adminSchoolId = req.user.schoolId;
+      const { pool } = require('../models/index');
+
+      // Fetch the bid with school + winner details for ownership check + notification
+      const bidResult = await pool.query(
+        `SELECT b.id, b.placed_by_user_id, b.bid_status, b.shipped_at,
+                a.school_id,
+                aw.title   AS artwork_title,
+                u.email    AS winner_email,
+                u.first_name AS winner_first_name
+         FROM   bids b
+         JOIN   auctions a  ON  a.id = b.auction_id
+         JOIN   artwork  aw ON aw.id = b.artwork_id
+         JOIN   users    u  ON  u.id = b.placed_by_user_id
+         WHERE  b.id = $1 AND b.bid_status = 'ACCEPTED'`,
+        [id]
+      );
+
+      if (bidResult.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Win not found' });
+      }
+
+      const bid = bidResult.rows[0];
+
+      // School scope enforcement for SCHOOL_ADMIN
+      if (adminRole === 'SCHOOL_ADMIN' && bid.school_id !== adminSchoolId) {
+        return res.status(403).json({ success: false, message: 'Access denied: not your school' });
+      }
+
+      // Build the SET clause dynamically — only update provided fields
+      const fields  = [];
+      const values  = [id]; // $1 = bid id
+      let   idx     = 2;
+
+      if (shipped === true && !bid.shipped_at) {
+        fields.push(`shipped_at = CURRENT_TIMESTAMP`);
+      } else if (shipped === false) {
+        fields.push(`shipped_at = NULL`);
+      }
+      if (trackingCarrier !== undefined) {
+        fields.push(`tracking_carrier = $${idx++}`);
+        values.push(trackingCarrier || null);
+      }
+      if (trackingNumber !== undefined) {
+        fields.push(`tracking_number = $${idx++}`);
+        values.push(trackingNumber || null);
+      }
+      if (delivered === true) {
+        fields.push(`delivered_at = CURRENT_TIMESTAMP`);
+      } else if (delivered === false) {
+        fields.push(`delivered_at = NULL`);
+      }
+      if (notes !== undefined) {
+        fields.push(`fulfillment_notes = $${idx++}`);
+        values.push(notes || null);
+      }
+
+      if (fields.length === 0) {
+        return res.status(400).json({ success: false, message: 'No fields to update' });
+      }
+
+      await pool.query(
+        `UPDATE bids SET ${fields.join(', ')} WHERE id = $1`,
+        values
+      );
+
+      // Audit log
+      await pool.query(
+        `INSERT INTO audit_logs (user_id, action_category, action_type, action_details)
+         VALUES ($1, 'ADMIN', 'FULFILLMENT_UPDATE', $2)`,
+        [req.user.id, JSON.stringify({ bidId: id, shipped, trackingCarrier, trackingNumber, delivered })]
+      ).catch(() => {});
+
+      // Notify winner when newly marked as shipped
+      if (shipped === true && !bid.shipped_at && bid.winner_email) {
+        setImmediate(() => {
+          notifyArtworkShipped(getSharedEmailProvider(), pool, {
+            userId: bid.placed_by_user_id,
+            email: bid.winner_email,
+            firstName: bid.winner_first_name,
+            artworkTitle: bid.artwork_title,
+            trackingCarrier: trackingCarrier || null,
+            trackingNumber: trackingNumber || null
+          }).catch(err => console.error('[notification] shipped failed:', err.message));
+        });
+      }
+
+      return res.json({ success: true, message: 'Fulfillment updated' });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+);
+
+// ============================================================================
 // Session Management (admin force-logout)
 // ============================================================================
 
