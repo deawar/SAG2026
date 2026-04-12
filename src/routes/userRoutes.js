@@ -198,6 +198,43 @@ module.exports = (db) => {
   });
 
   // ---------------------------------------------------------------------------
+  // GET /api/user/wins/:auctionId  — single win detail for checkout
+  // ---------------------------------------------------------------------------
+  router.get('/wins/:auctionId', async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      const { auctionId } = req.params;
+
+      const result = await db.query(
+        `SELECT b.id           AS "bidId",
+                b.bid_amount   AS "winningBid",
+                a.id           AS "auctionId",
+                a.title        AS "auctionTitle",
+                aw.title       AS "artworkTitle",
+                aw.id          AS "artworkId",
+                FALSE          AS shipped
+         FROM   bids b
+         JOIN   auctions a  ON a.id  = b.auction_id
+         LEFT JOIN artwork aw ON aw.auction_id = a.id AND aw.deleted_at IS NULL
+         WHERE  b.placed_by_user_id = $1
+           AND  b.bid_status        = 'ACCEPTED'
+           AND  a.id                = $2
+           AND  a.deleted_at        IS NULL
+         LIMIT 1`,
+        [userId, auctionId]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ success: false, message: 'Win not found' });
+      }
+
+      return res.json({ success: true, win: result.rows[0] });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ---------------------------------------------------------------------------
   // GET /api/user/wins  — accepted/winning bids
   // ---------------------------------------------------------------------------
   router.get('/wins', async (req, res, next) => {
