@@ -1091,30 +1091,32 @@ class AdminService {
       throw new Error('CROSS_SCHOOL_ACCESS_DENIED');
     }
 
-    // Get minor users (under 13)
-    const minorsResult = await pool.query(
-      `SELECT COUNT(*) as count FROM users 
-       WHERE EXTRACT(YEAR FROM age(date_of_birth)) < 13
-       AND created_at BETWEEN $1 AND $2${
-  schoolId ? ' AND school_id = $3' : ''}`,
-      schoolId ? [startDate, endDate, schoolId] : [startDate, endDate]
+    // Query consent counts directly from the users table
+    const schoolFilter = schoolId ? ' AND school_id = $3' : '';
+    const params = schoolId ? [startDate, endDate, schoolId] : [startDate, endDate];
+
+    const countsResult = await pool.query(
+      `SELECT
+         COUNT(*) FILTER (WHERE requires_parental_consent = TRUE)                               AS total_under13,
+         COUNT(*) FILTER (WHERE requires_parental_consent = TRUE AND parental_consent_status = 'pending')  AS pending,
+         COUNT(*) FILTER (WHERE requires_parental_consent = TRUE AND parental_consent_status = 'granted')  AS granted,
+         COUNT(*) FILTER (WHERE requires_parental_consent = TRUE AND parental_consent_status = 'denied')   AS denied
+       FROM users
+       WHERE created_at BETWEEN $1 AND $2
+         AND deleted_at IS NULL${schoolFilter}`,
+      params
     );
 
-    // Get parental consent records
-    const consentsResult = await pool.query(
-      `SELECT COUNT(*) as count FROM coppa_verifications 
-       WHERE created_at BETWEEN $1 AND $2${
-  schoolId ? ' AND user_id IN (SELECT id FROM users WHERE school_id = $3)' : ''}`,
-      schoolId ? [startDate, endDate, schoolId] : [startDate, endDate]
-    );
-
+    const counts = countsResult.rows[0];
     const report = {
       reportType: 'COPPA',
       startDate,
       endDate,
       summary: {
-        minorUsersIdentified: parseInt(minorsResult.rows[0].count),
-        parentalConsentsObtained: parseInt(consentsResult.rows[0].count)
+        totalUnder13: parseInt(counts.total_under13),
+        pending: parseInt(counts.pending),
+        granted: parseInt(counts.granted),
+        denied: parseInt(counts.denied)
       }
     };
 
