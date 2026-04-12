@@ -322,6 +322,33 @@ module.exports = (db) => {
   });
 
   /**
+ * POST /api/auth/2fa/disable
+ * Disable 2FA for the authenticated user
+ * Auth: Required
+ *
+ * Body: none (auth token is sufficient proof of account control)
+ * Response: 200 { ok: true }
+ */
+  router.post('/2fa/disable', authMiddleware.verifyToken, async (req, res, next) => {
+    try {
+      const userId = req.user.id;
+
+      await db.query(
+        `UPDATE users
+         SET two_fa_enabled = FALSE, two_fa_secret = NULL, backup_codes = NULL, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1`,
+        [userId]
+      );
+
+      await authenticationService._recordAuditLog(userId, 'SECURITY', '2FA_DISABLED', {});
+
+      return res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
  * POST /api/auth/password-reset
  * Verify 6-digit reset code and set a new password (step 2 of code-based reset)
  * Auth: Not required | Rate-limited by authLimiter (applied at app level)
