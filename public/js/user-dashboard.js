@@ -368,18 +368,34 @@ class UserDashboard {
     wins.forEach(win => {
       const item = document.createElement('li');
       item.className = 'win-item';
-      const payAction = win.shipped
-        ? `<div class="win-status">📦 Shipped</div>`
-        : `<div class="win-status">
+
+      let statusHtml;
+      if (win.delivered) {
+        statusHtml = `<div class="win-status win-delivered">✅ Delivered</div>`;
+      } else if (win.shipped) {
+        const tracking = (win.trackingCarrier || win.trackingNumber)
+          ? `<div class="win-tracking">
+               ${win.trackingCarrier ? `<span class="tracking-carrier">${this.escapeHtml(win.trackingCarrier)}</span>` : ''}
+               ${win.trackingNumber  ? `<span class="tracking-number">${this.escapeHtml(win.trackingNumber)}</span>`  : ''}
+             </div>`
+          : '';
+        statusHtml = `<div class="win-status win-shipped">📦 Shipped${tracking}</div>`;
+      } else {
+        statusHtml = `<div class="win-status win-awaiting">
+             <span class="awaiting-label">Awaiting shipment</span>
              <a href="/checkout.html?auctionId=${encodeURIComponent(win.auctionId)}"
                 class="btn btn-primary btn-sm">Pay now</a>
            </div>`;
+      }
+
+      const artworkTitle = win.artworkTitle || win.auctionTitle;
       item.innerHTML = `
                 <div class="win-info">
                     <h4><a href="/auction-detail.html?id=${win.auctionId}">${this.escapeHtml(win.auctionTitle)}</a></h4>
+                    ${artworkTitle !== win.auctionTitle ? `<p class="win-artwork">${this.escapeHtml(artworkTitle)}</p>` : ''}
                     <p class="win-amount">Winning bid: <strong>${UIComponents.formatCurrency(win.winningBid)}</strong></p>
                 </div>
-                ${payAction}
+                ${statusHtml}
             `;
       list.appendChild(item);
     });

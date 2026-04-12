@@ -80,7 +80,8 @@ class EmailTemplateService {
       'security-alert': EmailTemplateService.securityAlertTemplate,
       'auction-approved': EmailTemplateService.auctionApprovedTemplate,
       'student-registration-invite': EmailTemplateService.studentRegistrationInviteTemplate,
-      'artwork-status-changed': EmailTemplateService.artworkStatusChangedTemplate
+      'artwork-status-changed': EmailTemplateService.artworkStatusChangedTemplate,
+      'artwork-shipped': EmailTemplateService.artworkShippedTemplate
     };
 
     const templateFn = templates[templateId];
@@ -276,6 +277,28 @@ class EmailTemplateService {
       text: approved
         ? `Your artwork "${artworkTitle}" has been approved for the auction. View dashboard: ${dashboardLink}`
         : `Your artwork "${artworkTitle}" was not approved.${reason ? ` Reason: ${reason}` : ''} Contact your teacher for details.`
+    };
+  }
+
+  static artworkShippedTemplate(data) {
+    const { firstName, artworkTitle, trackingCarrier, trackingNumber } = data;
+    const dashboardLink = `${process.env.APP_URL || 'https://ssccbogart.com'}/user-dashboard.html`;
+    const trackingLine = trackingCarrier && trackingNumber
+      ? `<p><strong>Carrier:</strong> ${this.escapeHtml(trackingCarrier)}<br><strong>Tracking #:</strong> ${this.escapeHtml(trackingNumber)}</p>`
+      : '';
+    const trackingText = trackingCarrier && trackingNumber
+      ? ` Carrier: ${trackingCarrier}, Tracking: ${trackingNumber}.`
+      : '';
+    return {
+      subject: `📦 Your artwork "${artworkTitle}" has been shipped!`,
+      html: `
+        <h2>Your artwork is on its way, ${this.escapeHtml(firstName)}!</h2>
+        <p><strong>${this.escapeHtml(artworkTitle)}</strong> has been shipped.</p>
+        ${trackingLine}
+        <p><a href="${dashboardLink}" style="background-color:#17a2b8;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;">View My Dashboard</a></p>
+        <hr/><p style="font-size:0.85em;color:#888;">Silent Auction Gallery &mdash; <a href="${dashboardLink}">Manage notification preferences</a></p>
+      `,
+      text: `Your artwork "${artworkTitle}" has been shipped!${trackingText} View dashboard: ${dashboardLink}`
     };
   }
 
@@ -901,6 +924,24 @@ async function notifyArtworkStatusChanged(emailProvider, db, data) {
   await emailProvider.send(email, tmpl.subject, tmpl.html, tmpl.text);
 }
 
+/**
+ * Notify the winner that their artwork has been shipped.
+ * Non-blocking: caller should wrap in setImmediate.
+ *
+ * @param {object} emailProvider - EmailProvider instance
+ * @param {object} db - pg Pool for preference lookup
+ * @param {object} data - { userId, email, firstName, artworkTitle, trackingCarrier, trackingNumber }
+ */
+async function notifyArtworkShipped(emailProvider, db, data) {
+  const { userId, email, firstName, artworkTitle, trackingCarrier, trackingNumber } = data;
+  // Re-use email_winner preference: shipping is part of the win fulfilment flow
+  if (!await _checkEmailPref(db, userId, 'email_winner')) return;
+  const tmpl = EmailTemplateService.generateTemplate('artwork-shipped', {
+    firstName, artworkTitle, trackingCarrier, trackingNumber
+  });
+  await emailProvider.send(email, tmpl.subject, tmpl.html, tmpl.text);
+}
+
 // Lazy shared provider — instantiated on first use so NODE_ENV is evaluated at runtime
 let _sharedEmailProvider = null;
 function getSharedEmailProvider() {
@@ -920,5 +961,6 @@ module.exports = {
   getSharedEmailProvider,
   notifyOutbid,
   notifyAuctionWon,
-  notifyArtworkStatusChanged
+  notifyArtworkStatusChanged,
+  notifyArtworkShipped
 };

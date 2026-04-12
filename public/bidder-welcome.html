@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Support student artists. Bid on artwork from schools near you at Silent Auction Gallery.">
+    <title>Bid on Student Art - Silent Auction Gallery</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,500;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap">
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+
+    <style>
+        /* ── Page-specific overrides ─────────────────────────────────── */
+        .bidder-hero {
+            background: linear-gradient(135deg, var(--color-primary, #2c3e50) 0%, var(--color-secondary, #3498db) 100%);
+            color: #fff;
+            padding: 5rem 1.5rem 4rem;
+            text-align: center;
+        }
+        .bidder-hero h1 {
+            font-family: 'Cormorant Garant', serif;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            line-height: 1.15;
+            margin-bottom: 1rem;
+            color: #fff;
+        }
+        .bidder-hero p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 560px;
+            margin: 0 auto 2.5rem;
+        }
+        .bidder-hero .btn-hero {
+            display: inline-block;
+            padding: 1rem 2.5rem;
+            background: #fff;
+            color: var(--color-primary, #2c3e50);
+            font-weight: 600;
+            font-size: 1.1rem;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .bidder-hero .btn-hero:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+        }
+
+        .steps-section {
+            padding: 4rem 1.5rem;
+            background: var(--color-surface, #fff);
+        }
+        .steps-section h2 {
+            text-align: center;
+            font-family: 'Cormorant Garant', serif;
+            font-size: 2rem;
+            margin-bottom: 3rem;
+        }
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .step-card {
+            text-align: center;
+            padding: 2rem 1.5rem;
+            border: 1px solid var(--color-border, #e0e0e0);
+            border-radius: 8px;
+        }
+        .step-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .step-number {
+            display: inline-block;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background: var(--color-primary, #2c3e50);
+            color: #fff;
+            font-weight: 700;
+            line-height: 2rem;
+            text-align: center;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+        }
+        .step-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        .step-card p {
+            font-size: 0.95rem;
+            color: var(--color-text-muted, #666);
+            line-height: 1.5;
+        }
+
+        .info-section {
+            background: var(--color-surface-alt, #f7f7f7);
+            padding: 4rem 1.5rem;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        @media (max-width: 600px) {
+            .info-grid { grid-template-columns: 1fr; }
+        }
+        .info-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 1.75rem;
+            border: 1px solid var(--color-border, #e0e0e0);
+        }
+        .info-card h3 {
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-primary, #2c3e50);
+        }
+        .info-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .info-card ul li {
+            padding: 0.35rem 0;
+            font-size: 0.95rem;
+            color: var(--color-text, #333);
+        }
+        .info-card ul li::before {
+            margin-right: 0.5rem;
+        }
+        .info-card.can ul li::before { content: "✓"; color: #27ae60; }
+        .info-card.cannot ul li::before { content: "✗"; color: #e74c3c; }
+
+        .cta-section {
+            padding: 4rem 1.5rem;
+            text-align: center;
+        }
+        .cta-section h2 {
+            font-family: 'Cormorant Garant', serif;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        .cta-section p {
+            color: var(--color-text-muted, #666);
+            margin-bottom: 2rem;
+            max-width: 480px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .cta-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <header class="navbar" role="banner">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="logo" aria-label="Silent Auction Gallery Home">
+                    <img src="/images/logo/SAGLive.png" alt="Silent Auction Gallery Logo" class="logo-img">
+                    <span class="logo-text">SAG</span>
+                </a>
+            </div>
+            <nav class="navbar-nav" role="navigation" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="/auctions.html" class="nav-link">Auctions</a></li>
+                    <li><a href="/" class="nav-link">Home</a></li>
+                    <li><a href="/bidder-welcome.html" class="nav-link active" aria-current="page">For Bidders</a></li>
+                </ul>
+            </nav>
+            <div class="navbar-auth">
+                <a href="/login.html" class="btn btn-secondary">Sign In</a>
+                <a href="/register.html?role=BIDDER" class="btn btn-primary">Get Started</a>
+            </div>
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </button>
+        </div>
+    </header>
+
+    <main id="main-content">
+
+        <!-- Hero -->
+        <section class="bidder-hero" aria-label="Welcome banner">
+            <h1>Support student artists.<br>Bid on art that matters.</h1>
+            <p>Browse auctions from schools you're connected to. Every bid directly funds arts education for students in your community.</p>
+            <a href="/register.html?role=BIDDER" class="btn-hero">Create a free bidder account</a>
+        </section>
+
+        <!-- 3-step explainer -->
+        <section class="steps-section" aria-label="How it works">
+            <h2>How it works</h2>
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <div class="step-icon" aria-hidden="true">🖼️</div>
+                    <h3>Browse</h3>
+                    <p>Explore curated auctions showcasing original artwork submitted by students at schools you support.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <div class="step-icon" aria-hidden="true">🏷️</div>
+                    <h3>Bid</h3>
+                    <p>Place competitive bids on the pieces you love. You'll be notified in real time if you're outbid.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <div class="step-icon" aria-hidden="true">📦</div>
+                    <h3>Pay &amp; Receive</h3>
+                    <p>Win an auction? Complete a secure checkout and we'll arrange delivery of your new artwork.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- What you can / cannot do -->
+        <section class="info-section" aria-label="Bidder capabilities">
+            <div class="info-grid">
+                <div class="info-card can">
+                    <h3>As a bidder you can</h3>
+                    <ul>
+                        <li>Browse all public auctions</li>
+                        <li>Place bids on student artwork</li>
+                        <li>Track your bid history</li>
+                        <li>Pay securely for won items</li>
+                        <li>Receive shipped artwork</li>
+                        <li>Add items to your watchlist</li>
+                    </ul>
+                </div>
+                <div class="info-card cannot">
+                    <h3>Bidder accounts cannot</h3>
+                    <ul>
+                        <li>Submit artwork for auction</li>
+                        <li>Manage school or auction settings</li>
+                        <li>View other bidders' identities</li>
+                        <li>Access admin dashboards</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bottom CTA -->
+        <section class="cta-section" aria-label="Sign up call to action">
+            <h2>Ready to start bidding?</h2>
+            <p>Registration is free and takes less than two minutes. You must be 18 or older to create a bidder account.</p>
+            <div class="cta-btns">
+                <a href="/register.html?role=BIDDER" class="btn btn-primary btn-large">Create bidder account</a>
+                <a href="/auctions.html" class="btn btn-secondary btn-large">Browse auctions first</a>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About SAG</h3>
+                    <p>Silent Auction Gallery supports education through art.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="/auctions.html">Auctions</a></li>
+                        <li><a href="/bidder-welcome.html">For Bidders</a></li>
+                        <li><a href="/">Home</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Legal</h3>
+                    <ul>
+                        <li><a href="/privacy.html">Privacy Policy</a></li>
+                        <li><a href="/terms.html">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/js/theme-manager.js"></script>
+    <script src="/js/accessibility.js"></script>
+    <script src="/js/ui-components.js"></script>
+</body>
+</html>
