@@ -38,6 +38,7 @@ class AdminController {
     this.deleteUser = this.deleteUser.bind(this);
     this.resetUserPassword = this.resetUserPassword.bind(this);
     this.getAuctionById = this.getAuctionById.bind(this);
+    this.searchAuctions = this.searchAuctions.bind(this);
     this.listAuctionsByStatus = this.listAuctionsByStatus.bind(this);
     this.approveAuction = this.approveAuction.bind(this);
     this.rejectAuction = this.rejectAuction.bind(this);
@@ -376,6 +377,27 @@ class AdminController {
    * GET /api/admin/auctions
    * List auctions by status
    */
+  /**
+   * GET /api/admin/auctions/search?q=
+   * Search auctions by title or school name
+   */
+  async searchAuctions(req, res) {
+    try {
+      const { q = '' } = req.query;
+      const adminId = req.user.id;
+
+      const auctions = await adminService.searchAuctions(q, adminId);
+
+      return res.status(200).json({
+        success: true,
+        auctions,
+        count: auctions.length
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
   async listAuctionsByStatus(req, res) {
     try {
       const { status } = req.query;

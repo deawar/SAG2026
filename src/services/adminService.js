@@ -533,6 +533,42 @@ class AdminService {
   }
 
   /**
+   * Search auctions by title or school name
+   * RBAC: SITE_ADMIN sees all; SCHOOL_ADMIN sees own school only
+   * @param {string} q - Search term (empty → return all within scope)
+   * @param {string} adminId - Requesting admin's user ID
+   */
+  async searchAuctions(q, adminId) {
+    const admin = await this.verifyAdminAccess(adminId);
+
+    const params = [];
+    let query = `
+      SELECT a.id, a.title, a.auction_status, a.school_id, a.starts_at, a.ends_at, a.created_at,
+             s.name  AS school_name,
+             pg.gateway_name AS gateway_name,
+             pg.gateway_type AS gateway_type
+      FROM auctions a
+      LEFT JOIN schools s           ON s.id  = a.school_id
+      LEFT JOIN payment_gateways pg ON pg.id = a.payment_gateway_id
+      WHERE a.deleted_at IS NULL`;
+
+    if (q && q.trim()) {
+      params.push(`%${q.trim()}%`);
+      query += ` AND (a.title ILIKE $${params.length} OR s.name ILIKE $${params.length})`;
+    }
+
+    if (admin.role === 'SCHOOL_ADMIN') {
+      params.push(admin.school_id);
+      query += ` AND a.school_id = $${params.length}`;
+    }
+
+    query += ' ORDER BY a.created_at DESC LIMIT 50';
+
+    const result = await pool.query(query, params);
+    return result.rows;
+  }
+
+  /**
    * Approve auction: PENDING_APPROVAL -> APPROVED
    */
   async approveAuction(auctionId, adminId) {
