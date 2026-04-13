@@ -688,7 +688,7 @@ class UserController {
    * Uses the same SMTP pattern as authenticationService._sendResetCodeEmail.
    */
   async _sendVerificationEmail(email, firstName, userId, rawToken) {
-    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.APP_URL || 'https://sag.live';
     const verifyUrl = `${appUrl}/verify-email.html?uid=${encodeURIComponent(userId)}&token=${encodeURIComponent(rawToken)}`;
 
     const smtpHost = process.env.SMTP_HOST;
@@ -723,7 +723,7 @@ class UserController {
    * Send parental consent request email. Suppressed in test mode.
    */
   async _sendParentConsentEmail(parentEmail, childFirstName, userId, rawToken) {
-    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.APP_URL || 'https://sag.live';
     const consentUrl = `${appUrl}/parental-consent.html?token=${encodeURIComponent(rawToken)}&uid=${encodeURIComponent(userId)}`;
 
     const smtpHost = process.env.SMTP_HOST;
