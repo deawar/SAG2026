@@ -88,7 +88,9 @@ class AuctionDetail {
       this.displayAuction();
 
       if (data.artworks && data.artworks.length > 0) {
+        this.artworks = data.artworks;
         this.displayArtworkPiece(data.artworks[0]);
+        this.renderArtworkGallery(data.artworks);
       }
 
       const historyContainer = document.getElementById('bid-history-container');
@@ -631,10 +633,53 @@ class AuctionDetail {
       if (!response.ok) {return;}
       const data = await response.json();
       if (data.artwork && data.artwork.length > 0) {
+        this.artworks = data.artwork;
         this.displayArtworkPiece(data.artwork[0]);
+        this.renderArtworkGallery(data.artwork);
       }
     } catch (err) {
       console.warn('Could not load auction artwork:', err);
+    }
+  }
+
+  /**
+     * Render a thumbnail strip so users can browse all pieces in the auction.
+     * Hidden when there is only one piece.
+     * @param {Array} artworks
+     */
+  renderArtworkGallery(artworks) {
+    const container = document.getElementById('artwork-thumbnails');
+    if (!container || artworks.length < 2) {return;}
+
+    container.innerHTML = artworks.map((piece, i) => `
+      <button
+        class="artwork-thumb${i === 0 ? ' artwork-thumb-active' : ''}"
+        data-index="${i}"
+        aria-label="${this.escapeHtml(piece.title || `Artwork ${i + 1}`)}"
+        title="${this.escapeHtml(piece.title || `Artwork ${i + 1}`)}"
+        type="button"
+      >
+        <img
+          src="${this.escapeHtml(piece.imageUrl || '/images/auction-items/placeholder.svg')}"
+          alt="${this.escapeHtml(piece.title || '')}"
+          onerror="this.src='/images/auction-items/placeholder.svg'"
+        >
+      </button>
+    `).join('');
+
+    container.querySelectorAll('.artwork-thumb').forEach((btn, i) => {
+      btn.addEventListener('click', () => {
+        container.querySelectorAll('.artwork-thumb').forEach(b => b.classList.remove('artwork-thumb-active'));
+        btn.classList.add('artwork-thumb-active');
+        this.displayArtworkPiece(artworks[i]);
+      });
+    });
+
+    // Show piece count label
+    const countEl = document.getElementById('artwork-piece-count');
+    if (countEl) {
+      countEl.textContent = `${artworks.length} pieces`;
+      countEl.hidden = false;
     }
   }
 
