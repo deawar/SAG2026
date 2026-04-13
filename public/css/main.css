@@ -1014,6 +1014,52 @@ textarea.form-control {
     flex: 1;
 }
 
+/* ── Auction detail: artwork thumbnail strip ─────────────────────────────── */
+.artwork-thumbnails {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.artwork-thumb {
+    width: 68px;
+    height: 68px;
+    padding: 0;
+    border: 2px solid var(--color-border, #ddd);
+    border-radius: var(--radius-md, 6px);
+    overflow: hidden;
+    cursor: pointer;
+    background: #f4f4f4;
+    flex-shrink: 0;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.artwork-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.artwork-thumb:hover,
+.artwork-thumb:focus-visible {
+    border-color: var(--color-primary);
+    outline: none;
+}
+
+.artwork-thumb-active {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.artwork-piece-count {
+    font-size: var(--font-size-sm, 0.875rem);
+    color: var(--color-text-muted, #888);
+    margin-top: 0.25rem;
+    margin-bottom: 0;
+}
+
 .detail-item {
     display: flex;
     justify-content: space-between;
