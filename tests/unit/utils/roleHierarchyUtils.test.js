@@ -160,11 +160,16 @@ describe('Role Hierarchy Utilities', () => {
       expect(roleHierarchyUtils.canViewArtwork(schoolAdmin, draftArtwork)).toBe(true);
     });
 
-    test('TEACHER can view own submissions + approved artwork', () => {
+    test('TEACHER can view all artwork in own school', () => {
       const teacherOwnArtwork = { ...draftArtwork, submitted_by: '3' };
       expect(roleHierarchyUtils.canViewArtwork(teacher, teacherOwnArtwork)).toBe(true);
       expect(roleHierarchyUtils.canViewArtwork(teacher, approvedArtwork)).toBe(true);
-      expect(roleHierarchyUtils.canViewArtwork(teacher, draftArtwork)).toBe(false);
+      // Teachers can now see all artwork in their school (not just own + approved)
+      // so they can manage all pieces within an auction
+      expect(roleHierarchyUtils.canViewArtwork(teacher, draftArtwork)).toBe(true);
+      // But cannot see artwork from a different school
+      const otherSchoolArtwork = { ...draftArtwork, school_id: 'school-2' };
+      expect(roleHierarchyUtils.canViewArtwork(teacher, otherSchoolArtwork)).toBe(false);
     });
 
     test('STUDENT can view own submissions + approved artwork', () => {

@@ -152,6 +152,7 @@ class AuctionController {
         },
         artworks: artworkResult.rows.map(aw => ({
           id:            aw.id,
+          artworkId:     aw.id,  // consistent with authenticated endpoint
           title:         aw.title,
           imageUrl:      aw.image_url,
           medium:        aw.medium || null,
@@ -554,7 +555,8 @@ class AuctionController {
         success: true,
         count: sanitizedArtwork.length,
         artwork: sanitizedArtwork.map(piece => ({
-          artworkId: piece.id,
+          id: piece.id,         // used by submitBid (this.currentPiece?.id)
+          artworkId: piece.id,  // kept for any callers using the old key
           title: piece.title,
           description: piece.description,
           imageUrl: piece.image_url,

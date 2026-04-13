@@ -90,8 +90,8 @@ function canViewAuction(user, auction) {
       return sameSchool && ['APPROVED', 'LIVE'].includes(auctionStatus);
 
     case 'BIDDER':
-      // Can see APPROVED and LIVE auctions from own school
-      return sameSchool && ['APPROVED', 'LIVE'].includes(auctionStatus);
+      // BIDDERs are external users with no school affiliation — can view any APPROVED or LIVE auction
+      return ['APPROVED', 'LIVE'].includes(auctionStatus);
 
     default:
       return false;
@@ -167,16 +167,16 @@ function canViewArtwork(user, artwork) {
       return sameSchool;
 
     case 'TEACHER':
-      // Can see own submissions + approved artwork in school
-      return sameSchool && (ownSubmission || artworkStatus === 'APPROVED');
+      // Can see all artwork in own school (needed to manage auction pieces)
+      return sameSchool;
 
     case 'STUDENT':
       // Can see own draft submissions + approved artwork only
       return sameSchool && (ownSubmission || artworkStatus === 'APPROVED');
 
     case 'BIDDER':
-      // Can see approved artwork only
-      return sameSchool && artworkStatus === 'APPROVED';
+      // BIDDERs are external users with no school affiliation — can see any APPROVED artwork
+      return artworkStatus === 'APPROVED';
 
     default:
       return false;
