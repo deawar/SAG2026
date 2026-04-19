@@ -284,7 +284,7 @@ class BidController {
       const endTime = new Date(artwork.ends_at);
 
       // Check if auction is active
-      if (artwork.auction_status !== 'LIVE' || endTime <= now) {
+      if (!['LIVE', 'APPROVED'].includes(artwork.auction_status) || endTime <= now) {
         return res.status(200).json({
           success: false,
           valid: false,
