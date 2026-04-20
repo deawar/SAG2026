@@ -484,10 +484,11 @@ class AdminDashboard {
         'PENDING_APPROVAL': 'warning', 'ENDED': 'error', 'CANCELLED': 'error'
       }[status] || 'default';
 
-      const canApprove = ['DRAFT', 'PENDING_APPROVAL'].includes(status);
-      const canReject  = ['DRAFT', 'PENDING_APPROVAL'].includes(status);
-      const canCancel  = ['APPROVED', 'LIVE'].includes(status);
-      const canDelete  = ['DRAFT', 'CANCELLED', 'ENDED'].includes(status);
+      const canApprove  = ['DRAFT', 'PENDING_APPROVAL'].includes(status);
+      const canActivate = status === 'APPROVED';
+      const canReject   = ['DRAFT', 'PENDING_APPROVAL'].includes(status);
+      const canCancel   = ['APPROVED', 'LIVE'].includes(status);
+      const canDelete   = ['DRAFT', 'CANCELLED', 'ENDED'].includes(status);
 
       const schoolName  = this.escapeHtml(auction.school_name  || auction.school_id || '—');
       const gatewayName = this.escapeHtml(auction.gateway_name || auction.gateway_type || '—');
@@ -501,9 +502,10 @@ class AdminDashboard {
                 <td>-</td>
                 <td>${endsAt}</td>
                 <td style="white-space:nowrap;">
-                    ${canApprove ? `<button class="btn btn-sm btn-success" data-approve-auction="${auction.id}">Approve</button>` : ''}
-                    ${canReject  ? `<button class="btn btn-sm btn-warning" data-reject-auction="${auction.id}">Reject</button>`   : ''}
-                    ${canCancel  ? `<button class="btn btn-sm btn-warning" data-cancel-auction="${auction.id}">Cancel</button>`   : ''}
+                    ${canApprove  ? `<button class="btn btn-sm btn-success" data-approve-auction="${auction.id}">Approve</button>`  : ''}
+                    ${canActivate ? `<button class="btn btn-sm btn-success" data-activate-auction="${auction.id}">Go Live</button>` : ''}
+                    ${canReject   ? `<button class="btn btn-sm btn-warning" data-reject-auction="${auction.id}">Reject</button>`    : ''}
+                    ${canCancel   ? `<button class="btn btn-sm btn-warning" data-cancel-auction="${auction.id}">Cancel</button>`    : ''}
                     <button class="btn btn-sm btn-primary" data-edit-auction="${auction.id}">Edit</button>
                     ${canDelete  ? `<button class="btn btn-sm btn-danger"  data-delete-auction="${auction.id}">Delete</button>`   : ''}
                 </td>
@@ -512,6 +514,10 @@ class AdminDashboard {
 
       row.querySelector('[data-approve-auction]')?.addEventListener('click', () => {
         this.approveAuction(auction.id);
+      });
+
+      row.querySelector('[data-activate-auction]')?.addEventListener('click', () => {
+        this.activateAuction(auction.id);
       });
 
       row.querySelector('[data-reject-auction]')?.addEventListener('click', () => {
@@ -930,6 +936,27 @@ class AdminDashboard {
       this.loadAuctions();
     } catch (error) {
       console.error('Approve auction error:', error);
+    }
+  }
+
+  /**
+     * Activate an APPROVED auction to LIVE
+     */
+  async activateAuction(auctionId) {
+    try {
+      const response = await fetch(`/api/admin/auctions/${auctionId}/activate`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        UIComponents.showAlert(data.message || 'Failed to activate auction', 'error');
+        return;
+      }
+      UIComponents.createToast({ message: 'Auction is now LIVE', type: 'success' });
+      this.loadAuctions();
+    } catch (error) {
+      console.error('Activate auction error:', error);
     }
   }
 

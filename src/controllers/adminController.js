@@ -41,6 +41,7 @@ class AdminController {
     this.searchAuctions = this.searchAuctions.bind(this);
     this.listAuctionsByStatus = this.listAuctionsByStatus.bind(this);
     this.approveAuction = this.approveAuction.bind(this);
+    this.activateAuction = this.activateAuction.bind(this);
     this.rejectAuction = this.rejectAuction.bind(this);
     this.setAuctionFee = this.setAuctionFee.bind(this);
     this.extendAuction = this.extendAuction.bind(this);
@@ -443,6 +444,33 @@ class AdminController {
       }
 
       const result = await adminService.approveAuction(auctionId, adminId);
+
+      return res.status(200).json({
+        success: true,
+        result
+      });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * POST /api/admin/auctions/:auctionId/activate
+   * Activate auction (APPROVED -> LIVE)
+   */
+  async activateAuction(req, res) {
+    try {
+      const { auctionId } = req.params;
+      const adminId = req.user.id;
+
+      if (!auctionId) {
+        return res.status(400).json({
+          success: false,
+          error: 'AUCTION_ID_REQUIRED'
+        });
+      }
+
+      const result = await adminService.activateAuction(auctionId, adminId);
 
       return res.status(200).json({
         success: true,

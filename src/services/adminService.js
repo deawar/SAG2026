@@ -619,6 +619,49 @@ class AdminService {
   }
 
   /**
+   * Activate auction: APPROVED -> LIVE
+   */
+  async activateAuction(auctionId, adminId) {
+    const admin = await this.verifyAdminAccess(adminId);
+
+    const auctionResult = await pool.query(
+      'SELECT id, auction_status, school_id FROM auctions WHERE id = $1',
+      [auctionId]
+    );
+
+    if (auctionResult.rows.length === 0) {
+      throw new Error('AUCTION_NOT_FOUND');
+    }
+
+    const auction = auctionResult.rows[0];
+
+    if (admin.role === 'SCHOOL_ADMIN' && auction.school_id !== admin.school_id) {
+      throw new Error('CROSS_SCHOOL_ACCESS_DENIED');
+    }
+
+    if (auction.auction_status !== 'APPROVED') {
+      throw new Error('INVALID_STATE_TRANSITION');
+    }
+
+    await pool.query(
+      'UPDATE auctions SET auction_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      ['LIVE', auctionId]
+    );
+
+    await this.logAdminAction(
+      adminId,
+      'AUCTION_ACTIVATED',
+      'AUCTION',
+      auctionId,
+      { auction_status: 'APPROVED' },
+      { auction_status: 'LIVE' },
+      'Admin activated auction to LIVE'
+    );
+
+    return { success: true, auctionId, newStatus: 'LIVE' };
+  }
+
+  /**
    * Reject auction: PENDING_APPROVAL -> REJECTED
    */
   async rejectAuction(auctionId, reason, adminId) {
