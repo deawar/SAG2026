@@ -233,6 +233,18 @@ router.post(
 );
 
 /**
+ * POST /api/admin/auctions/:auctionId/activate
+ * Activate auction (APPROVED -> LIVE)
+ */
+router.post(
+  '/auctions/:auctionId/activate',
+  verifyToken,
+  requireAdmin2fa,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  adminController.activateAuction
+);
+
+/**
  * POST /api/admin/auctions/:auctionId/reject
  * Reject auction (PENDING_APPROVAL -> REJECTED)
  * Body: { reason: 'string' }
@@ -784,7 +796,7 @@ router.delete(
 );
 
 // ============================================================================
-// Route Summary (15 routes)
+// Route Summary (16 routes)
 // ============================================================================
 
 /*
@@ -795,10 +807,11 @@ router.delete(
   - DELETE /api/admin/users/:userId
   - GET    /api/admin/users/:userId/data
 
-  AUCTION MANAGEMENT (7 routes):
+  AUCTION MANAGEMENT (8 routes):
   - GET    /api/admin/auctions/:auctionId
   - GET    /api/admin/auctions
   - POST   /api/admin/auctions/:auctionId/approve
+  - POST   /api/admin/auctions/:auctionId/activate
   - POST   /api/admin/auctions/:auctionId/reject
   - PUT    /api/admin/auctions/:auctionId/fee
   - PUT    /api/admin/auctions/:auctionId/extend
