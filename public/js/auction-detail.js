@@ -212,14 +212,8 @@ class AuctionDetail {
       this.disableBidding();
     } else if (status === 'APPROVED') {
       statusBadge.className = 'auction-status-badge status-approved';
-      const now = Date.now();
-      const endTime = new Date(this.auction.endTime).getTime();
-      if (endTime > now) {
-        statusBadge.textContent = '✅ Approved — Live';
-      } else {
-        statusBadge.textContent = '✅ Approved — Ended';
-        this.disableBidding('This auction has ended. Thank you for participating!');
-      }
+      statusBadge.textContent = '✅ Approved — Coming Soon';
+      this.disableBidding();
     } else if (status === 'ENDED' || status === 'CLOSED' || status === 'CANCELLED') {
       statusBadge.className = 'auction-status-badge status-ended';
       statusBadge.textContent = status === 'CANCELLED' ? '❌ Cancelled' : '⛔ Auction Ended';
