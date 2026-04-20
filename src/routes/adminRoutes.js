@@ -222,7 +222,7 @@ router.delete(
 
 /**
  * POST /api/admin/auctions/:auctionId/approve
- * Approve auction (PENDING_APPROVAL -> APPROVED)
+ * Approve auction (DRAFT or PENDING_APPROVAL -> APPROVED)
  */
 router.post(
   '/auctions/:auctionId/approve',
