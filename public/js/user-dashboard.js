@@ -906,6 +906,7 @@ class UserDashboard {
     const startingBid   = document.getElementById('artwork-bid')?.value;
     const width         = document.getElementById('artwork-width')?.value;
     const height        = document.getElementById('artwork-height')?.value;
+    const depth         = document.getElementById('artwork-depth')?.value || null;
     const description   = document.getElementById('artwork-description')?.value?.trim();
     const imageFile     = document.getElementById('artwork-image')?.files[0];
 
@@ -929,7 +930,7 @@ class UserDashboard {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
-        body: JSON.stringify({ auctionId, title, artistName, medium, startingBid, width, height, description, imageData })
+        body: JSON.stringify({ auctionId, title, artistName, medium, startingBid, width, height, depth, description, imageData })
       });
 
       const data = await response.json();
