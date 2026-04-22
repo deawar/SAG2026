@@ -16,6 +16,9 @@ async function initializePage() {
   // Setup page-specific event listeners
   setupPageEventListeners();
 
+  // Load hero carousel
+  initCarousel();
+
   // Load featured auctions
   await loadFeaturedAuctions();
 
@@ -318,6 +321,121 @@ function escapeHtml(text) {
  * Handle 2FA verification
  * @param {Event} event
  */
+// =====================================================================
+// Hero Carousel
+// =====================================================================
+
+const CAROUSEL_INTERVAL = 4000;
+const CAROUSEL_FALLBACKS = [
+  { id: 'f1', title: 'Artwork Coming Soon',         artistName: 'Silent Auction Gallery', medium: null, imageUrl: '/images/placeholder-art.svg', auctionId: null },
+  { id: 'f2', title: 'Student Art Showcase',        artistName: 'Silent Auction Gallery', medium: null, imageUrl: '/images/hero-art.svg',         auctionId: null },
+  { id: 'f3', title: 'Supporting Education Through Art', artistName: 'Silent Auction Gallery', medium: null, imageUrl: '/images/placeholder.svg',  auctionId: null }
+];
+
+let _slides = [];
+let _slideIndex = 0;
+let _carouselTimer = null;
+let _infoVisible = false;
+
+async function initCarousel() {
+  let slides = [];
+  try {
+    const res = await fetch('/api/auctions/carousel');
+    const data = await res.json();
+    if (data.success && Array.isArray(data.artwork) && data.artwork.length > 0) {
+      slides = data.artwork;
+    }
+  } catch (err) { console.warn('Carousel fetch failed, using fallbacks:', err); }
+
+  _slides = slides.length > 0 ? slides : CAROUSEL_FALLBACKS;
+  _slideIndex = 0;
+
+  const track   = document.getElementById('carousel-track');
+  const dotsEl  = document.getElementById('carousel-dots');
+  const prevBtn = document.getElementById('carousel-prev');
+  const nextBtn = document.getElementById('carousel-next');
+  const infoEl  = document.getElementById('carousel-info');
+  if (!track) { return; }
+
+  const loggedIn = authManager.isAuthenticated();
+
+  // Build slides
+  track.innerHTML = _slides.map((s, i) => `
+    <div class="carousel-slide${i === 0 ? ' active' : ''}" data-index="${i}">
+      <img src="${escapeHtml(s.imageUrl)}" alt="${escapeHtml(s.title || 'Artwork')}" class="carousel-img" loading="${i === 0 ? 'eager' : 'lazy'}">
+    </div>
+  `).join('');
+
+  // Build dots
+  if (dotsEl) {
+    dotsEl.innerHTML = _slides.map((_, i) =>
+      `<button class="carousel-dot${i === 0 ? ' active' : ''}" data-dot="${i}" aria-label="Slide ${i + 1}"></button>`
+    ).join('');
+    dotsEl.querySelectorAll('.carousel-dot').forEach(dot =>
+      dot.addEventListener('click', () => { _carouselGoTo(Number.parseInt(dot.dataset.dot, 10)); _resetTimer(); })
+    );
+  }
+
+  // Prev arrow — logged-in only
+  if (prevBtn) {
+    prevBtn.style.display = loggedIn ? '' : 'none';
+    if (loggedIn) {
+      prevBtn.addEventListener('click', () => { _carouselStep(-1); _resetTimer(); });
+    }
+  }
+
+  // Next arrow — always visible
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => { _carouselStep(1); _resetTimer(); });
+  }
+
+  // Artist info on click — logged-in only
+  if (loggedIn && infoEl) {
+    track.addEventListener('click', () => {
+      const s = _slides[_slideIndex];
+      if (!s) { return; }
+      const meta = [s.artistName, s.medium].filter(Boolean).join(' · ');
+      infoEl.innerHTML = `
+        <div class="carousel-info-title">${escapeHtml(s.title || 'Untitled')}</div>
+        <div class="carousel-info-meta">${escapeHtml(meta)}</div>
+      `;
+      _infoVisible = !_infoVisible;
+      infoEl.classList.toggle('visible', _infoVisible);
+    });
+  }
+
+  // Pause on hover
+  const container = document.getElementById('hero-carousel');
+  if (container) {
+    container.addEventListener('mouseenter', () => { clearInterval(_carouselTimer); _carouselTimer = null; });
+    container.addEventListener('mouseleave', _startTimer);
+  }
+
+  _startTimer();
+}
+
+function _carouselGoTo(index) {
+  const slideEls = document.querySelectorAll('.carousel-slide');
+  const dotEls   = document.querySelectorAll('.carousel-dot');
+  const infoEl   = document.getElementById('carousel-info');
+
+  slideEls[_slideIndex]?.classList.remove('active');
+  dotEls[_slideIndex]?.classList.remove('active');
+
+  _slideIndex = ((index % _slides.length) + _slides.length) % _slides.length;
+  _infoVisible = false;
+  if (infoEl) { infoEl.classList.remove('visible'); }
+
+  slideEls[_slideIndex]?.classList.add('active');
+  dotEls[_slideIndex]?.classList.add('active');
+}
+
+function _carouselStep(dir) { _carouselGoTo(_slideIndex + dir); }
+
+function _startTimer() { _carouselTimer = setInterval(() => _carouselStep(1), CAROUSEL_INTERVAL); }
+
+function _resetTimer() { clearInterval(_carouselTimer); _startTimer(); }
+
 // Exposed globally so HTML onsubmit handlers can call it
 globalThis.handleVerify2FA = handleVerify2FA;
 async function handleVerify2FA(event) {
