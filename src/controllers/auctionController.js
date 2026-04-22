@@ -171,6 +171,40 @@ class AuctionController {
   }
 
   /**
+   * GET /api/auctions/carousel
+   * Returns up to 20 approved artwork items with images for the homepage carousel.
+   * Public — no auth required. Order is randomised per request.
+   */
+  async getCarouselArtwork(req, res) {
+    try {
+      const result = await pool.query(
+        `SELECT aw.id, aw.title, aw.artist_name, aw.medium, aw.image_url, aw.auction_id
+         FROM   artwork aw
+         WHERE  aw.artwork_status = 'APPROVED'
+           AND  aw.image_url IS NOT NULL
+           AND  aw.deleted_at IS NULL
+         ORDER  BY RANDOM()
+         LIMIT  20`
+      );
+
+      return res.json({
+        success: true,
+        artwork: result.rows.map(aw => ({
+          id:         aw.id,
+          title:      aw.title,
+          artistName: aw.artist_name,
+          medium:     aw.medium || null,
+          imageUrl:   aw.image_url,
+          auctionId:  aw.auction_id
+        }))
+      });
+    } catch (error) {
+      console.error('Error retrieving carousel artwork:', error);
+      return res.status(500).json({ success: false, artwork: [] });
+    }
+  }
+
+  /**
    * GET /api/auctions/:auctionId
    * Get auction details
    * VISIBILITY: Filtered by user role (SITE_ADMIN > SCHOOL_ADMIN > TEACHER > STUDENT)

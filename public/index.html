@@ -82,8 +82,14 @@
             <div class="hero-content">
                 <h1>Silent Auction Gallery</h1>
                 <p class="hero-subtitle">Supporting Education Through Art</p>
-                <div class="hero-image">
-                    <img src="/images/hero-art.svg" alt="Beautiful artwork showcase" class="hero-img">
+                <div class="hero-image" style="margin-bottom:50px;">
+                    <div class="hero-carousel" id="hero-carousel" aria-label="Artwork showcase">
+                        <div class="carousel-track" id="carousel-track"></div>
+                        <button class="carousel-btn carousel-prev" id="carousel-prev" aria-label="Previous artwork" style="display:none">&#8249;</button>
+                        <button class="carousel-btn carousel-next" id="carousel-next" aria-label="Next artwork">&#8250;</button>
+                        <div class="carousel-dots" id="carousel-dots"></div>
+                        <div class="carousel-info" id="carousel-info"></div>
+                    </div>
                 </div>
                 <button class="btn btn-large" id="browse-auctions-btn">Browse Auctions</button>
             </div>
