@@ -46,6 +46,16 @@ router.get(
 );
 
 /**
+ * GET /api/auctions/carousel
+ * Returns up to 20 approved artwork items for the homepage hero carousel.
+ * Access: Public (no auth required)
+ */
+router.get(
+  '/carousel',
+  (req, res) => auctionController.getCarouselArtwork(req, res)
+);
+
+/**
  * GET /api/auctions/:auctionId/public
  * Public read-only preview — no auth required.
  * Returns title, description, status, end time, and artworks (current high bid only).
