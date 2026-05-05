@@ -327,3 +327,79 @@ describe('_renderEnhancedAuthWall()', () => {
     expect(authEl.innerHTML).toContain('Want to place a bid?');
   });
 });
+
+// =================== TASK 9: AuctionLabels ===================
+
+describe('AuctionLabels', () => {
+  let AuctionLabels;
+  let originalLocation;
+
+  beforeAll(() => {
+    originalLocation = globalThis.location;
+    AuctionLabels = require('../../../public/js/auction-labels.js');
+  });
+
+  afterEach(() => {
+    globalThis.location = originalLocation;
+  });
+
+  function makeLabelsInstance(overrides = {}) {
+    const inst = Object.create(AuctionLabels.prototype);
+    inst.auctionId = 'auction-1';
+    inst.auction = { title: 'Spring Art Show', schoolName: 'Lincoln Elementary' };
+    inst.artworks = [];
+    Object.assign(inst, overrides);
+    return inst;
+  }
+
+  test('13 — renderLabels renders correct card count for a 5-piece auction', () => {
+    document.body.innerHTML = `<div id="labels-grid"></div>`;
+    const artworks = Array.from({ length: 5 }, (_, i) => ({
+      id: `art-${i + 1}`,
+      title: `Artwork ${i + 1}`,
+      artistName: 'Artist',
+      medium: 'Oil',
+      dimensions: '10x10',
+      description: 'A fine piece',
+      startingPrice: 100,
+      currentBid: null,
+      reservePrice: null,
+    }));
+    const inst = makeLabelsInstance({ artworks });
+    inst.renderLabels();
+    expect(document.querySelectorAll('.label-card')).toHaveLength(5);
+  });
+
+  test('14 — each label card has correct data-auction-id and data-artwork-id', () => {
+    document.body.innerHTML = `<div id="labels-grid"></div>`;
+    const artworks = [{
+      id: 'art-abc', title: 'Sunset', artistName: 'Alice',
+      medium: 'Watercolour', dimensions: '20x30', description: '',
+      startingPrice: 75, currentBid: 100, reservePrice: null,
+    }];
+    const inst = makeLabelsInstance({ artworks });
+    inst.renderLabels();
+    const card = document.querySelector('.label-card');
+    expect(card.dataset.auctionId).toBe('auction-1');
+    expect(card.dataset.artworkId).toBe('art-abc');
+  });
+
+  test('15 — checkAuth redirects to login when no token present', () => {
+    mockLocalStorage.clear();
+    const assignSpy = jest.fn();
+    delete globalThis.location;
+    globalThis.location = {
+      assign: assignSpy,
+      pathname: '/auction-labels.html',
+      search: '?id=auction-1',
+      origin: 'http://localhost',
+    };
+
+    const inst = makeLabelsInstance();
+    inst.checkAuth();
+
+    expect(assignSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/login.html?returnTo=')
+    );
+  });
+});
