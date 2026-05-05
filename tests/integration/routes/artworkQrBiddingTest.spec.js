@@ -220,3 +220,43 @@ describe('displayArtworkPiece() min-bid hint', () => {
     expect(document.getElementById('min-bid-amount').textContent).toBe('$210.00');
   });
 });
+
+// =================== TASK 6: ?artwork= param ===================
+
+describe('_focusArtwork()', () => {
+  const artworks = [
+    { id: 'art-1', title: 'First', artistName: 'Alice', imageUrl: '', startingPrice: 100, currentBid: null, bidCount: 0, medium: '', dimensions: '' },
+    { id: 'art-2', title: 'Second', artistName: 'Bob', imageUrl: '', startingPrice: 200, currentBid: null, bidCount: 0, medium: '', dimensions: '' },
+  ];
+
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <img id="artwork-image">
+      <p id="artwork-artist"></p>
+      <p id="artwork-artist-small"></p>
+      <dd id="artwork-medium"></dd>
+      <dd id="artwork-dimensions"></dd>
+      <span id="display-opening-bid"></span>
+      <span id="display-current-bid"></span>
+      <span id="display-bid-count"></span>
+      <span id="min-bid-amount"></span>
+      <div id="artwork-thumbnails"></div>
+      <div id="bidding-form-container" style="display:block;"></div>
+      <div id="auth-required" style="display:none;"></div>
+    `;
+  });
+
+  test('1 — selects the artwork matching focusArtworkId', () => {
+    const inst = makeInstance({ artworks, focusArtworkId: 'art-2', isVisitor: false });
+    inst.renderArtworkGallery(artworks);
+    inst._focusArtwork();
+    expect(inst.currentPiece.id).toBe('art-2');
+  });
+
+  test('2 — falls back to first artwork when focusArtworkId does not match', () => {
+    const inst = makeInstance({ artworks, focusArtworkId: 'nonexistent', isVisitor: false });
+    inst.renderArtworkGallery(artworks);
+    inst._focusArtwork();
+    expect(inst.currentPiece.id).toBe('art-1');
+  });
+});

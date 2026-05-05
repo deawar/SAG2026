@@ -6,6 +6,7 @@
 class AuctionDetail {
   constructor() {
     this.auctionId = new URLSearchParams(globalThis.location.search).get('id');
+    this.focusArtworkId = new URLSearchParams(globalThis.location.search).get('artwork');
     this.auction = null;
     this.bidHistory = [];
     this.isUserLoggedIn = false;
@@ -88,8 +89,8 @@ class AuctionDetail {
 
       if (data.artworks && data.artworks.length > 0) {
         this.artworks = data.artworks;
-        this.displayArtworkPiece(data.artworks[0]);
         this.renderArtworkGallery(data.artworks);
+        this._focusArtwork();
       }
 
       const historyContainer = document.getElementById('bid-history-container');
@@ -654,8 +655,8 @@ class AuctionDetail {
       const data = await response.json();
       if (data.artwork && data.artwork.length > 0) {
         this.artworks = data.artwork;
-        this.displayArtworkPiece(data.artwork[0]);
         this.renderArtworkGallery(data.artwork);
+        this._focusArtwork();
       }
       this.loadBidHistory();
     } catch (err) {
@@ -1000,6 +1001,65 @@ class AuctionDetail {
       "'": '&#039;'
     };
     return text.replaceAll(/[&<>"']/g, (char) => map[char]);
+  }
+
+  /**
+   * Select and display the piece targeted by ?artwork= param (or first piece).
+   * Logged-in users with a focus ID get the bid form scrolled into view.
+   * Visitors with a focus ID get the enhanced auth wall.
+   */
+  _focusArtwork() {
+    if (!this.artworks?.length) { return; }
+
+    const target = this.focusArtworkId
+      ? (this.artworks.find(a => String(a.id) === String(this.focusArtworkId)) ?? this.artworks[0])
+      : this.artworks[0];
+
+    this.displayArtworkPiece(target);
+    this._activateThumbnail(target.id);
+
+    if (this.isVisitor && this.focusArtworkId) {
+      this._renderEnhancedAuthWall(target);
+    } else if (!this.isVisitor && this.focusArtworkId) {
+      document.getElementById('bidding-form-container')
+        ?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  /**
+   * Activate the thumbnail button for the given artworkId.
+   */
+  _activateThumbnail(artworkId) {
+    const container = document.getElementById('artwork-thumbnails');
+    if (!container) { return; }
+    const idx = this.artworks.findIndex(a => String(a.id) === String(artworkId));
+    container.querySelectorAll('.artwork-thumb').forEach(b => b.classList.remove('artwork-thumb-active'));
+    container.querySelector(`.artwork-thumb[data-index="${idx}"]`)?.classList.add('artwork-thumb-active');
+  }
+
+  /**
+   * Replace the generic auth wall with an artwork-specific image + bid CTA.
+   * Only called when an unauthenticated visitor scans a per-artwork QR (?artwork= set).
+   */
+  _renderEnhancedAuthWall(artwork) {
+    const authEl = document.getElementById('auth-required');
+    if (!authEl) { return; }
+    const returnTo = encodeURIComponent(globalThis.location.pathname + globalThis.location.search);
+    authEl.innerHTML = `
+      <div class="auth-wall-artwork">
+        <img src="${this.escapeHtml(artwork.imageUrl || '')}" alt="${this.escapeHtml(artwork.title || 'Artwork')}" class="auth-wall-img">
+        <div class="auth-wall-body">
+          <h2>Log in to bid on &ldquo;${this.escapeHtml(artwork.title || 'this artwork')}&rdquo;</h2>
+          <p class="artist-name">${this.escapeHtml(artwork.artistName || '')}</p>
+          <p class="auth-wall-price">Starting at ${UIComponents.formatCurrency(Number(artwork.startingPrice ?? 0))}</p>
+          <div class="auth-wall-actions">
+            <a href="/login.html?returnTo=${returnTo}" class="btn btn-primary btn-large">Log in</a>
+            <a href="/register.html?returnTo=${returnTo}" class="btn btn-secondary">Create account</a>
+          </div>
+        </div>
+      </div>
+    `;
+    authEl.style.display = 'block';
   }
 
   /**
