@@ -95,7 +95,7 @@ class AuctionDetail {
 
       const historyContainer = document.getElementById('bid-history-container');
       if (historyContainer) {
-        historyContainer.innerHTML = '<p class="text-muted">Log in to see bid history</p>';
+        historyContainer.innerHTML = '<li class="text-muted">Log in to see bid history</li>';
       }
     } catch (error) {
       console.error('Load public auction error:', error);
@@ -271,7 +271,7 @@ class AuctionDetail {
     list.innerHTML = '';
 
     if (this.bidHistory.length === 0) {
-      list.innerHTML = '<p class="text-muted">No bids yet</p>';
+      list.innerHTML = '<li class="text-muted">No bids yet</li>';
       return;
     }
 
@@ -401,7 +401,6 @@ class AuctionDetail {
     e.preventDefault();
 
     const bidAmount = form.querySelector('#bid-amount')?.value;
-    const paymentMethod = form.querySelector('#payment-method')?.value;
 
     if (!bidAmount || Number.isNaN(Number.parseFloat(bidAmount))) {
       UIComponents.showAlert('Please enter a valid bid amount', 'warning');
