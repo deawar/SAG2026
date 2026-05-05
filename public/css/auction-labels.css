@@ -1,0 +1,121 @@
+/* Screen layout */
+
+.labels-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.labels-header h1 { margin: 0 0 0.25rem; }
+
+.labels-header .school-name {
+  color: var(--color-text-muted, #666);
+  margin: 0;
+}
+
+.labels-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.label-card {
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fff;
+  overflow: hidden;
+}
+
+.label-meta {
+  font-size: 0.7rem;
+  color: var(--color-text-muted, #888);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.label-piece-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.label-title-block { flex: 1; min-width: 0; }
+
+.label-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.2rem;
+  font-family: 'Cormorant Garant', serif;
+}
+
+.label-artist {
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #555);
+  margin: 0;
+}
+
+.label-qr { flex-shrink: 0; width: 100px; height: 100px; }
+.label-qr img, .label-qr canvas { width: 100px !important; height: 100px !important; }
+
+.label-specs {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #555);
+  margin: 0.4rem 0;
+}
+
+.label-description {
+  font-size: 0.8rem;
+  margin: 0.4rem 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.label-pricing {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border, #eee);
+  font-size: 0.8rem;
+}
+
+.label-pricing .price-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.label-reserve { font-style: italic; color: var(--color-text-muted, #888); }
+
+/* Print styles */
+
+@media print {
+  @page { size: letter; margin: 0.5in; }
+
+  .navbar, .footer, #print-btn, #alert-container { display: none !important; }
+
+  body { background: white; color: black; font-size: 90%; }
+
+  .main-content { padding: 0; }
+
+  .labels-header { margin-bottom: 1rem; }
+
+  .labels-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .label-card {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    border: 1px solid #999;
+    border-radius: 4px;
+    padding: 0.75rem;
+  }
+}
