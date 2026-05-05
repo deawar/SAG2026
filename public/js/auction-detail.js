@@ -543,6 +543,9 @@ class AuctionDetail {
       formContainer.style.display = 'none';
     }
 
+    const banner = document.getElementById('leading-bidder-banner');
+    if (banner) { banner.hidden = true; }
+
     const closedAlert = document.getElementById('auction-closed');
     if (closedAlert) {
       if (message) {
