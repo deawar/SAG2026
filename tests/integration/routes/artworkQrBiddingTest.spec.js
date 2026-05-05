@@ -129,3 +129,66 @@ describe('loadBidHistory()', () => {
     expect(inst.bidHistory[0].amount).toBe(150);
   });
 });
+
+// =================== TASK 4: submit event + banner ===================
+
+describe('attachEventListeners() and submitBid()', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <form id="bidding-form">
+        <input id="bid-amount" type="number" value="150">
+        <button type="submit" id="place-bid-btn">Place Bid</button>
+      </form>
+      <div id="leading-bidder-banner" hidden>
+        <span id="leading-bidder-piece"></span>
+      </div>
+    `;
+    mockLocalStorage.setItem('auth_token', 'tok');
+    jest.clearAllMocks();
+  });
+
+  test('8 — submitBid fires on form submit event, not just button click', () => {
+    const inst = makeInstance({
+      auction: { status: 'LIVE', endTime: new Date(Date.now() + 60_000).toISOString(), currentBid: 100 },
+      currentPiece: { id: 'art-1', title: 'Sunset' },
+    });
+    const submitSpy = jest.spyOn(inst, 'submitBid').mockImplementation((e) => e.preventDefault());
+    inst.attachEventListeners();
+
+    document.getElementById('bidding-form').dispatchEvent(
+      new Event('submit', { bubbles: true, cancelable: true })
+    );
+
+    expect(submitSpy).toHaveBeenCalledTimes(1);
+  });
+
+  test('9 — successful submitBid shows leading-bidder banner with piece title', async () => {
+    globalThis.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ biddingState: { currentBid: 150, totalBids: 3 } }),
+    });
+
+    const inst = makeInstance({
+      auction: { status: 'LIVE', endTime: new Date(Date.now() + 60_000).toISOString(), currentBid: 100 },
+      currentPiece: { id: 'art-1', title: 'Sunset' },
+    });
+    inst.updateBidInfo = jest.fn();
+    inst.loadBidHistory = jest.fn().mockResolvedValue(undefined);
+
+    const form = document.getElementById('bidding-form');
+    await inst.submitBid(new Event('submit', { cancelable: true }), form);
+
+    expect(document.getElementById('leading-bidder-banner').hidden).toBe(false);
+    expect(document.getElementById('leading-bidder-piece').textContent).toContain('Sunset');
+  });
+
+  test('10 — handleNewBid with outbidCurrentUser:true hides leading-bidder banner', () => {
+    document.getElementById('leading-bidder-banner').hidden = false;
+
+    const inst = makeInstance();
+    inst.displayBidHistory = jest.fn();
+    inst.handleNewBid({ bidderName: 'Bob', amount: 200, outbidCurrentUser: true });
+
+    expect(document.getElementById('leading-bidder-banner').hidden).toBe(true);
+  });
+});

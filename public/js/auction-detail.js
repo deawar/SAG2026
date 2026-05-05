@@ -331,8 +331,7 @@ class AuctionDetail {
   attachEventListeners() {
     const biddingForm = document.getElementById('bidding-form');
     if (biddingForm) {
-      const submitBtn = biddingForm.querySelector('button[type="submit"]');
-      submitBtn?.addEventListener('click', (e) => this.submitBid(e, biddingForm));
+      biddingForm.addEventListener('submit', (e) => this.submitBid(e, biddingForm));
     }
 
     // Watch list button
@@ -469,6 +468,14 @@ class AuctionDetail {
 
       // Clear form
       form.reset();
+
+      // Show leading-bidder banner
+      const banner = document.getElementById('leading-bidder-banner');
+      const pieceEl = document.getElementById('leading-bidder-piece');
+      if (banner && pieceEl) {
+        pieceEl.textContent = this.currentPiece?.title ? ` on "${this.currentPiece.title}"` : '';
+        banner.hidden = false;
+      }
 
       // Reload bid history
       this.loadBidHistory();
@@ -926,6 +933,8 @@ class AuctionDetail {
         type: 'warning',
         duration: 5000
       });
+      const banner = document.getElementById('leading-bidder-banner');
+      if (banner) { banner.hidden = true; }
     }
   }
 
