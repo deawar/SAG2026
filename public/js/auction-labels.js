@@ -13,7 +13,7 @@ class AuctionLabels {
       globalThis.location.assign('/auctions.html');
       return;
     }
-    this.checkAuth();
+    if (!this.checkAuth()) { return; }
     await this.loadData();
     this.renderLabels();
     this.generateQRCodes();
@@ -24,17 +24,20 @@ class AuctionLabels {
     if (!token) {
       const returnTo = encodeURIComponent(globalThis.location.pathname + globalThis.location.search);
       globalThis.location.assign(`/login.html?returnTo=${returnTo}`);
-      return;
+      return false;
     }
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const allowed = ['TEACHER', 'SCHOOL_ADMIN', 'SITE_ADMIN'];
       if (!allowed.includes(payload.role)) {
         globalThis.location.assign('/auctions.html');
+        return false;
       }
     } catch {
       globalThis.location.assign('/login.html');
+      return false;
     }
+    return true;
   }
 
   async loadData() {
