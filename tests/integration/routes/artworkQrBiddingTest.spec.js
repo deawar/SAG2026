@@ -260,3 +260,70 @@ describe('_focusArtwork()', () => {
     expect(inst.currentPiece.id).toBe('art-1');
   });
 });
+
+// =================== TASK 7: enhanced auth wall ===================
+
+describe('_renderEnhancedAuthWall()', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <div id="auth-required" style="display:none;"></div>
+      <div id="artwork-thumbnails"></div>
+      <img id="artwork-image">
+      <p id="artwork-artist"></p>
+      <p id="artwork-artist-small"></p>
+      <dd id="artwork-medium"></dd>
+      <dd id="artwork-dimensions"></dd>
+      <span id="display-opening-bid"></span>
+      <span id="display-current-bid"></span>
+      <span id="display-bid-count"></span>
+      <span id="min-bid-amount"></span>
+    `;
+  });
+
+  test('3 — enhanced auth wall shown when visitor + focusArtworkId is set', () => {
+    const artwork = {
+      id: 'art-1', title: 'Sunset', artistName: 'Alice',
+      imageUrl: '/img/1.jpg', startingPrice: 100,
+      currentBid: null, bidCount: 0, medium: '', dimensions: '',
+    };
+    const inst = makeInstance({ artworks: [artwork], focusArtworkId: 'art-1', isVisitor: true });
+    inst.renderArtworkGallery = jest.fn();
+    inst._focusArtwork();
+
+    const authEl = document.getElementById('auth-required');
+    expect(authEl.style.display).toBe('block');
+    expect(authEl.innerHTML).toContain('Log in to bid on');
+    expect(authEl.innerHTML).toContain('Sunset');
+    expect(authEl.innerHTML).toContain('/login.html?returnTo=');
+  });
+
+  test('4 — generic auth wall unchanged when no focusArtworkId', () => {
+    document.body.innerHTML = `
+      <div id="auth-required" style="display:block;">
+        <p><strong>Want to place a bid?</strong></p>
+      </div>
+      <div id="artwork-thumbnails"></div>
+      <img id="artwork-image">
+      <p id="artwork-artist"></p>
+      <p id="artwork-artist-small"></p>
+      <dd id="artwork-medium"></dd>
+      <dd id="artwork-dimensions"></dd>
+      <span id="display-opening-bid"></span>
+      <span id="display-current-bid"></span>
+      <span id="display-bid-count"></span>
+      <span id="min-bid-amount"></span>
+    `;
+    const artwork = {
+      id: 'art-1', title: 'Sunset', artistName: 'Alice',
+      imageUrl: '', startingPrice: 100,
+      currentBid: null, bidCount: 0, medium: '', dimensions: '',
+    };
+    const inst = makeInstance({ artworks: [artwork], focusArtworkId: null, isVisitor: true });
+    inst.renderArtworkGallery = jest.fn();
+    inst._focusArtwork();
+
+    const authEl = document.getElementById('auth-required');
+    expect(authEl.innerHTML).not.toContain('Log in to bid on');
+    expect(authEl.innerHTML).toContain('Want to place a bid?');
+  });
+});
