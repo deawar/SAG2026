@@ -245,15 +245,24 @@ class AuctionDetail {
      * Load bid history
      */
   async loadBidHistory() {
+    if (!this.currentPiece) {
+      const list = document.getElementById('bid-history-container');
+      if (list) { list.innerHTML = '<li class="text-muted">No bids yet</li>'; }
+      return;
+    }
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`/api/auctions/${this.auctionId}/bids`, {
+      const response = await fetch(`/api/bidding/artwork/${this.currentPiece.id}/history`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       const data = await response.json();
 
       if (response.ok) {
-        this.bidHistory = data.bids || [];
+        this.bidHistory = (data.data || []).map(b => ({
+          bidderName: b.bidder?.displayName ?? 'Anonymous',
+          amount: b.amount,
+          createdAt: b.timestamp,
+        }));
         this.displayBidHistory();
       }
     } catch (error) {
