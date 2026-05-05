@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Print QR code labels for Silent Auction Gallery artwork">
   <title>Auction Labels - Silent Auction Gallery</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,6 +15,7 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
+  <a href="#main-content" class="skip-to-main">Skip to main content</a>
   <header class="navbar" role="banner">
     <div class="navbar-container">
       <div class="navbar-brand">
@@ -22,13 +24,24 @@
           <span class="logo-text">SAG</span>
         </a>
       </div>
+      <nav class="navbar-nav" role="navigation" aria-label="Main Navigation">
+        <ul class="nav-list">
+          <li><a href="/auctions.html" class="nav-link">Auctions</a></li>
+          <li><a href="/" class="nav-link">Home</a></li>
+        </ul>
+      </nav>
       <div class="navbar-auth">
-        <button class="btn btn-secondary" id="login-btn" aria-label="Login">Login</button>
-        <button class="btn btn-profile" id="user-menu-btn" aria-label="User menu" style="display:none;">
+        <button class="btn btn-secondary" id="login-btn" aria-label="Login to your account">Login</button>
+        <button class="btn btn-profile" id="user-menu-btn" aria-label="User account menu" style="display:none;">
           <span id="user-name"></span>
           <span class="menu-icon" aria-hidden="true">▼</span>
         </button>
       </div>
+      <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </button>
     </div>
   </header>
 
@@ -41,7 +54,7 @@
         </div>
         <button class="btn btn-primary" id="print-btn" onclick="window.print()">Print All Labels</button>
       </div>
-      <div id="alert-container" class="alert-container" role="region" aria-live="polite"></div>
+      <section id="alert-container" class="alert-container" aria-label="Alerts" aria-live="polite" aria-atomic="true"></section>
       <div id="labels-grid" class="labels-grid" aria-label="Printable auction labels">
         <!-- Populated by auction-labels.js -->
       </div>
