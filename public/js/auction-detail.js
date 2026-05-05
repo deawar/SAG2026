@@ -63,7 +63,6 @@ class AuctionDetail {
       this.auction = data.auction;
       this.displayAuction();
       this.loadArtwork();
-      this.loadBidHistory();
     } catch (error) {
       console.error('Load auction error:', error);
       this.showError('Failed to load auction');
@@ -654,6 +653,7 @@ class AuctionDetail {
         this.displayArtworkPiece(data.artwork[0]);
         this.renderArtworkGallery(data.artwork);
       }
+      this.loadBidHistory();
     } catch (err) {
       console.warn('Could not load auction artwork:', err);
     }
