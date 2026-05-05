@@ -159,6 +159,10 @@
                             </div>
 
                             <!-- Bidding Form (Visible to logged-in users) -->
+                            <div id="leading-bidder-banner" class="alert alert-success" role="status" aria-live="polite" hidden>
+                              <strong>You are the current high bidder</strong>
+                              <span id="leading-bidder-piece"></span>
+                            </div>
                             <div id="bidding-form-container" style="display:none;">
                                 <form id="bidding-form" class="bidding-form" aria-label="Place bid form">
                                     <fieldset>
@@ -184,16 +188,9 @@
                                             <small id="bid-amount-error" class="error-message" role="alert"></small>
                                         </div>
 
-                                        <div class="form-group">
-                                            <label for="payment-method">Payment Method <span aria-label="required">*</span></label>
-                                            <select id="payment-method" class="form-control" required aria-required="true" aria-describedby="payment-help">
-                                                <option value="">Select payment method</option>
-                                                <option value="credit_card">Credit Card</option>
-                                                <option value="debit_card">Debit Card</option>
-                                                <option value="bank_transfer">Bank Transfer</option>
-                                            </select>
-                                            <small id="payment-help" class="help-text">Required to finalize purchase if you win</small>
-                                        </div>
+                                        <p class="bid-note" id="payment-note">
+                                          Payment is collected at checkout if you win. No card details needed now.
+                                        </p>
 
                                         <button type="submit" class="btn btn-primary btn-large btn-block" id="place-bid-btn">
                                             Place Bid
@@ -227,9 +224,9 @@
                 <!-- Bid History -->
                 <section class="bid-history" role="region" aria-label="Bid History">
                     <h2>Bid History</h2>
-                    <div id="bid-history-container" class="bid-history-list" role="list" aria-live="polite" aria-atomic="false">
-                        <p class="loading-message">Loading bid history...</p>
-                    </div>
+                    <ul id="bid-history-container" class="bid-history-list" aria-live="polite" aria-atomic="false">
+                        <li class="loading-message">Loading bid history...</li>
+                    </ul>
                 </section>
 
                 <!-- Related Auctions -->
