@@ -299,12 +299,21 @@ class AuctionDetail {
     const authRequired = document.getElementById('auth-required');
     const biddingForm = document.getElementById('bidding-form-container');
 
-    if (this.isUserLoggedIn) {
-      if (authRequired) {authRequired.style.display = 'none';}
-      if (biddingForm) {biddingForm.style.display = 'block';}
-    } else {
-      if (authRequired) {authRequired.style.display = 'block';}
-      if (biddingForm) {biddingForm.style.display = 'none';}
+    if (!this.isUserLoggedIn) {
+      if (authRequired) { authRequired.style.display = 'block'; }
+      if (biddingForm) { biddingForm.style.display = 'none'; }
+      return;
+    }
+
+    // Logged in — always hide the auth wall
+    if (authRequired) { authRequired.style.display = 'none'; }
+
+    // Only show bid form when auction is actively live — preserves disableBidding() for ENDED/DRAFT/etc.
+    if (
+      this.auction?.status === 'LIVE' &&
+      new Date(this.auction?.endTime) > new Date()
+    ) {
+      if (biddingForm) { biddingForm.style.display = 'block'; }
     }
   }
 
