@@ -192,3 +192,31 @@ describe('attachEventListeners() and submitBid()', () => {
     expect(document.getElementById('leading-bidder-banner').hidden).toBe(true);
   });
 });
+
+// =================== TASK 5: min-bid hint ===================
+
+describe('displayArtworkPiece() min-bid hint', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <img id="artwork-image">
+      <p id="artwork-artist"></p>
+      <p id="artwork-artist-small"></p>
+      <dd id="artwork-medium"></dd>
+      <dd id="artwork-dimensions"></dd>
+      <span id="display-opening-bid"></span>
+      <span id="display-current-bid"></span>
+      <span id="display-bid-count"></span>
+      <span id="min-bid-amount"></span>
+    `;
+  });
+
+  test('12 — min-bid hint equals currentBid + $10 increment', () => {
+    const inst = makeInstance();
+    inst.displayArtworkPiece({
+      id: 'art-1', title: 'Sunset', artistName: 'Alice',
+      imageUrl: '', startingPrice: 100, currentBid: 200,
+      bidCount: 3, medium: 'Oil', dimensions: '10x10',
+    });
+    expect(document.getElementById('min-bid-amount').textContent).toBe('$210.00');
+  });
+});
