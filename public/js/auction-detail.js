@@ -188,12 +188,6 @@ class AuctionDetail {
       bidCountEl.textContent = this.auction.totalBids ?? this.auction.bidCount ?? 0;
     }
 
-    const minBidHelpEl = document.getElementById('min-bid-amount');
-    if (minBidHelpEl) {
-      const current = this.auction.currentBid ?? 0;
-      const increment = this.auction.minBidIncrement ?? 10;
-      minBidHelpEl.textContent = UIComponents.formatCurrency(current + increment);
-    }
   }
 
   /**
