@@ -98,3 +98,34 @@ describe('checkLoginStatus()', () => {
     expect(document.getElementById('bidding-form-container').style.display).toBe('block');
   });
 });
+
+// =================== TASK 3: loadBidHistory() ===================
+
+describe('loadBidHistory()', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `<ul id="bid-history-container"></ul>`;
+    mockLocalStorage.clear();
+    jest.clearAllMocks();
+  });
+
+  test('11 — calls per-artwork history endpoint', async () => {
+    globalThis.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: [
+          { bidder: { displayName: 'Alice' }, amount: 150, timestamp: '2026-01-01T00:00:00Z', status: 'ACTIVE' },
+        ],
+      }),
+    });
+
+    const inst = makeInstance({ currentPiece: { id: 'art-42' } });
+    await inst.loadBidHistory();
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/bidding/artwork/art-42/history',
+      expect.any(Object)
+    );
+    expect(inst.bidHistory[0].bidderName).toBe('Alice');
+    expect(inst.bidHistory[0].amount).toBe(150);
+  });
+});
