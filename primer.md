@@ -1,6 +1,6 @@
 # Silent Auction Gallery — Session Primer
-**Last updated:** 2026-04-12
-**Project path:** `c:\Users\dwarren\OneDrive\projects\SAG2026\Silent-Auction-Gallery\`
+**Last updated:** 2026-05-05
+**Project path:** `c:\Users\Dean.SSCCBISHOP.000\OneDrive\projects\SAG2026\Silent-Auction-Gallery\`
 
 ---
 
@@ -20,10 +20,10 @@ Start date: 2026-01-26 | Target: Q2 2026
 | 3 | Authentication & Authorization | Complete |
 | 4 | Payment Processing | Complete |
 | 5 | Auction Management API | Complete |
-| 6 | Frontend Development | Partial - auctions list wired, detail/teacher stubs remain |
+| 6 | Frontend Development | Complete — auction-detail fully wired, labels page added |
 | 7 | Notification System | Complete - email wired for outbid, won, artwork status, shipped |
 | 8 | Admin Dashboard | Partial - fulfillment tab added; other sections backend complete |
-| 9 | Deployment & Testing | Pending |
+| 9 | Deployment & Testing | Partial — Playwright installed; live test pending server redeploy + seed |
 | 10 | Data Migration | Pending |
 | 11 | Security Audit | Partial - G1–G17, G19, G13–G16 applied |
 | 12 | UI/UX Testing | Pending |
@@ -49,6 +49,7 @@ Start date: 2026-01-26 | Target: Q2 2026
 | G18 | Delete empty bidRoutes.js dead file |
 | G17 | Mandatory 2FA for admin accounts |
 | G19 | Concurrent session limiting (MAX_SESSIONS_PER_USER) |
+| QR  | Artwork QR labels + authenticated bidding UI fixes (6 bugs, ?artwork= param, labels page) |
 
 ---
 
@@ -56,98 +57,166 @@ Start date: 2026-01-26 | Target: Q2 2026
 
 | Suites | Tests |
 |--------|-------|
-| 44 pass, 4 skipped | 635 pass |
+| 45 pass, 4 skipped | 650 pass |
 
-No failures.
+No failures. The "force exiting Jest" warning is pre-existing (open handles in backend tests) and unrelated to the frontend unit tests.
 
 ---
 
-## What Was Done Last Session (2026-04-12) — continued
+## What Was Done Last Session (2026-05-05) — Bidding Fixes + Artwork Seeding
+
+### Two Bidding Bug Fixes
+
+#### Bug 1 — Cents/Dollars Mismatch in `src/services/biddingService.js`
+Service was written expecting cents but `biddingRoutes.js` passes raw dollar amounts from the frontend. After the first bid, `currentBid + 100` (e.g. $50 + $100 = $150 minimum) blocked all subsequent bids.
+
+**Fixed 4 locations:**
+- Line ~62: `minimumBid = currentBid + 100` → `currentBid + 10` ($10 minimum increment)
+- Line ~65: error message removed `/100` divisions (`.toFixed(2)` on dollar value directly)
+- Line ~70: reserve price error message removed `/100` division
+- Line ~133: `newBidDollars: bidAmount / 100` → `bidAmount`
+- Line ~145: success message removed `/100` division
+
+**Currency convention (non-obvious, do not revert):** DB stores DECIMAL(10,2) dollars. `biddingRoutes.js` passes `bidAmount` as dollars directly. Do NOT divide by 100 anywhere in biddingService.
+
+#### Bug 2 — Client-Side Min-Bid Guard in `public/js/auction-detail.js` `submitBid()`
+`this.auction.currentBid` is always undefined — `this.auction` is the auction object, not the current artwork piece. Min-bid guard was always 0 + 10 = $10, never updating.
+
+**Fixed:**
+```js
+// Before:
+const currentBid = this.auction.currentBid ?? 0;
+const minBid = currentBid + (this.auction.minBidIncrement || 10);
+// After:
+const currentBid = this.currentPiece?.currentBid ?? 0;
+const minBid = currentBid + 10;
+```
+
+**Updated test** in `tests/unit/services/biddingService.test.js` "should reject bid that is below minimum increment": old values were cents (`bidAmount: 40050`, `current_bid: 40000`). Updated to dollar values (`bidAmount: 55`, `current_bid: 50`) so `55 < 50+10=60` correctly triggers rejection.
+
+---
+
+### Artwork Images + Seed Script
+
+**6 JPGs added** to `public/images/auction-items/` (copied from `C:\Users\Dean.SSCCBISHOP.000\OneDrive\Artwork\`):
+
+| Filename | Title | Medium | Dimensions | Starting Bid |
+|----------|-------|--------|------------|--------------|
+| BeachRooster.jpg | Beach Rooster | Watercolor | 20×28cm | $5 |
+| BurgerCat.jpg | Burger Cat | Acrylic on Board | 30×30cm | $5 |
+| RainbowSky.jpg | Rainbow Sky | Acrylic on Canvas | 30×30cm | $8 |
+| Roostertude.jpg | Roostertude | Acrylic and Marker | 38×28cm | $8 |
+| UGASmiling.jpg | UGA Smiling | Acrylic on Canvas | 40×32cm | $10 |
+| SeaLife.jpg | Sea Life | Watercolor and Ink | 38×50cm | $15 |
+
+**`db/seeds/seed-artwork.js`** — new Node.js seed script:
+- Reads `DATABASE_*` env vars (same as main app)
+- Finds teacher account by `TEACHER_EMAIL` env var (default: `dean.ed.warren@gmail.com`)
+- Finds most recent non-ended auction for that school, or creates a new LIVE auction (7-day window)
+- Inserts artwork as APPROVED with `image_url: /images/auction-items/<filename>`
+- Idempotent: skips pieces whose title already exists in the target auction
+
+**To run on production server:**
+```bash
+docker exec sag-app-prod node db/seeds/seed-artwork.js
+```
+Port 5432 is NOT exposed publicly in `docker-compose.prod.yml` — must run inside the container.
+
+---
+
+### Browse Auctions Button Fix (`public/index.html` line 94)
+
+`<button class="btn btn-large" id="browse-auctions-btn">Browse Auctions</button>` had no JS handler and no href — clicked nothing. Converted to an anchor:
+```html
+<a href="/auctions.html" class="btn btn-large" id="browse-auctions-btn">Browse Auctions</a>
+```
+
+---
+
+### Live Testing Setup (SAG-Live_MCP)
+
+SAG-Live_MCP is a Python-based Playwright MCP (not Node). Ran `python -m playwright install chromium` from `SAG-Live_MCP/` (172MB Chrome + 108MB Headless Shell). Playwright is now installed and ready.
+
+**Pending live test workflow (once server is redeployed):**
+1. `docker exec sag-app-prod node db/seeds/seed-artwork.js`
+2. Login as teacher → verify 6 artwork pieces appear
+3. Login as bidder → place bid on artwork
+4. Login as second bidder → outbid, verify outbid banner and email notification
+5. Verify bid history, min-increment enforcement, and auction-detail UI
+
+---
+
+## What Was Done Session 2026-05-04 — Artwork QR Labels + Bidding UI Fixes
+
+### 6 Bidding Fixes in `public/js/auction-detail.js`
+
+1. **`checkLoginStatus()` respects auction status** — now only shows `#bidding-form-container` when `auction.status === 'LIVE'` and `endTime > now`.
+2. **`loadBidHistory()` uses per-artwork endpoint** — calls `GET /api/bidding/artwork/:artworkId/history` (BIDDER role compatible, no school restriction).
+3. **Min-bid hint is correct** — `displayArtworkPiece()` computes `piece.currentBid + 10`. Removed stale block in `updateBidInfo()`.
+4. **Form submit event** — `attachEventListeners()` listens to `form.addEventListener('submit', ...)`. Enter-key submit now works.
+5. **Leading-bidder banner** — `#leading-bidder-banner` (green, `role="status"`, `aria-live="polite"`) shows after successful bid. Hidden by: outbid WebSocket, auction end.
+6. **Payment method removed** — `#payment-method` select removed; replaced with `<p class="bid-note">` explaining payment at checkout.
+
+### `?artwork=` QR Deep-Link
+
+Constructor reads `this.focusArtworkId` from URL. `_focusArtwork()` selects piece, activates thumbnail, scrolls form into view, shows enhanced auth wall for visitors. Both `loadArtwork()` and `_loadPublicPreview()` call `_focusArtwork()` after `renderArtworkGallery()`.
+
+### Enhanced Auth Wall
+
+`_renderEnhancedAuthWall(artwork)`: artwork image + title + artist + starting price + Login/Register CTAs. Only rendered when `focusArtworkId` is set AND visitor. `returnTo` encodes full path including `?id=...&artwork=...`.
+
+### New Files (2026-05-04)
+
+- `public/auction-labels.html` — printable label page (auth-gated: TEACHER, SCHOOL_ADMIN, SITE_ADMIN)
+- `public/css/auction-labels.css` — `.labels-grid`, `.label-card`, `@media print` (letter size, 0.5in margins)
+- `public/js/auction-labels.js` — `AuctionLabels` class: auth check, parallel fetch, `renderLabel()`, `generateQRCodes()`
+- `tests/integration/routes/artworkQrBiddingTest.spec.js` — 15 frontend unit tests (`@jest-environment jsdom`)
+- `package.json`: added `jest-environment-jsdom@29`
+
+---
+
+## What Was Done Session 2026-04-12
 
 ### G16 — BIDDER Role Onboarding
 
-**Backend — `src/controllers/userController.js`:**
-- Added `accountType === 'bidder'` branch: creates BIDDER role user, skips COPPA/DOB/schoolId requirements, still sends verification email
+- `src/controllers/userController.js`: `accountType === 'bidder'` branch creates BIDDER role user, skips COPPA/DOB/schoolId
+- `public/bidder-welcome.html`: hero + 3-step explainer + CTA → `/register.html?role=BIDDER`
+- `public/register.html`: `#role-chooser`, `#role-mode-input`, `#dob-group`, `#school-fields-group`, `#age-confirmation-group`
+- `public/js/auth-pages.js`: `_applyBidderMode()`, `?role=BIDDER` detection, isBidderMode flow
+- Nav link "For Bidders" added to: `index.html`, `auctions.html`, `login.html`, `register.html`, `auction-detail.html`
 
-**New page — `public/bidder-welcome.html`:**
-- Hero: "Support student artists. Bid on art that matters."
-- 3-step explainer: Browse → Bid → Pay
-- Can/cannot do cards
-- Primary CTA → `/register.html?role=BIDDER`
-- "For Bidders" nav link active on this page
+### G15 — Visitor Auth Wall
 
-**`public/register.html` changes:**
-- Added `#role-mode-input` hidden input (value: `student` or `bidder`)
-- Added `#role-chooser` two-card section (Student/Teacher vs Parent/Collector) — shown when no `?role=` param
-- Added `id="dob-group"` wrapper on DOB field group
-- Added `id="school-fields-group"` wrapper around school search + school select
-- Added `id="age-confirmation-group"` with 18+ checkbox (hidden by default, shown for BIDDER)
-- Added `id="step1-heading"` and `id="step1-subtitle"` for dynamic copy update
-
-**`public/js/auth-pages.js` changes:**
-- `initRegister()` reads `?role=BIDDER` (case-insensitive); if present calls `_applyBidderMode()` directly
-- Shows `#role-chooser` for neutral flow; "Parent/Collector" card calls `_applyBidderMode()`
-- `_applyBidderMode(form)`: hides school/DOB groups, removes required attrs, shows age-confirmation checkbox, updates heading/subtitle, sets `this.isBidderMode = true`
-- `validateRegisterStep()`: when `isBidderMode`, requires age-confirmation checkbox instead of DOB + school
-- `submitRegister()`: when `isBidderMode`, sets `accountType: 'bidder'`, omits `dateOfBirth` and `schoolId`
-
-**Nav link added to:** `index.html`, `auctions.html`, `login.html`, `register.html`, `auction-detail.html`
-
-**Tests — `tests/integration/routes/bidderRegistrationIntegrationTest.spec.js` (12 tests):**
-- Backend: BIDDER creates 201, no schoolId required, no DOB required, missing fields → 400, duplicate → 409, student still works
-- Frontend unit: `?role=BIDDER` detection (case-insensitive), hidden fields list, required fields list
-
----
-
-### G15 — Visitor Auth Wall on Auction Detail Page
-
-**Problem:** Unauthenticated visitors clicking an auction tile saw a blank page (silent 401).
-
-**Solution:** Option A — public read-only preview.
-
-- `src/routes/auctionRoutes.js` — added `GET /api/auctions/:auctionId/public` (no auth) before `/:auctionId`
-- `src/controllers/auctionController.js` — added `getAuctionPublic()`: queries auction + approved artworks, returns safe projection (no bidder identities, no bid history, current high bid only)
-- `public/js/auction-detail.js` — `loadAuction()` branches on token presence; visitors call `_loadPublicPreview()` which uses the public endpoint, sets `this.isVisitor = true`, renders auction + first artwork, shows "Log in to see bid history" placeholder. Login/register buttons include `?returnTo=<currentPath>`
-- `public/auction-detail.html` — `#auth-required` banner now has both "Log in" and "create a free account" buttons
-- `public/js/auth-pages.js` — after successful login, reads `?returnTo`, validates it's a same-origin path (`/^\/[^/\\]/`), redirects there; falls back to dashboard otherwise
-
-**Security note:** `returnTo` validation uses `/^\/[^/\\]/` — rejects `//evil.com` (double-slash protocol-relative), `\/evil.com` (backslash bypass), and anything without a leading `/`.
-
----
-
-## What Was Done Earlier Last Session (2026-04-12)
+- `GET /api/auctions/:auctionId/public` (no auth) — safe projection, no bidder identities
+- `public/js/auction-detail.js`: visitors call `_loadPublicPreview()`, sets `this.isVisitor = true`
+- `returnTo` validation: `/^\/[^/\\]/` — rejects `//evil.com` and backslash bypasses
 
 ### G19 — Concurrent Session Limiting
 
-- `db/migrations/20260412130000_add_session_last_used.up.sql` — adds `last_used_at` to `user_sessions`
-- `src/routes/userRoutes.js` — fixed `authenticationService` undefined (now builds `authService` object properly)
-- `src/routes/userRoutes.js` — fixed stray `authenticationService.tokenBlacklist.revoke` → `tokenBlacklist.revoke`
-- `public/user-dashboard.html` — sessions management UI in Account tab (list, per-session revoke, sign out all others)
-- `tests/integration/routes/sessionLimitingIntegrationTest.spec.js` — 14 tests covering eviction, refresh revocation, admin force-logout
+- `db/migrations/20260412130000_add_session_last_used.up.sql`: adds `last_used_at` to `user_sessions`
+- `SessionService.createSession`: PG subquery pattern for eviction (ORDER BY LIMIT invalid in PG UPDATE)
 
-### G13 — Email Notifications Not Wired
+### G13 — Email Notifications
 
-- `src/services/notificationService.js` — added `provider: 'json'` transport, `artworkStatusChangedTemplate`, `createEmailProvider()`, `getSharedEmailProvider()`, `notifyOutbid`, `notifyAuctionWon`, `notifyArtworkStatusChanged`, `_checkEmailPref`
-- `src/services/biddingService.js` — fires `notifyOutbid` via `setImmediate` after `placeBid` commit
-- `src/services/auctionService.js` — fires `notifyAuctionWon` via `setImmediate` after `endAuction` commit
-- `src/controllers/teacherController.js` — fires `notifyArtworkStatusChanged` via `setImmediate` after approve/reject
-- `tests/integration/routes/emailNotificationsIntegrationTest.spec.js` — 12 tests
+- `src/services/notificationService.js`: `createEmailProvider()` (SMTP prod / jsonTransport dev), `getSharedEmailProvider()` (lazy singleton), `notifyOutbid`, `notifyAuctionWon`, `notifyArtworkStatusChanged`, `notifyArtworkShipped`
+- Callers wrap in `setImmediate()` to not block HTTP response
 
-### G14 — Artwork Delivery / Fulfillment Loop
+### G14 — Artwork Fulfillment Loop
 
-- `db/migrations/20260412140000_add_fulfillment_columns.up.sql` — adds `shipped_at`, `tracking_carrier`, `tracking_number`, `delivered_at`, `fulfillment_notes` to `bids`
-- `src/routes/adminRoutes.js` — `GET /api/admin/wins` (unshipped wins list, school-scoped) and `PATCH /api/admin/wins/:id/fulfillment` (dynamic SET, school enforcement, 2FA required, fires `notifyArtworkShipped`)
-- `src/routes/userRoutes.js` — `GET /api/user/wins` returns real fulfillment columns instead of `FALSE AS shipped`
-- `src/services/notificationService.js` — `artworkShippedTemplate` + `notifyArtworkShipped` (uses `email_winner` pref)
-- `public/admin-dashboard.html` — Fulfillment tab with wins table, tracking inputs, Mark Shipped / Mark Delivered buttons
-- `public/js/user-dashboard.js` — `displayWins` shows three states: delivered / shipped (with carrier+tracking) / awaiting shipment
-- `tests/integration/routes/fulfillmentIntegrationTest.spec.js` — 11 tests
-
-**Key bug found & fixed:** `makeToken()` in fulfillment tests omitted `jti` claim, so `tokenBlacklist.isRevoked` short-circuited without calling `pool.query`. The bid SELECT consumed mock #1 (empty rows) instead of mock #2 (bid row), causing spurious 404s. Fix: added `jti: uuidv4()` to `makeToken()`.
+- `db/migrations/20260412140000_add_fulfillment_columns.up.sql`: adds `shipped_at`, `tracking_carrier`, `tracking_number`, `delivered_at`, `fulfillment_notes` to `bids`
+- `PATCH /api/admin/wins/:id/fulfillment`: dynamic SET clause, school enforcement, fires `notifyArtworkShipped`
 
 ---
 
 ## Critical Architecture Notes
+
+### Currency Convention (CRITICAL)
+
+**DB stores DECIMAL(10,2) dollars. All bid amounts are dollars throughout.**
+- `biddingRoutes.js` passes raw dollar `bidAmount` from request body to `biddingService.placeBid()`
+- `biddingService.js` works in dollars — do NOT divide by 100, do NOT add 100 for increment (add 10)
+- `UIComponents.formatCurrency(n)` expects dollars
+- Minimum bid increment: **$10**
 
 ### Email Transport Architecture
 
@@ -156,92 +225,29 @@ createEmailProvider()
   → NODE_ENV=production: SMTP via nodemailer (requires SMTP_HOST)
   → otherwise: jsonTransport (logs to stdout, no real SMTP)
 
-getSharedEmailProvider()
-  → lazy singleton, created on first call
-  → used by biddingService, auctionService, teacherController, adminRoutes
-
-notifyXxx(emailProvider, db, data)
-  → checks notification_preferences.email_xxx (fail-open)
-  → calls emailProvider.send(to, subject, html, text)
-  → caller wraps in setImmediate() to not block HTTP response
+getSharedEmailProvider() → lazy singleton
 ```
-
-### Notification Preference Keys (notification_preferences table)
-
-| Event | DB Column |
-|-------|-----------|
-| Outbid alert | `email_outbid` |
-| Auction won | `email_winner` |
-| Artwork status changed | `email_artwork_status` |
-| Artwork shipped | `email_winner` |
-
-Default: enabled (true) if no preferences row exists.
-
-### Where Notifications Fire
-
-| Event | Source file | Trigger point |
-|-------|-------------|---------------|
-| Outbid | `src/services/biddingService.js` | After `placeBid` COMMIT |
-| Auction won | `src/services/auctionService.js` | After `endAuction` COMMIT |
-| Artwork approved | `src/controllers/teacherController.js` | After `approveSubmission` UPDATE |
-| Artwork rejected | `src/controllers/teacherController.js` | After `rejectSubmission` UPDATE |
-| Artwork shipped | `src/routes/adminRoutes.js` | After fulfillment PATCH UPDATE |
-
----
 
 ### JWT Token Shapes
 
-**Access token payload:**
-```json
-{
-  "sub": "uuid",
-  "email": "...",
-  "role": "SITE_ADMIN",
-  "schoolId": "uuid|null",
-  "twoFaEnabled": true,
-  "jti": "uuid",
-  "iat": 1234, "exp": 1234,
-  "iss": "silent-auction-gallery",
-  "aud": "silent-auction-users"
-}
-```
+**Access token:** `{ sub, email, role, schoolId, twoFaEnabled, jti, iat, exp, iss, aud }`
+**Refresh token:** `{ sub, jti, type: 'refresh', iat, exp, iss, aud }`
+**Special:** `purpose: '2fa_force_setup'` or `purpose: '2fa_challenge'`
 
-**Refresh token payload:**
-```json
-{
-  "sub": "uuid",
-  "jti": "uuid",
-  "type": "refresh",
-  "iat": 1234, "exp": 1234,
-  "iss": "silent-auction-gallery",
-  "aud": "silent-auction-users"
-}
-```
-
-**Special-purpose tokens:** `purpose: '2fa_force_setup'` or `purpose: '2fa_challenge'`
-- Verified with `jwt.verify(token, ACCESS_SECRET, { algorithms: ['HS256'] })` NOT `jwtService.verifyAccessToken` (which enforces issuer/audience)
-
-### Session Tracking (user_sessions table)
+### Session Tracking
 
 - Only `token_type = 'REFRESH'` rows count toward MAX_SESSIONS_PER_USER
 - `checkSession` is fail-open: missing row = legacy token = allow
-- `last_used_at` updated non-blocking on every token refresh
-- `SessionService.createSession` uses PG subquery pattern for eviction (ORDER BY LIMIT in UPDATE is invalid PG)
+- `SessionService.createSession` uses PG subquery pattern for eviction
 
 ### Admin 2FA Flow
 
 ```
 POST /api/auth/login (admin, no 2FA)
   → 200 { requiresTwoFactorSetup: true, setupToken, userId }
-
-POST /api/auth/2fa/force-setup (body: { setupToken })
-  → 200 { qrCodeUrl, secret, backupCodes }
-
-POST /api/auth/2fa/force-verify (body: { setupToken, code })
-  → 200 { accessToken, refreshToken, user }
+POST /api/auth/2fa/force-setup → { qrCodeUrl, secret, backupCodes }
+POST /api/auth/2fa/force-verify → { accessToken, refreshToken, user }
 ```
-
-Frontend stores `force_2fa_setup_token` in `sessionStorage`, redirects to `/force-2fa-setup.html`.
 
 ### Middleware Chain for Admin Routes
 
@@ -249,50 +255,35 @@ Frontend stores `force_2fa_setup_token` in `sessionStorage`, redirects to `/forc
 verifyToken → requireAdmin2fa → verifyRole([...]) → handler
 ```
 
-`requireAdmin2fa` returns 403 `admin_2fa_required` if `req.user.role` is admin but `req.user.twoFaEnabled` is falsy.
-
-### Fulfillment Endpoint
-
-`PATCH /api/admin/wins/:id/fulfillment`
-- Requires `verifyToken → requireAdmin2fa → verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN'])`
-- SCHOOL_ADMIN blocked if `bid.school_id !== req.user.schoolId` → 403 `Access denied: not your school`
-- Dynamic SET clause: only updates fields present in request body
-- Returns 400 if no recognizable fields provided
-- Fires `notifyArtworkShipped` via setImmediate when `shipped === true && !bid.shipped_at`
-
 ### TokenBlacklist / Pool in Tests
 
-- `TokenBlacklistService` lazily loads `pool` from `require('../models/index').pool`
-- `pool` is `null` in test mode (`NODE_ENV=test`) unless mocked
-- Admin route tests and teacher route tests must mock pool:
-  ```js
-  jest.mock('../../../src/models/index', () => ({
-    ...jest.requireActual('../../../src/models/index'),
-    pool: { query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }) }
-  }));
-  const { pool: mockPool } = require('../../../src/models/index');
-  ```
-- **Mock query order matters:** `tokenBlacklist.isRevoked` (in `verifyToken`) fires BEFORE handler queries — put its mock FIRST
-- **`jti` required in test tokens:** Without `jti`, `isRevoked` returns early without calling pool.query, shifting all subsequent mocks by one position
+- `pool` is `null` in test mode unless mocked
+- **Mock query order:** `tokenBlacklist.isRevoked` fires BEFORE handler queries — put mock FIRST
+- **`jti` required in test tokens:** Without `jti`, `isRevoked` returns early without calling `pool.query`
 
-### Routes Architecture
+### Frontend Unit Test Pattern (jest-environment-jsdom)
 
-| Route module | Factory? | DB source |
-|---|---|---|
-| `authRoutes(db)` | Yes | injected `db` (mockDb in tests) |
-| `userRoutes(db)` | Yes | injected `db` + pool via SessionService |
-| `adminRoutes` | No | lazy pool from `models/index` |
-| `teacherRoutes` | No | pool from `models/index` |
+- `@jest-environment jsdom` docblock
+- `Object.create(ClassName.prototype)` — no constructor
+- All `globalThis` stubs set BEFORE `require()`
+- `jest-environment-jsdom` must match jest major version (both `@29`)
 
 ### Schema Column Naming (key pitfalls)
 
 - `users.account_status` (not `status`)
 - `auctions.auction_status`, `starts_at`/`ends_at`, `created_by_user_id`
 - `bids.bid_status`, `bid_amount`, `placed_by_user_id`, `placed_at`
-- `bids` fulfillment columns: `shipped_at`, `tracking_carrier`, `tracking_number`, `delivered_at`, `fulfillment_notes`
 - `artwork.artwork_status`, `starting_bid_amount`, `reserve_bid_amount`, `created_by_user_id`
-- `transactions` table (not `payments`): `transaction_status`, `hammer_amount`, `buyer_user_id`
 - Status values are UPPERCASE: ACTIVE, DRAFT, LIVE, ENDED, CANCELLED, OUTBID, ACCEPTED
+
+### Bidding API — Key Endpoints
+
+| Endpoint | Auth | Notes |
+|---|---|---|
+| `GET /api/auctions/:id/public` | None | Visitor preview — safe projection, no bidder identities |
+| `GET /api/auctions/:id/artwork` | Required | Returns artwork with `currentBid`, `startingPrice` in dollars |
+| `GET /api/bidding/artwork/:artworkId/history` | Optional | Per-artwork bid history — no school restriction, works for BIDDER |
+| `POST /api/bidding/place` | Required | Body: `{ artworkId, bidAmount }` — dollars, not cents |
 
 ---
 
@@ -300,22 +291,32 @@ verifyToken → requireAdmin2fa → verifyRole([...]) → handler
 
 | File | Role |
 |------|------|
-| `src/services/notificationService.js` | Email templates, EmailProvider, notification functions, createEmailProvider |
-| `src/services/biddingService.js` | Bid placement with outbid notification |
+| `src/services/notificationService.js` | Email templates, EmailProvider, notification functions |
+| `src/services/biddingService.js` | Bid placement — dollars throughout, $10 minimum increment |
 | `src/services/auctionService.js` | Auction lifecycle with winner notification |
 | `src/controllers/teacherController.js` | Artwork approve/reject with status notifications |
-| `src/services/authenticationService.js` | JWTService, TwoFactorService, RBACService, SessionService, AuthenticationService, TokenBlacklistService |
+| `src/services/authenticationService.js` | JWTService, TwoFactorService, RBACService, SessionService, TokenBlacklistService |
 | `src/controllers/userController.js` | Login, logout, register, 2FA verify, refresh, password, profile |
 | `src/middleware/authMiddleware.js` | verifyToken, optionalVerifyToken, requireAdmin2fa, verifyRole |
 | `src/routes/authRoutes.js` | /api/auth/* including /2fa/force-setup and /2fa/force-verify |
 | `src/routes/userRoutes.js` | /api/user/* including /sessions endpoints and /wins with fulfillment fields |
 | `src/routes/adminRoutes.js` | /api/admin/* including /wins (fulfillment list) and /wins/:id/fulfillment (PATCH) |
 | `src/routes/teacherRoutes.js` | /api/teacher/* artwork approve/reject |
+| `public/auction-detail.html` | Auction detail page — no payment-method select, has leading-bidder-banner, bid-history-container is `<ul>` |
+| `public/js/auction-detail.js` | AuctionDetail class — all bidding logic, WebSocket, QR deep-link, auth wall |
+| `public/auction-labels.html` | Printable label page — auth-gated (TEACHER/SCHOOL_ADMIN/SITE_ADMIN) |
+| `public/css/auction-labels.css` | Label card layout + @media print stylesheet |
+| `public/js/auction-labels.js` | AuctionLabels class — fetch, render, QR generation |
+| `public/images/auction-items/` | 6 student artwork JPGs: BeachRooster, BurgerCat, RainbowSky, Roostertude, SeaLife, UGASmiling |
+| `db/seeds/seed-artwork.js` | Idempotent artwork seed — run via `docker exec sag-app-prod node db/seeds/seed-artwork.js` |
+| `public/index.html` | Home page — Browse Auctions is `<a href="/auctions.html">`, not a button |
 | `public/force-2fa-setup.html` | Forced admin 2FA setup UI |
 | `public/user-dashboard.html` | User dashboard with sessions management in Account tab |
 | `public/admin-dashboard.html` | Admin dashboard with Fulfillment tab |
 | `public/js/user-dashboard.js` | User dashboard JS including wins/fulfillment display |
+| `public/bidder-welcome.html` | BIDDER role landing page |
 | `db/migrations/` | All schema migrations |
 | `tests/integration/routes/` | Integration tests (mock DB) |
+| `tests/integration/routes/artworkQrBiddingTest.spec.js` | 15 frontend unit tests for QR/bidding feature |
 | `tests/helpers/createTestApp.js` | Creates Express app with mockDb |
 | `tests/helpers/mockDb.js` | jest.fn() mock for injected db |
