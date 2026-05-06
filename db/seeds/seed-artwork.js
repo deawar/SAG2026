@@ -39,7 +39,7 @@ const ARTWORKS = [
     medium:      'Watercolor',
     widthCm:     20,
     heightCm:    28,
-    startingBid: 25.00,
+    startingBid: 5,
     description: 'A cheerful rooster in striped board shorts and sunglasses enjoys a day at the beach. Watercolor on paper, matted and framed.',
   },
   {
@@ -49,7 +49,7 @@ const ARTWORKS = [
     medium:      'Acrylic on Board',
     widthCm:     30,
     heightCm:    30,
-    startingBid: 25.00,
+    startingBid: 5,
     description: 'A deadpan cat gazes out from inside a burger bun surrounded by lettuce. Bold pop-art style on a vibrant yellow background.',
   },
   {
@@ -59,7 +59,7 @@ const ARTWORKS = [
     medium:      'Acrylic on Canvas',
     widthCm:     30,
     heightCm:    30,
-    startingBid: 30.00,
+    startingBid: 8,
     description: 'A dramatic rainbow arcs across a stormy purple-blue sky over distant mountains. Rich atmospheric color work in acrylic.',
   },
   {
@@ -69,7 +69,7 @@ const ARTWORKS = [
     medium:      'Acrylic and Marker',
     widthCm:     38,
     heightCm:    28,
-    startingBid: 35.00,
+    startingBid: 8,
     description: 'A confident rooster surveys a farm landscape complete with windmill and wooden fence. Strong linework and vivid color.',
   },
   {
@@ -79,7 +79,7 @@ const ARTWORKS = [
     medium:      'Watercolor and Ink',
     widthCm:     38,
     heightCm:    50,
-    startingBid: 75.00,
+    startingBid: 15,
     description: 'An intricate framed piece featuring a sea turtle whose shell holds an entire ocean world — octopus, dolphins, tropical fish, and seagrass. Exceptional detail in watercolor and ink.',
   },
   {
@@ -89,7 +89,7 @@ const ARTWORKS = [
     medium:      'Acrylic on Canvas',
     widthCm:     40,
     heightCm:    32,
-    startingBid: 50.00,
+    startingBid: 10,
     description: 'The beloved UGA Bulldog mascot beams in his Georgia uniform against a bold red background. Signed by the artist.',
   },
 ];
