@@ -58,11 +58,11 @@ describe('BiddingService', () => {
     it('should reject bid that is below minimum increment', async () => {
       const artworkId = 'art-123';
       const userId = 'user-456';
-      const bidAmount = 40050; // Only $0.50 above current bid (minimum is current + 100 = 40100)
+      const bidAmount = 55; // Only $5 above current bid (minimum is current + $10 = $60)
 
       mockClient.query
         .mockResolvedValueOnce({})  // BEGIN
-        .mockResolvedValueOnce({ rows: [{ id: 'art-123', starting_bid_amount: 10000, current_bid: 40000, auction_status: 'LIVE', ends_at: new Date(Date.now() + 3600000), created_by_user_id: 'artist-789', auction_id: 'auction-123' }] });
+        .mockResolvedValueOnce({ rows: [{ id: 'art-123', starting_bid_amount: 25, current_bid: 50, auction_status: 'LIVE', ends_at: new Date(Date.now() + 3600000), created_by_user_id: 'artist-789', auction_id: 'auction-123' }] });
 
       await expect(biddingService.placeBid(artworkId, userId, bidAmount)).rejects.toThrow('below minimum');
 
