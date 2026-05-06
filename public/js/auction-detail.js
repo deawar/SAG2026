@@ -418,8 +418,8 @@ class AuctionDetail {
       return;
     }
 
-    const currentBid = this.auction.currentBid ?? 0;
-    const minBid = currentBid + (this.auction.minBidIncrement || 10);
+    const currentBid = this.currentPiece?.currentBid ?? 0;
+    const minBid = currentBid + 10;
     if (Number.parseFloat(bidAmount) < minBid) {
       UIComponents.showAlert(
         `Minimum bid is ${UIComponents.formatCurrency(minBid)}`,

@@ -59,15 +59,15 @@ class BiddingService {
       // Validate bid amount against current highest + minimum increment
       const currentBid = artwork.current_bid ? parseFloat(artwork.current_bid) : 0;
       const startingBid = artwork.starting_bid_amount ? parseFloat(artwork.starting_bid_amount) : 0;
-      const minimumBid = currentBid > 0 ? currentBid + 100 : startingBid; // $1.00 default increment
+      const minimumBid = currentBid > 0 ? currentBid + 10 : startingBid; // $10 minimum increment
 
       if (bidAmount < minimumBid) {
-        throw new Error(`Bid amount $${(bidAmount / 100).toFixed(2)} is below minimum required $${(minimumBid / 100).toFixed(2)}`);
+        throw new Error(`Bid amount $${bidAmount.toFixed(2)} is below minimum required $${minimumBid.toFixed(2)}`);
       }
 
       // Check for reserve price (if exists)
       if (artwork.reserve_bid_amount && bidAmount < parseFloat(artwork.reserve_bid_amount)) {
-        throw new Error(`Bid does not meet reserve price of $${(parseFloat(artwork.reserve_bid_amount) / 100).toFixed(2)}`);
+        throw new Error(`Bid does not meet reserve price of $${parseFloat(artwork.reserve_bid_amount).toFixed(2)}`);
       }
 
       // Check user's account status
@@ -130,7 +130,7 @@ class BiddingService {
             email: prevBidder.email,
             firstName: prevBidder.first_name,
             artworkTitle: artwork.title,
-            newBidDollars: bidAmount / 100,
+            newBidDollars: bidAmount,
             auctionEndsAt: artwork.ends_at
           }).catch(err => console.error('[notification] outbid failed:', err.message));
         });
@@ -142,7 +142,7 @@ class BiddingService {
         artworkId,
         bidAmount,
         timestamp: bid.placed_at,
-        message: `Bid placed successfully for $${(bidAmount / 100).toFixed(2)}`
+        message: `Bid placed successfully for $${bidAmount.toFixed(2)}`
       };
     } catch (error) {
       await client.query('ROLLBACK');
