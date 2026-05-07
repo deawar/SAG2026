@@ -282,34 +282,26 @@ a:focus {
     color: var(--color-dark-gray);
     text-decoration: none;
     font-weight: 500;
-    padding: var(--spacing-sm) var(--spacing-md);
-    border-radius: var(--radius-md);
-    transition: color var(--transition-fast);
-    position: relative;
-    letter-spacing: 0.025em;
-}
-
-/* Underline that grows from the center on hover */
-.nav-link::after {
-    content: '';
-    position: absolute;
-    bottom: 2px;
-    left: 50%;
-    right: 50%;
-    height: 2px;
-    background-color: var(--color-primary);
-    border-radius: 1px;
-    transition: left var(--transition-normal), right var(--transition-normal);
+    font-size: 14px;
+    padding: 7px 15px;
+    border-radius: 8px;
+    border: 1.5px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    backface-visibility: hidden;
+    transform: translate3d(0, 0, 0);
+    transition: all .3s;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    cursor: pointer;
 }
 
 .nav-link:hover {
     color: var(--color-primary);
+    border-color: var(--color-primary);
+    background-color: transparent;
     text-decoration: none;
-}
-
-.nav-link:hover::after {
-    left: var(--spacing-md);
-    right: var(--spacing-md);
+    transform: translate3d(0, -1px, 0);
 }
 
 .nav-link:focus {
@@ -318,16 +310,10 @@ a:focus {
 }
 
 .nav-link.active {
-    color: var(--color-primary);
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
     font-weight: 600;
-}
-
-.nav-link.active::after {
-    left: var(--spacing-md);
-    right: var(--spacing-md);
-    bottom: -1px;
-    height: 3px;
-    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
 }
 
 .navbar-auth {
