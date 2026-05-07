@@ -298,16 +298,17 @@
                     <!-- Profile Information -->
                     <div class="settings-section">
                         <h3>Profile Information</h3>
-                        <form id="profile-form" class="settings-form" aria-label="Update profile information">
+                        <form id="profile-form" data-form="profile" class="settings-form" aria-label="Update profile information">
                             <fieldset>
                                 <legend class="sr-only">Personal Information</legend>
-                                
+
                                 <div class="form-group">
                                     <label for="full-name">Full Name <span aria-label="required">*</span></label>
-                                    <input 
-                                        type="text" 
-                                        id="full-name" 
-                                        class="form-control" 
+                                    <input
+                                        type="text"
+                                        id="full-name"
+                                        name="full-name"
+                                        class="form-control"
                                         required
                                         aria-required="true"
                                         aria-describedby="fullname-error"
@@ -317,10 +318,11 @@
 
                                 <div class="form-group">
                                     <label for="email">Email Address <span aria-label="required">*</span></label>
-                                    <input 
-                                        type="email" 
-                                        id="email" 
-                                        class="form-control" 
+                                    <input
+                                        type="email"
+                                        id="email"
+                                        name="email"
+                                        class="form-control"
                                         required
                                         aria-required="true"
                                         aria-describedby="email-error"
@@ -330,10 +332,11 @@
 
                                 <div class="form-group">
                                     <label for="phone">Phone Number</label>
-                                    <input 
-                                        type="tel" 
-                                        id="phone" 
-                                        class="form-control" 
+                                    <input
+                                        type="tel"
+                                        id="phone"
+                                        name="phone"
+                                        class="form-control"
                                         placeholder="+1 (555) 000-0000"
                                         aria-describedby="phone-help"
                                     >
@@ -348,7 +351,7 @@
                     <!-- Address Information -->
                     <div class="settings-section">
                         <h3>Shipping Address</h3>
-                        <form id="address-form" class="settings-form" aria-label="Update shipping address">
+                        <form id="address-form" data-form="address" class="settings-form" aria-label="Update shipping address">
                             <fieldset>
                                 <legend class="sr-only">Shipping Address</legend>
                                 
@@ -490,16 +493,17 @@
             <button class="modal-close" aria-label="Close password change">&times;</button>
             
             <h2 id="password-title">Change Password</h2>
-            <form id="password-form" class="auth-form" aria-label="Change password form">
+            <form id="password-form" data-form="password" class="auth-form" aria-label="Change password form">
                 <fieldset>
                     <legend class="sr-only">Password Information</legend>
-                    
+
                     <div class="form-group">
                         <label for="current-password">Current Password <span aria-label="required">*</span></label>
-                        <input 
-                            type="password" 
-                            id="current-password" 
-                            class="form-control" 
+                        <input
+                            type="password"
+                            id="current-password"
+                            name="old-password"
+                            class="form-control"
                             required
                             aria-required="true"
                             aria-describedby="current-password-error"
@@ -509,10 +513,11 @@
 
                     <div class="form-group">
                         <label for="new-password">New Password <span aria-label="required">*</span></label>
-                        <input 
-                            type="password" 
-                            id="new-password" 
-                            class="form-control" 
+                        <input
+                            type="password"
+                            id="new-password"
+                            name="new-password"
+                            class="form-control"
                             required
                             aria-required="true"
                             aria-describedby="new-password-error new-password-help"
@@ -523,10 +528,11 @@
 
                     <div class="form-group">
                         <label for="confirm-password">Confirm Password <span aria-label="required">*</span></label>
-                        <input 
-                            type="password" 
-                            id="confirm-password" 
-                            class="form-control" 
+                        <input
+                            type="password"
+                            id="confirm-password"
+                            name="confirm-password"
+                            class="form-control"
                             required
                             aria-required="true"
                             aria-describedby="confirm-password-error"

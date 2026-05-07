@@ -637,11 +637,13 @@ label {
     cursor: not-allowed;
 }
 
+.form-control:user-invalid,
 .form-control:invalid:not(:placeholder-shown) {
     border-color: var(--color-error);
 }
 
-.form-control:invalid:focus {
+.form-control:user-invalid:focus,
+.form-control:invalid:not(:placeholder-shown):focus {
     box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.1);
 }
 
