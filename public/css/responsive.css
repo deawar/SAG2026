@@ -303,13 +303,12 @@
         text-align: left;
     }
     
-    .nav-link.active::after {
-        display: none;
-    }
-    
     .nav-link.active {
-        background-color: var(--color-lightest-gray);
-        border-left: 3px solid var(--color-primary);
+        background-color: var(--color-primary);
+        color: #fff;
+        border-color: var(--color-primary);
+        border-left: 3px solid var(--color-primary-dark);
+        border-radius: 0;
         padding-left: calc(var(--spacing-md) - 3px);
     }
     
@@ -551,13 +550,14 @@
         min-height: 44px;
     }
     
-    /* Remove hover effects on touch devices */
+    /* Keep hover styles readable on touch devices */
     .btn:hover {
-        background-color: var(--color-primary);
+        background-color: var(--color-primary-dark);
     }
-    
+
     .nav-link:hover {
-        color: var(--color-gray);
+        color: var(--color-primary);
+        border-color: var(--color-primary);
     }
 }
 
