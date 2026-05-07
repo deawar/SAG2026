@@ -116,7 +116,10 @@ class UserDashboard {
       submitBtn?.addEventListener('click', (e) => this.saveAddress(e, addressForm));
     }
 
-    // Password change form
+    // Password change form (in modal)
+    const changePasswordBtn = document.getElementById('change-password-btn');
+    changePasswordBtn?.addEventListener('click', () => UIComponents.showModal('password-modal'));
+
     const passwordForm = document.querySelector('[data-form="password"]');
     if (passwordForm) {
       const submitBtn = passwordForm.querySelector('button[type="submit"]');
@@ -197,7 +200,7 @@ class UserDashboard {
 
     const activePanel = document.getElementById(tabName);
     if (activePanel) {
-      activePanel.style.display = '';
+      activePanel.style.display = 'block';
       activePanel.setAttribute('aria-hidden', 'false');
 
       // Load data for this tab
