@@ -918,7 +918,7 @@ textarea.form-control {
 /* ===== Hero Carousel ===== */
 .hero-carousel {
     position: relative;
-    width: 100%;
+    width: 78%;
     height: 320px;
     border-radius: var(--radius-md);
     overflow: hidden;
