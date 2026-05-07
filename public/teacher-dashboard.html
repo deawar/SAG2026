@@ -126,20 +126,30 @@
                         <!-- CSV Upload Form -->
                         <div class="card">
                             <h3>Upload Student List</h3>
+
+                            <div class="csv-sample-banner">
+                                <div class="csv-sample-info">
+                                    <strong>Required format:</strong> two columns — <code>name</code> and <code>email</code> — with a header row.
+                                </div>
+                                <a href="/downloads/sample-students.csv" download="sample-students.csv" class="btn btn-secondary btn-sm">
+                                    ⬇ Download Sample CSV
+                                </a>
+                            </div>
+
                             <form id="csv-upload-form" class="form">
                                 <div class="form-group">
                                     <label for="csv-file">CSV File <span aria-label="required">*</span></label>
-                                    <input 
-                                        type="file" 
-                                        id="csv-file" 
+                                    <input
+                                        type="file"
+                                        id="csv-file"
                                         name="csvFile"
-                                        accept=".csv" 
+                                        accept=".csv"
                                         required
                                         aria-required="true"
                                         aria-describedby="csv-help"
                                     >
                                     <small id="csv-help" class="help-text">
-                                        File format: Name, Email (one student per line, with header row)
+                                        One student per row. Names with commas should be quoted: <code>"Smith, John"</code>
                                     </small>
                                 </div>
                                 <button type="submit" class="btn btn-primary">Upload and Generate Links</button>
