@@ -874,15 +874,20 @@ async function _checkEmailPref(db, userId, prefKey) {
  * @param {object} data - { userId, email, firstName, artworkTitle, newBidDollars, auctionEndsAt }
  */
 async function notifyOutbid(emailProvider, db, data) {
-  const { userId, email, firstName, artworkTitle, newBidDollars, auctionEndsAt, artworkId } = data;
+  const { userId, email, firstName, artworkTitle, newBidDollars, auctionEndsAt, artworkId, auctionId } = data;
   if (!await _checkEmailPref(db, userId, 'email_outbid')) return;
   const baseUrl = process.env.FRONTEND_URL || process.env.SITE_URL || 'https://sag.live';
+  let auctionLink = `${baseUrl}/auction-detail.html`;
+  if (auctionId) {
+    auctionLink += `?id=${auctionId}`;
+    if (artworkId) auctionLink += `&artwork=${artworkId}`;
+  }
   const tmpl = EmailTemplateService.generateTemplate('outbid-alert', {
     firstName,
     artworkTitle,
     currentBid: newBidDollars,
     auctionEndTime: auctionEndsAt ? new Date(auctionEndsAt).toLocaleString() : 'unknown',
-    auctionLink: `${baseUrl}/auction-detail.html${artworkId ? '?id=' + artworkId : ''}`
+    auctionLink
   });
   await emailProvider.send(email, tmpl.subject, tmpl.html, tmpl.text);
 }
