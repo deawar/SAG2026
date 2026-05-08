@@ -131,7 +131,8 @@ class BiddingService {
             firstName: prevBidder.first_name,
             artworkTitle: artwork.title,
             newBidDollars: bidAmount,
-            auctionEndsAt: artwork.ends_at
+            auctionEndsAt: artwork.ends_at,
+            artworkId
           }).catch(err => console.error('[notification] outbid failed:', err.message));
         });
       }
