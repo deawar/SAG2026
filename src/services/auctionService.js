@@ -831,7 +831,7 @@ class AuctionService {
    */
   async _generateQRCode(auctionId) {
     try {
-      const auctionUrl = `${process.env.APP_URL || 'http://localhost:5000'}/auctions/${auctionId}`;
+      const auctionUrl = `${process.env.FRONTEND_URL || process.env.SITE_URL || 'https://sag.live'}/auctions/${auctionId}`;
       const qrCode = await QRCode.toDataURL(auctionUrl);
       return qrCode;
     } catch (error) {

@@ -253,7 +253,7 @@ class EmailTemplateService {
 
   static artworkStatusChangedTemplate(data) {
     const { firstName, artworkTitle, newStatus, reason } = data;
-    const dashboardLink = `${process.env.APP_URL || 'https://ssccbogart.com'}/user-dashboard.html`;
+    const dashboardLink = `${process.env.FRONTEND_URL || process.env.SITE_URL || 'https://sag.live'}/user-dashboard.html`;
     const approved = newStatus === 'APPROVED';
     return {
       subject: approved
@@ -282,7 +282,7 @@ class EmailTemplateService {
 
   static artworkShippedTemplate(data) {
     const { firstName, artworkTitle, trackingCarrier, trackingNumber } = data;
-    const dashboardLink = `${process.env.APP_URL || 'https://ssccbogart.com'}/user-dashboard.html`;
+    const dashboardLink = `${process.env.FRONTEND_URL || process.env.SITE_URL || 'https://sag.live'}/user-dashboard.html`;
     const trackingLine = trackingCarrier && trackingNumber
       ? `<p><strong>Carrier:</strong> ${this.escapeHtml(trackingCarrier)}<br><strong>Tracking #:</strong> ${this.escapeHtml(trackingNumber)}</p>`
       : '';
@@ -410,7 +410,7 @@ class EmailProvider {
     }
 
     const info = await this.transporter.sendMail({
-      from: this.config.fromEmail || 'noreply@ssccbogart.com',
+      from: this.config.fromEmail || 'noreply@sag.live',
       to,
       subject,
       html,
@@ -881,7 +881,7 @@ async function notifyOutbid(emailProvider, db, data) {
     artworkTitle,
     currentBid: newBidDollars,
     auctionEndTime: auctionEndsAt ? new Date(auctionEndsAt).toLocaleString() : 'unknown',
-    auctionLink: `${process.env.APP_URL || 'https://ssccbogart.com'}/auction-detail.html`
+    auctionLink: `${process.env.FRONTEND_URL || process.env.SITE_URL || 'https://sag.live'}/auction-detail.html`
   });
   await emailProvider.send(email, tmpl.subject, tmpl.html, tmpl.text);
 }
@@ -897,7 +897,7 @@ async function notifyOutbid(emailProvider, db, data) {
 async function notifyAuctionWon(emailProvider, db, data) {
   const { userId, email, firstName, artworkTitle, winningBidDollars } = data;
   if (!await _checkEmailPref(db, userId, 'email_winner')) return;
-  const dashboardLink = `${process.env.APP_URL || 'https://ssccbogart.com'}/user-dashboard.html`;
+  const dashboardLink = `${process.env.FRONTEND_URL || process.env.SITE_URL || 'https://sag.live'}/user-dashboard.html`;
   const tmpl = EmailTemplateService.generateTemplate('winner-notification', {
     firstName,
     artworkTitle,
