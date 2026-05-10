@@ -325,6 +325,169 @@ class SquareGateway extends PaymentGateway {
 }
 
 // ============================================================================
+// 4.3b PayPal Gateway Implementation  (uses @paypal/paypal-server-sdk v2+)
+// ============================================================================
+
+class PayPalGateway extends PaymentGateway {
+  constructor(config) {
+    super(config);
+    const {
+      Client,
+      Environment,
+      OrdersController,
+      PaymentsController,
+      OAuthAuthorizationController
+    } = require('@paypal/paypal-server-sdk');
+    this.ppClient = new Client({
+      clientCredentialsAuthCredentials: {
+        oAuthClientId: config.clientId,
+        oAuthClientSecret: config.clientSecret
+      },
+      environment: config.environment === 'production'
+        ? Environment.Production
+        : Environment.Sandbox
+    });
+    this.ordersController = new OrdersController(this.ppClient);
+    this.paymentsController = new PaymentsController(this.ppClient);
+    this.oauthController = new OAuthAuthorizationController(this.ppClient);
+    this.apiBase = config.environment === 'production'
+      ? 'https://api-m.paypal.com'
+      : 'https://api-m.sandbox.paypal.com';
+  }
+
+  async tokenizePaymentMethod(paymentData) {
+    const { amount, currency, description, returnUrl, cancelUrl, metadata } = paymentData;
+    try {
+      const response = await this.ordersController.createOrder({
+        body: {
+          intent: 'CAPTURE',
+          purchaseUnits: [{
+            referenceId: metadata?.artworkId || 'default',
+            description: description || 'Silent Auction Gallery purchase',
+            amount: {
+              currencyCode: (currency || 'USD').toUpperCase(),
+              value: Number(amount).toFixed(2)
+            }
+          }],
+          applicationContext: {
+            returnUrl,
+            cancelUrl,
+            brandName: 'Silent Auction Gallery',
+            userAction: 'PAY_NOW'
+          }
+        }
+      });
+      const order = response.result;
+      const approvalLink = order.links?.find(l => l.rel === 'approve');
+      return {
+        token: order.id,
+        approvalUrl: approvalLink ? approvalLink.href : null
+      };
+    } catch (error) {
+      throw new Error(`PAYPAL_TOKENIZATION_FAILED: ${error.message}`);
+    }
+  }
+
+  async chargeCard(chargeData) {
+    const { token: orderId } = chargeData;
+    try {
+      const response = await this.ordersController.captureOrder({ id: orderId, body: {} });
+      const order = response.result;
+      const captureDetail = order.purchaseUnits[0].payments.captures[0];
+      return {
+        transactionId: captureDetail.id,
+        orderId: order.id,
+        status: order.status,
+        amount: parseFloat(captureDetail.amount.value),
+        currency: captureDetail.amount.currencyCode,
+        timestamp: new Date(captureDetail.createTime),
+        gatewayResponse: order
+      };
+    } catch (error) {
+      throw new Error(`PAYPAL_CHARGE_FAILED: ${error.message}`);
+    }
+  }
+
+  async refundCharge(refundData) {
+    const { transactionId: captureId, amount, reason } = refundData;
+    try {
+      const response = await this.paymentsController.refundCapturedPayment({
+        captureId,
+        body: {
+          amount: amount ? { currencyCode: 'USD', value: Number(amount).toFixed(2) } : undefined,
+          noteToPayer: reason || 'Refund'
+        }
+      });
+      const refund = response.result;
+      return {
+        refundId: refund.id,
+        status: refund.status,
+        amount: refund.amount ? parseFloat(refund.amount.value) : amount,
+        timestamp: new Date(refund.createTime)
+      };
+    } catch (error) {
+      throw new Error(`PAYPAL_REFUND_FAILED: ${error.message}`);
+    }
+  }
+
+  async getTransactionStatus(transactionId) {
+    try {
+      const response = await this.paymentsController.getCapturedPayment({ captureId: transactionId });
+      const capture = response.result;
+      return {
+        transactionId: capture.id,
+        status: capture.status,
+        amount: parseFloat(capture.amount.value),
+        currency: capture.amount.currencyCode,
+        timestamp: new Date(capture.createTime)
+      };
+    } catch (error) {
+      throw new Error(`PAYPAL_STATUS_CHECK_FAILED: ${error.message}`);
+    }
+  }
+
+  async validateWebhook(webhookData, headers) {
+    try {
+      const tokenResponse = await this.oauthController.requestToken({
+        body: { grantType: 'client_credentials' }
+      });
+      const accessToken = tokenResponse.result.accessToken;
+
+      const event = typeof webhookData === 'string' ? JSON.parse(webhookData) : webhookData;
+      const res = await fetch(`${this.apiBase}/v1/notifications/verify-webhook-signature`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          auth_algo: headers['paypal-auth-algo'],
+          cert_url: headers['paypal-cert-url'],
+          client_cert_key_id: headers['paypal-transmission-id'],
+          transmission_id: headers['paypal-transmission-id'],
+          transmission_sig: headers['paypal-transmission-sig'],
+          transmission_time: headers['paypal-transmission-time'],
+          webhook_id: this.config.webhookId,
+          webhook_event: event
+        })
+      });
+      const result = await res.json();
+
+      if (result.verification_status !== 'SUCCESS') {
+        throw new Error('Invalid signature');
+      }
+      return {
+        eventType: event.event_type,
+        eventId: event.id,
+        data: event.resource
+      };
+    } catch (error) {
+      throw new Error(`PAYPAL_WEBHOOK_INVALID: ${error.message}`);
+    }
+  }
+}
+
+// ============================================================================
 // 4.4 Payment Service (Multi-Gateway Orchestration)
 // ============================================================================
 
@@ -891,6 +1054,7 @@ module.exports = {
   PaymentGateway,
   StripeGateway,
   SquareGateway,
+  PayPalGateway,
   PaymentService,
   FraudDetectionService
 };
