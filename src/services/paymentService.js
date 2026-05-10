@@ -389,11 +389,19 @@ class PayPalGateway extends PaymentGateway {
   }
 
   async chargeCard(chargeData) {
-    const { token: orderId } = chargeData;
+    const { token: orderId, idempotencyKey } = chargeData;
     try {
-      const response = await this.ordersController.captureOrder({ id: orderId, body: {} });
+      const response = await this.ordersController.captureOrder({
+        id: orderId,
+        paypalRequestId: idempotencyKey,
+        body: {}
+      });
       const order = response.result;
-      const captureDetail = order.purchaseUnits[0].payments.captures[0];
+      const captures = order.purchaseUnits?.[0]?.payments?.captures;
+      if (!captures?.length) {
+        throw new Error('No capture returned from PayPal');
+      }
+      const captureDetail = captures[0];
       return {
         transactionId: captureDetail.id,
         orderId: order.id,
@@ -414,7 +422,7 @@ class PayPalGateway extends PaymentGateway {
       const response = await this.paymentsController.refundCapturedPayment({
         captureId,
         body: {
-          amount: amount ? { currencyCode: 'USD', value: Number(amount).toFixed(2) } : undefined,
+          amount: amount ? { currencyCode: (refundData.currency || 'USD').toUpperCase(), value: Number(amount).toFixed(2) } : undefined,
           noteToPayer: reason || 'Refund'
         }
       });
@@ -448,8 +456,9 @@ class PayPalGateway extends PaymentGateway {
 
   async validateWebhook(webhookData, headers) {
     try {
+      const creds = Buffer.from(`${this.config.clientId}:${this.config.clientSecret}`).toString('base64');
       const tokenResponse = await this.oauthController.requestToken({
-        body: { grantType: 'client_credentials' }
+        authorization: `Basic ${creds}`
       });
       const accessToken = tokenResponse.result.accessToken;
 
@@ -463,7 +472,7 @@ class PayPalGateway extends PaymentGateway {
         body: JSON.stringify({
           auth_algo: headers['paypal-auth-algo'],
           cert_url: headers['paypal-cert-url'],
-          client_cert_key_id: headers['paypal-transmission-id'],
+          client_cert_key_id: headers['paypal-cert-id'],
           transmission_id: headers['paypal-transmission-id'],
           transmission_sig: headers['paypal-transmission-sig'],
           transmission_time: headers['paypal-transmission-time'],
@@ -471,6 +480,9 @@ class PayPalGateway extends PaymentGateway {
           webhook_event: event
         })
       });
+      if (!res.ok) {
+        throw new Error(`PayPal verification endpoint returned ${res.status}`);
+      }
       const result = await res.json();
 
       if (result.verification_status !== 'SUCCESS') {
