@@ -9,22 +9,71 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const PaymentController = require('../controllers/paymentController');
+const {
+  StripeGateway,
+  SquareGateway,
+  PayPalGateway,
+  PaymentService,
+  FraudDetectionService
+} = require('../services/paymentService');
 
 /**
- * NullPaymentService — safe stand-in until a real PaymentService is wired up.
- * Every method throws a clear error instead of crashing on null dereference.
+ * NullPaymentService — stand-in when no gateway env vars are configured.
  */
 class NullPaymentService {
-  _notConfigured() {
-    throw new Error('PaymentService not configured');
-  }
+  _notConfigured() { throw new Error('PaymentService not configured'); }
   async processPayment()   { this._notConfigured(); }
   async getPaymentStatus() { this._notConfigured(); }
   async processRefund()    { this._notConfigured(); }
   async handleWebhook()    { this._notConfigured(); }
 }
 
-const paymentController = new PaymentController(new NullPaymentService());
+function buildPaymentService(db) {
+  const gateways = {};
+
+  if (process.env.STRIPE_SECRET_KEY) {
+    gateways.STRIPE = new StripeGateway({
+      apiKey: process.env.STRIPE_SECRET_KEY,
+      webhookSecret: process.env.STRIPE_WEBHOOK_SECRET
+    });
+  }
+  if (process.env.SQUARE_ACCESS_TOKEN) {
+    gateways.SQUARE = new SquareGateway({
+      apiKey: process.env.SQUARE_ACCESS_TOKEN,
+      environment: process.env.SQUARE_ENVIRONMENT || 'production'
+    });
+  }
+  if (process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET) {
+    gateways.PAYPAL = new PayPalGateway({
+      clientId: process.env.PAYPAL_CLIENT_ID,
+      clientSecret: process.env.PAYPAL_CLIENT_SECRET,
+      environment: process.env.PAYPAL_ENVIRONMENT || 'production',
+      webhookId: process.env.PAYPAL_WEBHOOK_ID
+    });
+  }
+
+  if (Object.keys(gateways).length === 0) {
+    return new NullPaymentService();
+  }
+
+  return new PaymentService({
+    db,
+    gateways,
+    fraudDetectionService: new FraudDetectionService({ db }),
+    complianceService: { logTransaction: async () => {} }
+  });
+}
+
+// Lazily resolved on first use — pool not available at module load time
+// (same pattern as adminRoutes.js)
+let _paymentController = null;
+function getPaymentController() {
+  if (!_paymentController) {
+    const { pool } = require('../models/index');
+    _paymentController = new PaymentController(buildPaymentService(pool));
+  }
+  return _paymentController;
+}
 
 /**
  * POST /api/payments
@@ -60,7 +109,7 @@ const paymentController = new PaymentController(new NullPaymentService());
  */
 router.post('/',
   authMiddleware.verifyToken,
-  (req, res, next) => paymentController.processPayment(req, res, next)
+  (req, res, next) => getPaymentController().processPayment(req, res, next)
 );
 
 /**
@@ -90,7 +139,7 @@ router.post('/',
  */
 router.get('/:transactionId',
   authMiddleware.verifyToken,
-  (req, res, next) => paymentController.getPaymentStatus(req, res, next)
+  (req, res, next) => getPaymentController().getPaymentStatus(req, res, next)
 );
 
 /**
@@ -126,7 +175,7 @@ router.get('/:transactionId',
 router.post('/:transactionId/refund',
   authMiddleware.verifyToken,
   authMiddleware.verifyRole('SITE_ADMIN', 'SCHOOL_ADMIN'),
-  (req, res, next) => paymentController.refundPayment(req, res, next)
+  (req, res, next) => getPaymentController().refundPayment(req, res, next)
 );
 
 /**
@@ -147,7 +196,7 @@ router.post('/:transactionId/refund',
  * }
  */
 router.post('/webhooks/payment',
-  (req, res, next) => paymentController.handleWebhook(req, res, next)
+  (req, res, next) => getPaymentController().handleWebhook(req, res, next)
 );
 
 /**
