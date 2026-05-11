@@ -455,7 +455,7 @@ class AuctionService {
         startTime: auction.starts_at,
         endTime: auction.ends_at,
         createdAt: auction.created_at,
-        currentBid: auction.current_bid ? Number.parseFloat(auction.current_bid) / 100 : 0,
+        currentBid: auction.current_bid ? Number.parseFloat(auction.current_bid) : 0,
         bidCount: Number.parseInt(auction.bid_count) || 0,
         image: auction.cover_image || null
       })),
