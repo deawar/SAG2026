@@ -39,10 +39,7 @@ class BidController {
         });
       }
 
-      // Convert to cents if needed
-      const bidAmountCents = typeof bidAmount === 'number' ? Math.round(bidAmount * 100) : bidAmount;
-
-      const result = await biddingService.placeBid(artworkId, userId, bidAmountCents);
+      const result = await biddingService.placeBid(artworkId, userId, bidAmount);
 
       return res.status(201).json(result);
     } catch (error) {
