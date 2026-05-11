@@ -56,6 +56,17 @@ class AuctionDetail {
       });
       const data = await response.json();
 
+      if (response.status === 401) {
+        // Stale or expired token — clear it and show the public preview
+        if (window.authManager) {
+          window.authManager.clearAuth();
+        } else {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('refresh_token');
+        }
+        return this._loadPublicPreview();
+      }
+
       if (!response.ok) {
         this.showError(data.message || 'Auction not found');
         return;
