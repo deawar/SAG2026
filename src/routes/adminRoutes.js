@@ -517,6 +517,15 @@ router.post(
         });
       }
 
+      const { gateway_type: gatewayType = 'STRIPE' } = req.body;
+      const allowedTypes = ['STRIPE', 'SQUARE', 'PAYPAL'];
+      if (!allowedTypes.includes(gatewayType.toUpperCase())) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid gateway_type. Allowed: ${allowedTypes.join(', ')}`
+        });
+      }
+
       // Insert dummy test gateway
       const result = await pool.query(
         `INSERT INTO payment_gateways (
@@ -528,8 +537,8 @@ router.post(
          RETURNING id`,
         [
           schoolId,
-          'STRIPE',
-          'Test Gateway — NOT for real payments',
+          gatewayType.toUpperCase(),
+          `Test ${gatewayType.toUpperCase()} Gateway — NOT for real payments`,
           'test_dummy_key_not_for_production',
           'test_dummy_secret_not_for_production',
           req.user.id
