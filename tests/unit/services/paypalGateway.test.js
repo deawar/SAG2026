@@ -47,6 +47,7 @@ describe('PayPalGateway', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    global.fetch = jest.fn();
     gateway = new PayPalGateway(sandboxConfig);
   });
 
@@ -92,6 +93,21 @@ describe('PayPalGateway', () => {
     it('sets production apiBase when environment is production', () => {
       const gw = new PayPalGateway(productionConfig);
       expect(gw.apiBase).toBe('https://api-m.paypal.com');
+    });
+
+    it('assigns controllers to instance properties', () => {
+      expect(gateway.ordersController).toBeDefined();
+      expect(gateway.paymentsController).toBeDefined();
+      expect(gateway.oauthController).toBeDefined();
+    });
+
+    it('sets apiBase to sandbox URL when environment is not production', () => {
+      expect(gateway.apiBase).toBe('https://api-m.sandbox.paypal.com');
+    });
+
+    it('sets apiBase to production URL when environment is production', () => {
+      const prodGateway = new PayPalGateway({ ...sandboxConfig, environment: 'production' });
+      expect(prodGateway.apiBase).toBe('https://api-m.paypal.com');
     });
   });
 
@@ -273,6 +289,14 @@ describe('PayPalGateway', () => {
         .rejects.toThrow('PAYPAL_CHARGE_FAILED: No capture returned from PayPal');
     });
 
+    it('throws PAYPAL_CHARGE_FAILED when purchaseUnits is null', async () => {
+      mockCaptureOrder.mockResolvedValueOnce({
+        result: { id: 'ORDER-123', status: 'COMPLETED', purchaseUnits: null }
+      });
+      await expect(gateway.chargeCard({ token: 'ORDER-123', idempotencyKey: 'key-1' }))
+        .rejects.toThrow('PAYPAL_CHARGE_FAILED');
+    });
+
     it('throws PAYPAL_CHARGE_FAILED with SDK error message on SDK failure', async () => {
       mockCaptureOrder.mockRejectedValueOnce(new Error('PayPal API unavailable'));
 
@@ -375,6 +399,16 @@ describe('PayPalGateway', () => {
       await expect(gateway.refundCharge(refundData))
         .rejects.toThrow('PAYPAL_REFUND_FAILED: Refund not allowed');
     });
+
+    it('passes transactionId as captureId to refundCapturedPayment', async () => {
+      mockRefundCapturedPayment.mockResolvedValueOnce({
+        result: { id: 'REFUND-001', status: 'COMPLETED', createTime: '2026-05-10T12:00:00Z' }
+      });
+      await gateway.refundCharge({ transactionId: 'CAPTURE-001', amount: 50, reason: 'test' });
+      expect(mockRefundCapturedPayment).toHaveBeenCalledWith(
+        expect.objectContaining({ captureId: 'CAPTURE-001' })
+      );
+    });
   });
 
   // ============================================================================
@@ -445,7 +479,6 @@ describe('PayPalGateway', () => {
     };
 
     beforeEach(() => {
-      global.fetch = jest.fn();
       mockRequestToken.mockResolvedValue({ result: { accessToken: 'mock-access-token' } });
     });
 
@@ -563,6 +596,25 @@ describe('PayPalGateway', () => {
 
       const fetchCall = global.fetch.mock.calls[0];
       expect(fetchCall[1].headers['Authorization']).toBe('Bearer mock-access-token');
+    });
+
+    it('includes all required signature fields in the verification request body', async () => {
+      mockRequestToken.mockResolvedValueOnce({ result: { accessToken: 'mock-token' } });
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ verification_status: 'SUCCESS' })
+      });
+      await gateway.validateWebhook(webhookEvent, webhookHeaders);
+      const body = JSON.parse(global.fetch.mock.calls[0][1].body);
+      expect(body).toMatchObject({
+        auth_algo: webhookHeaders['paypal-auth-algo'],
+        cert_url: webhookHeaders['paypal-cert-url'],
+        client_cert_key_id: webhookHeaders['paypal-cert-id'],
+        transmission_id: webhookHeaders['paypal-transmission-id'],
+        transmission_sig: webhookHeaders['paypal-transmission-sig'],
+        transmission_time: webhookHeaders['paypal-transmission-time'],
+        webhook_id: sandboxConfig.webhookId
+      });
     });
   });
 });
