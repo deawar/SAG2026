@@ -289,19 +289,18 @@ class BidController {
         });
       }
 
-      const minIncrement = 100; // $1.00 default increment
+      const minIncrement = 10; // $10.00 minimum increment (matches biddingService.js)
       const currentBid = artwork.current_bid ? parseFloat(artwork.current_bid) : 0;
       const startingBid = artwork.starting_bid_amount ? parseFloat(artwork.starting_bid_amount) : 0;
       const minimumBid = currentBid > 0 ? currentBid + minIncrement : startingBid;
-      const bidAmountCents = typeof bidAmount === 'number' ? Math.round(bidAmount * 100) : bidAmount;
 
-      if (bidAmountCents < minimumBid) {
+      if (bidAmount < minimumBid) {
         return res.status(200).json({
           success: true,
           valid: false,
-          message: `Bid must be at least $${(minimumBid / 100).toFixed(2)}`,
-          minimumBid: minimumBid / 100,
-          currentBid: (currentBid || startingBid) / 100
+          message: `Bid must be at least $${minimumBid.toFixed(2)}`,
+          minimumBid,
+          currentBid: currentBid || startingBid
         });
       }
 
@@ -309,8 +308,8 @@ class BidController {
         success: true,
         valid: true,
         message: 'Bid amount is valid',
-        minimumBid: minimumBid / 100,
-        currentBid: (currentBid || startingBid) / 100
+        minimumBid,
+        currentBid: currentBid || startingBid
       });
     } catch (error) {
       console.error('Error validating bid:', error);
