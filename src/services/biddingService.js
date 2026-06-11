@@ -378,30 +378,31 @@ class BiddingService {
         ['ENDED', auctionId]
       );
 
-      // Find the highest active bid across all artwork in this auction
+      // Find the highest active bid PER ARTWORK in this auction (one winner per piece)
       const winnerResult = await client.query(
-        `SELECT b.placed_by_user_id, b.bid_amount, b.artwork_id,
+        `SELECT DISTINCT ON (b.artwork_id)
+                b.placed_by_user_id, b.bid_amount, b.artwork_id,
                 u.first_name, u.last_name, u.email
          FROM bids b
          JOIN artwork a ON b.artwork_id = a.id
          JOIN users u ON b.placed_by_user_id = u.id
          WHERE a.auction_id = $1 AND b.bid_status = 'ACTIVE'
-         ORDER BY b.bid_amount DESC LIMIT 1`,
+         ORDER BY b.artwork_id, b.bid_amount DESC`,
         [auctionId]
       );
 
-      let winner = null;
+      const winners = [];
 
-      if (winnerResult.rows.length > 0) {
-        const row = winnerResult.rows[0];
-        winner = {
+      for (const row of winnerResult.rows) {
+        winners.push({
           id: row.placed_by_user_id,
           name: `${row.first_name} ${row.last_name}`,
           email: row.email,
-          bidAmount: row.bid_amount
-        };
+          bidAmount: row.bid_amount,
+          artworkId: row.artwork_id
+        });
 
-        // Mark winning bid as ACCEPTED
+        // Mark winning bid as ACCEPTED for this artwork
         await client.query(
           `UPDATE bids SET bid_status = 'ACCEPTED'
            WHERE artwork_id = $1 AND placed_by_user_id = $2 AND bid_status = 'ACTIVE'`,
@@ -409,12 +410,15 @@ class BiddingService {
         );
       }
 
+      // Backward-compatible: expose the top winner for callers that expect a single `winner`
+      const winner = winners.length > 0 ? winners[0] : null;
+
       // Log auction closure
       await client.query(
         `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details)
          VALUES ($1, $2, $3, $4, $5)`,
         ['AUCTION', 'auction_closed', 'auction', auctionId,
-          JSON.stringify({ winner_id: winner?.id || null, final_bid: winner?.bidAmount || null })]
+          JSON.stringify({ winners_count: winners.length, total_bids_accepted: winners.length })]
       );
 
       await client.query('COMMIT');
@@ -423,7 +427,10 @@ class BiddingService {
         success: true,
         auctionId,
         winner,
-        message: winner ? `Auction closed. Winner: ${winner.name}` : 'Auction closed with no winner'
+        winners,
+        message: winners.length > 0
+          ? `Auction closed. ${winners.length} winner(s) determined.`
+          : 'Auction closed with no winner'
       };
     } catch (error) {
       await client.query('ROLLBACK');

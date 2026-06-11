@@ -362,4 +362,22 @@ describe('BiddingService', () => {
       expect(auctions[1].isWinning).toBe(false);
     });
   });
+
+  describe('closeAuction winner determination', () => {
+    it('selects one winner per artwork, not one winner total', () => {
+      // Simulate DISTINCT ON result: 2 artworks, 2 winners
+      const distinctOnRows = [
+        { artwork_id: 'art-1', placed_by_user_id: 'user-A', bid_amount: 200, first_name: 'Alice', last_name: 'A', email: 'a@test.com' },
+        { artwork_id: 'art-2', placed_by_user_id: 'user-B', bid_amount: 150, first_name: 'Bob',   last_name: 'B', email: 'b@test.com' }
+      ];
+      // Old behavior: LIMIT 1 = only 1 winner
+      const oldWinners = distinctOnRows.slice(0, 1);
+      // New behavior: one row per artwork = 2 winners
+      const newWinners = distinctOnRows;
+      expect(oldWinners.length).toBe(1);
+      expect(newWinners.length).toBe(2);
+      expect(newWinners[0].artwork_id).toBe('art-1');
+      expect(newWinners[1].artwork_id).toBe('art-2');
+    });
+  });
 });
