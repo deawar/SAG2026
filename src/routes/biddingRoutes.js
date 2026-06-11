@@ -96,7 +96,7 @@ router.post('/withdraw', authMiddleware.verifyToken, async (req, res) => {
  * GET /api/bidding/artwork/:artworkId/history
  * Get bid history for artwork
  */
-router.get('/artwork/:artworkId/history', async (req, res) => {
+router.get('/artwork/:artworkId/history', authMiddleware.verifyToken, async (req, res) => {
   try {
     const { artworkId } = req.params;
 
@@ -120,7 +120,7 @@ router.get('/artwork/:artworkId/history', async (req, res) => {
  * GET /api/bidding/artwork/:artworkId/state
  * Get current bidding state for artwork
  */
-router.get('/artwork/:artworkId/state', async (req, res) => {
+router.get('/artwork/:artworkId/state', authMiddleware.verifyToken, async (req, res) => {
   try {
     const { artworkId } = req.params;
 
@@ -191,7 +191,7 @@ router.get('/user/active', authMiddleware.verifyToken, async (req, res) => {
  * GET /api/bidding/auction/:auctionId/winner
  * Get auction winner information
  */
-router.get('/auction/:auctionId/winner', async (req, res) => {
+router.get('/auction/:auctionId/winner', authMiddleware.verifyToken, async (req, res) => {
   try {
     const { auctionId } = req.params;
 
