@@ -617,7 +617,7 @@ class AuctionService {
                 email: user.email,
                 firstName: user.first_name,
                 artworkTitle: winner.artworkTitle,
-                winningBidDollars: parseFloat(winner.winningBid) / 100
+                winningBidDollars: parseFloat(winner.winningBid)
               });
             } catch (err) {
               console.error('[notification] auction-won failed for winner %s: %s', winner.winnerId, err.message);
