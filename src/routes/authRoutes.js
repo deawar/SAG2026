@@ -28,9 +28,12 @@ module.exports = (db) => {
   const userModel = new UserModel(db);
 
   // Create service instances
+  if (!process.env.JWT_ACCESS_SECRET || !process.env.JWT_REFRESH_SECRET) {
+    throw new Error('FATAL: JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be set in environment');
+  }
   const jwtService = new JWTService({
-    accessTokenSecret: process.env.JWT_ACCESS_SECRET || 'dev-secret',
-    refreshTokenSecret: process.env.JWT_REFRESH_SECRET || 'dev-secret',
+    accessTokenSecret: process.env.JWT_ACCESS_SECRET,
+    refreshTokenSecret: process.env.JWT_REFRESH_SECRET,
     accessTokenExpiry: '15m',
     refreshTokenExpiry: '7d'
   });

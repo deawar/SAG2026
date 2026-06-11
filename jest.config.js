@@ -93,6 +93,13 @@ module.exports = {
   restoreMocks: true,
 
   /**
+   * Setup Files
+   * Run before each test file — ensures JWT secrets are available globally
+   * so the fail-fast guard in authRoutes / userRoutes does not abort workers.
+   */
+  setupFiles: ['<rootDir>/tests/setup.env.js'],
+
+  /**
    * Transform Files
    * Use babel-jest so jest.mock() is hoisted above require() calls
    */
