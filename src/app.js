@@ -77,10 +77,19 @@ function createApp(db) {
   // ==========================================================================
   // CORS
   // ==========================================================================
+  const allowedOrigins = isProduction
+    ? (process.env.ALLOWED_ORIGINS || 'https://sag.live,https://www.sag.live')
+        .split(',').map(o => o.trim())
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'];
+
   const corsOptions = {
-    origin: isProduction
-      ? ['https://yourdomain.com', 'https://www.yourdomain.com']
-      : '*',
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: origin ${origin} not allowed`));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
