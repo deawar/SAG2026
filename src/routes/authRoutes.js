@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const authMiddleware = require('../middleware/authMiddleware');
+const { loginLimiter } = require('../middleware/rateLimitMiddleware');
 const UserController = require('../controllers/userController');
 const ValidationUtils = require('../utils/validationUtils');
 
@@ -133,7 +134,7 @@ module.exports = (db) => {
  *   }
  * }
  */
-  router.post('/login', (req, res, next) => userController.login(req, res, next));
+  router.post('/login', loginLimiter, (req, res, next) => userController.login(req, res, next));
 
   /**
  * POST /api/auth/logout
@@ -199,7 +200,7 @@ module.exports = (db) => {
  *   }
  * }
  */
-  router.post('/verify-2fa', (req, res, next) => userController.verify2FA(req, res, next));
+  router.post('/verify-2fa', loginLimiter, (req, res, next) => userController.verify2FA(req, res, next));
 
   /**
  * POST /api/auth/2fa/setup
