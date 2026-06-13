@@ -46,7 +46,7 @@ class NotificationController {
         data: result
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -69,7 +69,7 @@ class NotificationController {
         pagination: { limit, offset, count: notifications.length }
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -89,7 +89,7 @@ class NotificationController {
         data: preferences
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -133,7 +133,7 @@ class NotificationController {
         data: updated
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -154,7 +154,7 @@ class NotificationController {
         message: 'Notification marked as read'
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -189,7 +189,7 @@ class NotificationController {
         message: `Unsubscribed from ${channel} notifications`
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -232,7 +232,7 @@ class NotificationController {
         data: result
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 }

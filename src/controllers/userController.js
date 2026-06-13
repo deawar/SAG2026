@@ -228,7 +228,7 @@ class UserController {
       if (error.code === '23505') {
         return res.status(409).json({ success: false, message: 'Email already registered' });
       }
-      next(error);
+      return next(error);
     }
   }
 
@@ -387,7 +387,7 @@ class UserController {
         }
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -443,7 +443,7 @@ class UserController {
         message: 'Logged out successfully'
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -531,7 +531,7 @@ class UserController {
           message: 'User not found'
         });
       }
-      next(error);
+      return next(error);
     }
   }
 
@@ -629,7 +629,7 @@ class UserController {
           message: 'User not found'
         });
       }
-      next(error);
+      return next(error);
     }
   }
 
@@ -680,7 +680,7 @@ class UserController {
           message: 'User not found'
         });
       }
-      next(error);
+      return next(error);
     }
   }
 

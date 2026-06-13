@@ -83,7 +83,7 @@ class PaymentController {
         }
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -142,7 +142,7 @@ class PaymentController {
         }
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
@@ -229,7 +229,7 @@ class PaymentController {
         }
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   }
 
