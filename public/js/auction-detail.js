@@ -818,6 +818,8 @@ class AuctionDetail {
   }
 
   openLightbox(piece) {
+    this._lightboxOpener = document.activeElement;
+    this._bodyOverflow = document.body.style.overflow;
     const lb = document.getElementById('artwork-lightbox');
     const img = document.getElementById('lightbox-img');
     if (!lb || !img) { return; }
@@ -826,13 +828,24 @@ class AuctionDetail {
     lb.hidden = false;
     document.body.style.overflow = 'hidden';
     document.getElementById('lightbox-close')?.focus();
+    this._lightboxTrapHandler = (e) => {
+      if (e.key !== 'Tab') { return; }
+      e.preventDefault();
+      document.getElementById('lightbox-close')?.focus();
+    };
+    lb.addEventListener('keydown', this._lightboxTrapHandler);
   }
 
   closeLightbox() {
     const lb = document.getElementById('artwork-lightbox');
     if (!lb) { return; }
     lb.hidden = true;
-    document.body.style.overflow = '';
+    document.body.style.overflow = this._bodyOverflow ?? '';
+    if (this._lightboxTrapHandler) {
+      lb.removeEventListener('keydown', this._lightboxTrapHandler);
+      this._lightboxTrapHandler = null;
+    }
+    this._lightboxOpener?.focus();
   }
 
   /**
