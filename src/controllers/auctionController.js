@@ -178,7 +178,7 @@ class AuctionController {
   async getCarouselArtwork(req, res) {
     try {
       const result = await pool.query(
-        `SELECT aw.id, aw.title, aw.artist_name, aw.medium, aw.image_url, aw.auction_id
+        `SELECT aw.id, aw.title, aw.artist_name, aw.medium, aw.image_url, aw.auction_id, aw.artist_grade
          FROM   artwork aw
          WHERE  aw.artwork_status = 'APPROVED'
            AND  aw.image_url IS NOT NULL
@@ -194,6 +194,7 @@ class AuctionController {
           title: aw.title,
           artistName: aw.artist_name,
           medium: aw.medium || null,
+          artistGrade: aw.artist_grade || null,
           imageUrl: aw.image_url,
           auctionId: aw.auction_id
         }))

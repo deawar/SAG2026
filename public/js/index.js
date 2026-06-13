@@ -336,6 +336,7 @@ let _slides = [];
 let _slideIndex = 0;
 let _carouselTimer = null;
 let _infoVisible = false;
+let _lightboxInitialized = false;
 
 async function initCarousel() {
   let slides = [];
@@ -354,10 +355,7 @@ async function initCarousel() {
   const dotsEl  = document.getElementById('carousel-dots');
   const prevBtn = document.getElementById('carousel-prev');
   const nextBtn = document.getElementById('carousel-next');
-  const infoEl  = document.getElementById('carousel-info');
   if (!track) { return; }
-
-  const loggedIn = authManager.isAuthenticated();
 
   // Build slides
   track.innerHTML = _slides.map((s, i) => `
@@ -376,12 +374,10 @@ async function initCarousel() {
     );
   }
 
-  // Prev arrow — logged-in only
+  // Prev arrow — always visible
   if (prevBtn) {
-    prevBtn.style.display = loggedIn ? '' : 'none';
-    if (loggedIn) {
-      prevBtn.addEventListener('click', () => { _carouselStep(-1); _resetTimer(); });
-    }
+    prevBtn.style.display = '';
+    prevBtn.addEventListener('click', () => { _carouselStep(-1); _resetTimer(); });
   }
 
   // Next arrow — always visible
@@ -389,19 +385,19 @@ async function initCarousel() {
     nextBtn.addEventListener('click', () => { _carouselStep(1); _resetTimer(); });
   }
 
-  // Artist info on click — logged-in only
-  if (loggedIn && infoEl) {
-    track.addEventListener('click', () => {
-      const s = _slides[_slideIndex];
-      if (!s) { return; }
-      const meta = [s.artistName, s.medium].filter(Boolean).join(' · ');
-      infoEl.innerHTML = `
-        <div class="carousel-info-title">${escapeHtml(s.title || 'Untitled')}</div>
-        <div class="carousel-info-meta">${escapeHtml(meta)}</div>
-      `;
-      _infoVisible = !_infoVisible;
-      infoEl.classList.toggle('visible', _infoVisible);
-    });
+  // Open fullscreen lightbox on click — available to all visitors
+  track.addEventListener('click', () => {
+    const s = _slides[_slideIndex];
+    if (s) { _openHomeLightbox(s); }
+  });
+
+  // Lightbox event listeners — set up once per page load
+  const lbEl = document.getElementById('artwork-lightbox-home');
+  if (lbEl && !_lightboxInitialized) {
+    _lightboxInitialized = true;
+    document.getElementById('lightbox-home-close')?.addEventListener('click', _closeHomeLightbox);
+    lbEl.addEventListener('click', (e) => { if (e.target === lbEl) { _closeHomeLightbox(); } });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { _closeHomeLightbox(); } });
   }
 
   // Pause on hover
@@ -435,6 +431,33 @@ function _carouselStep(dir) { _carouselGoTo(_slideIndex + dir); }
 function _startTimer() { _carouselTimer = setInterval(() => _carouselStep(1), CAROUSEL_INTERVAL); }
 
 function _resetTimer() { clearInterval(_carouselTimer); _startTimer(); }
+
+function _openHomeLightbox(slide) {
+  const lb = document.getElementById('artwork-lightbox-home');
+  if (!lb) { return; }
+  // Reject non-image URL schemes as a defense-in-depth measure
+  if (!slide.imageUrl || !/^(https?:|\/|data:image\/)/.test(slide.imageUrl)) { return; }
+  const img      = document.getElementById('lightbox-home-img');
+  const titleEl  = document.getElementById('lightbox-home-title');
+  const metaEl   = document.getElementById('lightbox-home-meta');
+  img.src        = slide.imageUrl;
+  img.alt        = slide.title || 'Artwork';
+  titleEl.textContent = slide.title || 'Untitled';
+  const parts = [];
+  if (slide.artistName)  { parts.push(`Artist: ${slide.artistName}`); }
+  if (slide.artistGrade) { parts.push(`Grade ${slide.artistGrade}`); }
+  if (slide.medium)      { parts.push(slide.medium); }
+  metaEl.textContent = parts.join('  ·  ');
+  document.body.style.overflow = 'hidden';
+  lb.hidden = false;
+  document.getElementById('lightbox-home-close')?.focus();
+}
+
+function _closeHomeLightbox() {
+  document.body.style.overflow = '';
+  const lb = document.getElementById('artwork-lightbox-home');
+  if (lb) { lb.hidden = true; }
+}
 
 // Exposed globally so HTML onsubmit handlers can call it
 globalThis.handleVerify2FA = handleVerify2FA;

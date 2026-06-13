@@ -918,11 +918,12 @@ textarea.form-control {
 /* ===== Hero Carousel ===== */
 .hero-carousel {
     position: relative;
-    width: 78%;
-    height: 320px;
+    width: 100%;
+    aspect-ratio: 4 / 3;
     border-radius: var(--radius-md);
     overflow: hidden;
-    background: rgba(0, 0, 0, 0.2);
+    background: #111;
+    cursor: pointer;
 }
 
 .carousel-track {
@@ -945,7 +946,7 @@ textarea.form-control {
 .carousel-img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
 }
 
 .carousel-btn {
@@ -1027,6 +1028,71 @@ textarea.form-control {
 .carousel-info-meta {
     font-size: var(--font-size-xs);
     opacity: 0.85;
+}
+
+/* ===== Home Page Artwork Lightbox ===== */
+.artwork-lightbox-home {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.93);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9000;
+    padding: var(--spacing-lg);
+}
+
+.artwork-lightbox-home[hidden] {
+    display: none;
+}
+
+.lightbox-home-img {
+    max-width: min(95vw, 1200px);
+    max-height: 72vh;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+    display: block;
+}
+
+.lightbox-home-info {
+    color: white;
+    text-align: center;
+    margin-top: var(--spacing-md);
+    max-width: 600px;
+}
+
+.lightbox-home-title {
+    font-family: var(--font-heading);
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    margin-bottom: var(--spacing-xs);
+}
+
+.lightbox-home-meta {
+    font-size: var(--font-size-sm);
+    opacity: 0.85;
+    line-height: 1.6;
+}
+
+.lightbox-home-close {
+    position: absolute;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2.5rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    transition: background 0.2s;
+    z-index: 1;
+}
+
+.lightbox-home-close:hover {
+    background: rgba(255, 255, 255, 0.15);
 }
 
 .hero h1 {
