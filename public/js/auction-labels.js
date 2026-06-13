@@ -115,7 +115,7 @@ class AuctionLabels {
     document.querySelectorAll('[data-qr-artwork]').forEach(el => {
       const artworkId = el.dataset.qrArtwork;
       const url = `${globalThis.location.origin}/auction-detail.html?id=${encodeURIComponent(this.auctionId)}&artwork=${encodeURIComponent(artworkId)}`;
-      new QRCodeLib(el, { text: url, width: 100, height: 100 });
+      new QRCodeLib(el, { text: url, width: 160, height: 160 });
     });
   }
 
