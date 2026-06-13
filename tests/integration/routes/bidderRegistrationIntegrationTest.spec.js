@@ -21,7 +21,7 @@ const mockSendMail = jest.fn().mockResolvedValue({ messageId: '<test@example.com
 jest.mock('nodemailer', () => ({
   createTransport: jest.fn(() => ({
     sendMail: mockSendMail,
-    verify:   jest.fn().mockResolvedValue(true)
+    verify: jest.fn().mockResolvedValue(true)
   }))
 }));
 
@@ -33,10 +33,10 @@ const mockDb         = require('../../helpers/mockDb');
 
 function bidderPayload(overrides = {}) {
   return {
-    email:       'bidder@example.com',
-    password:    'SecurePass1!abc',
-    firstName:   'Alice',
-    lastName:    'Smith',
+    email: 'bidder@example.com',
+    password: 'SecurePass1!abc',
+    firstName: 'Alice',
+    lastName: 'Smith',
     accountType: 'bidder',
     ...overrides
   };
@@ -44,12 +44,12 @@ function bidderPayload(overrides = {}) {
 
 function studentPayload(overrides = {}) {
   return {
-    email:       'student@example.com',
-    password:    'SecurePass1!abc',
-    firstName:   'Bob',
-    lastName:    'Jones',
+    email: 'student@example.com',
+    password: 'SecurePass1!abc',
+    firstName: 'Bob',
+    lastName: 'Jones',
     dateOfBirth: '2006-01-01',
-    schoolId:    'school-1',
+    schoolId: 'school-1',
     accountType: 'student',
     ...overrides
   };

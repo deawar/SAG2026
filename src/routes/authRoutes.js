@@ -666,18 +666,17 @@ module.exports = (db) => {
           [uid]
         );
         return res.json({ ok: true, message: 'Consent granted. The account is now active.' });
-      } else {
-        await db.query(
-          `UPDATE users SET
+      }
+      await db.query(
+        `UPDATE users SET
              parental_consent_status = 'denied',
              parent_consent_token    = NULL,
              deleted_at              = NOW(),
              updated_at              = NOW()
            WHERE id = $1`,
-          [uid]
-        );
-        return res.json({ ok: true, message: 'Consent denied. The account has been removed.' });
-      }
+        [uid]
+      );
+      return res.json({ ok: true, message: 'Consent denied. The account has been removed.' });
     } catch (err) {
       next(err);
     }

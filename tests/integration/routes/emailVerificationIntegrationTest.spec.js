@@ -8,8 +8,8 @@
  */
 
 process.env.NODE_ENV = 'test';
-if (!process.env.JWT_ACCESS_SECRET) process.env.JWT_ACCESS_SECRET = 'test-access-secret';
-if (!process.env.JWT_REFRESH_SECRET) process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
+if (!process.env.JWT_ACCESS_SECRET) {process.env.JWT_ACCESS_SECRET = 'test-access-secret';}
+if (!process.env.JWT_REFRESH_SECRET) {process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';}
 
 const request = require('supertest');
 const createTestApp = require('../../helpers/createTestApp');
@@ -22,7 +22,7 @@ const VALID_USER = {
   password: 'SecurePass123!',
   firstName: 'Alice',
   lastName: 'Tester',
-  dateOfBirth: '2000-01-01',
+  dateOfBirth: '2000-01-01'
 };
 
 const NEW_USER_ROW = {
@@ -33,7 +33,7 @@ const NEW_USER_ROW = {
   role: 'STUDENT',
   school_id: null,
   account_status: 'PENDING',
-  created_at: new Date(),
+  created_at: new Date()
 };
 
 // A verified user row (returned by getByEmail after verification)
@@ -42,7 +42,7 @@ const VERIFIED_USER_ROW = {
   account_status: 'ACTIVE',
   email_verified_at: new Date(),
   password_hash: '$2b$12$placeholder', // not actually checked — we mock checkPassword
-  two_fa_enabled: false,
+  two_fa_enabled: false
 };
 
 // Unverified user row (returned by getByEmail before verification)
@@ -50,7 +50,7 @@ const UNVERIFIED_USER_ROW = {
   ...NEW_USER_ROW,
   email_verified_at: null,
   password_hash: '$2b$12$placeholder',
-  two_fa_enabled: false,
+  two_fa_enabled: false
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

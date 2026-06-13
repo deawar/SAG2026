@@ -3,7 +3,7 @@
  * Database Schema Validation Tests
  * Silent Auction Gallery - Section 10
  * ============================================================================
- * 
+ *
  * Comprehensive tests for:
  * - Table existence and structure
  * - Column definitions and types
@@ -13,7 +13,7 @@
  * - Views and triggers
  * - Data type validation
  * - Default values
- * 
+ *
  * Total: 35+ tests
  */
 
@@ -60,7 +60,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
       `;
       const result = await db.query(query);
       const tableNames = result.rows.map(row => row.table_name);
-      
+
       requiredTables.forEach(table => {
         expect(tableNames).toContain(table);
       });
@@ -137,7 +137,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
       `;
       const result = await db.query(query);
       const columns = result.rows.map(row => row.column_name);
-      
+
       expect(columns).toContain('id');
       expect(columns).toContain('email');
       expect(columns).toContain('password_hash');
@@ -154,7 +154,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
       `;
       const result = await db.query(query);
       const columns = result.rows.map(row => row.column_name);
-      
+
       expect(columns).toContain('id');
       expect(columns).toContain('title');
       expect(columns).toContain('auction_status');
@@ -171,7 +171,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
       `;
       const result = await db.query(query);
       const columns = result.rows.map(row => row.column_name);
-      
+
       expect(columns).toContain('id');
       expect(columns).toContain('auction_id');
       expect(columns).toContain('placed_by_user_id');
@@ -186,7 +186,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
       `;
       const result = await db.query(query);
       const columns = result.rows.map(row => row.column_name);
-      
+
       expect(columns).toContain('id');
       expect(columns).toContain('title');
       expect(columns).toContain('artist_name');
@@ -201,7 +201,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
       `;
       const result = await db.query(query);
       const columns = result.rows.map(row => row.column_name);
-      
+
       expect(columns).toContain('id');
       expect(columns).toContain('hammer_amount');
       expect(columns).toContain('gateway_id');
@@ -308,7 +308,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
       `;
       const result = await db.query(query);
       const notNullColumns = result.rows.map(row => row.column_name);
-      
+
       expect(notNullColumns).toContain('id');
       expect(notNullColumns).toContain('title');
     });

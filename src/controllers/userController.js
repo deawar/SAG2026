@@ -110,7 +110,7 @@ class UserController {
         const today = new Date();
         let age = today.getFullYear() - dob.getFullYear();
         const m = today.getMonth() - dob.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {age--;}
         isUnder13 = age < 13;
       }
 
@@ -683,6 +683,7 @@ class UserController {
       next(error);
     }
   }
+
   /**
    * Send an email verification link. Suppressed in test mode.
    * Uses the same SMTP pattern as authenticationService._sendResetCodeEmail.
@@ -791,7 +792,7 @@ class UserController {
    * @param {Object} req - Express request (for IP + user-agent)
    */
   async _createSessionRecord(userId, refreshJti, req) {
-    if (!this.authService?.sessionService) return;
+    if (!this.authService?.sessionService) {return;}
     try {
       const refreshExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
       const sessionResult = await this.authService.sessionService.createSession(userId, {

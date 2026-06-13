@@ -139,29 +139,29 @@ class AuctionController {
       return res.json({
         success: true,
         auction: {
-          title:        a.title,
-          description:  a.description,
-          status:       a.auction_status,
-          startTime:    a.starts_at,
-          endTime:      a.ends_at,
+          title: a.title,
+          description: a.description,
+          status: a.auction_status,
+          startTime: a.starts_at,
+          endTime: a.ends_at,
           timeRemaining: Math.max(0, endTime - now),
-          isActive:     a.auction_status === 'LIVE' && endTime > now,
-          schoolId:     a.school_id,
-          schoolName:   a.school_name || null,
-          totalBids:    0
+          isActive: a.auction_status === 'LIVE' && endTime > now,
+          schoolId: a.school_id,
+          schoolName: a.school_name || null,
+          totalBids: 0
         },
         artworks: artworkResult.rows.map(aw => ({
-          id:            aw.id,
-          artworkId:     aw.id,  // consistent with authenticated endpoint
-          title:         aw.title,
-          imageUrl:      aw.image_url,
-          medium:        aw.medium || null,
-          dimensions:    (aw.dimensions_width_cm && aw.dimensions_height_cm)
+          id: aw.id,
+          artworkId: aw.id,  // consistent with authenticated endpoint
+          title: aw.title,
+          imageUrl: aw.image_url,
+          medium: aw.medium || null,
+          dimensions: (aw.dimensions_width_cm && aw.dimensions_height_cm)
             ? `${aw.dimensions_width_cm} × ${aw.dimensions_height_cm} cm`
             : null,
           startingPrice: aw.starting_bid_amount,
-          currentBid:    aw.current_high_bid || null,
-          bidCount:      null
+          currentBid: aw.current_high_bid || null,
+          bidCount: null
         }))
       });
     } catch (error) {
@@ -190,12 +190,12 @@ class AuctionController {
       return res.json({
         success: true,
         artwork: result.rows.map(aw => ({
-          id:         aw.id,
-          title:      aw.title,
+          id: aw.id,
+          title: aw.title,
           artistName: aw.artist_name,
-          medium:     aw.medium || null,
-          imageUrl:   aw.image_url,
-          auctionId:  aw.auction_id
+          medium: aw.medium || null,
+          imageUrl: aw.image_url,
+          auctionId: aw.auction_id
         }))
       });
     } catch (error) {

@@ -610,7 +610,7 @@ class AuctionService {
                 'SELECT id, email, first_name FROM users WHERE id = $1 AND deleted_at IS NULL',
                 [winner.winnerId]
               );
-              if (userResult.rows.length === 0) continue;
+              if (userResult.rows.length === 0) {continue;}
               const user = userResult.rows[0];
               await notifyAuctionWon(emailProvider, pool, {
                 userId: user.id,

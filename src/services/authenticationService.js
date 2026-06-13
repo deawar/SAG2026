@@ -572,8 +572,8 @@ class SessionService {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING id, user_id, token_jti, created_at`,
       [sessionId, userId, tokenJti, tokenType, expiresAt,
-       ipAddress, userAgent, deviceFingerprint,
-       twoFAVerified || false, twoFAVerified ? new Date() : null]
+        ipAddress, userAgent, deviceFingerprint,
+        twoFAVerified || false, twoFAVerified ? new Date() : null]
     );
 
     return { ...result.rows[0], revokedJti };
@@ -590,10 +590,10 @@ class SessionService {
    */
   async checkSession(tokenJti) {
     const result = await this.db.query(
-      `SELECT revoked_at FROM user_sessions WHERE token_jti = $1`,
+      'SELECT revoked_at FROM user_sessions WHERE token_jti = $1',
       [tokenJti]
     );
-    if (result.rows.length === 0) return null; // No record — legacy token, allow
+    if (result.rows.length === 0) {return null;} // No record — legacy token, allow
     return { revoked: result.rows[0].revoked_at !== null };
   }
 
@@ -1048,7 +1048,7 @@ class AuthenticationService {
 
     // Remove any existing unused codes for this user
     await this.db.query(
-      `DELETE FROM password_reset_tokens WHERE user_id = $1 AND used_at IS NULL`,
+      'DELETE FROM password_reset_tokens WHERE user_id = $1 AND used_at IS NULL',
       [user.id]
     );
 

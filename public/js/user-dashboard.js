@@ -374,7 +374,7 @@ class UserDashboard {
 
       let statusHtml;
       if (win.delivered) {
-        statusHtml = `<div class="win-status win-delivered">✅ Delivered</div>`;
+        statusHtml = '<div class="win-status win-delivered">✅ Delivered</div>';
       } else if (win.shipped) {
         const tracking = (win.trackingCarrier || win.trackingNumber)
           ? `<div class="win-tracking">

@@ -32,7 +32,7 @@ const BASE_USER = {
   password: 'SecurePass123!',
   firstName: 'John',
   lastName: 'Doe',
-  role: 'STUDENT',
+  role: 'STUDENT'
 };
 
 // ---------------------------------------------------------------------------
@@ -111,7 +111,7 @@ describe('User Model', () => {
       ['plain string with no @', 'notanemail'],
       ['domain only, no TLD', 'missing@domain'],
       ['no local part', '@nodomain.com'],
-      ['empty string', ''],
+      ['empty string', '']
     ])('should throw INVALID_EMAIL for %s', (_desc, badEmail) => {
       expect(() => userModel._validateUserData({ ...BASE_USER, email: badEmail }))
         .toThrow('INVALID_EMAIL');
@@ -139,7 +139,7 @@ describe('User Model', () => {
   describe('enforce unique email constraint', () => {
     test('should throw EMAIL_ALREADY_EXISTS when email is already registered', async () => {
       const dbWithExistingUser = new MockDatabase([
-        { rows: [{ id: 'existing-id' }], rowCount: 1 }, // email check returns a match
+        { rows: [{ id: 'existing-id' }], rowCount: 1 } // email check returns a match
       ]);
       const model = new UserModel(dbWithExistingUser);
 
@@ -151,7 +151,7 @@ describe('User Model', () => {
       const newUser = { id: 'new-uuid', email: 'new@example.com', first_name: 'John', last_name: 'Doe', role: 'STUDENT' };
       const dbFresh = new MockDatabase([
         { rows: [], rowCount: 0 },       // email uniqueness check — no existing user
-        { rows: [newUser], rowCount: 1 }, // INSERT ... RETURNING
+        { rows: [newUser], rowCount: 1 } // INSERT ... RETURNING
       ]);
       const model = new UserModel(dbFresh);
 

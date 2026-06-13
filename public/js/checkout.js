@@ -3,7 +3,7 @@
  * Requires: Stripe.js v3 (loaded by checkout.html), auth-manager.js, api-client.js
  */
 
-(function () {
+(function() {
   'use strict';
 
   // ── Auth guard ──────────────────────────────────────────────────────────────
@@ -12,7 +12,7 @@
   }
 
   function redirectToLogin() {
-    window.location.href = '/login.html?redirect=' + encodeURIComponent(window.location.href);
+    window.location.href = `/login.html?redirect=${encodeURIComponent(window.location.href)}`;
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -195,11 +195,11 @@
 
       // Tokenize — raw card data never leaves the browser
       const { token: stripeToken, error } = await stripe.createToken(cardElement, {
-        address_line1:   line1,
-        address_city:    city,
-        address_state:   state,
-        address_zip:     zip,
-        address_country: country,
+        address_line1: line1,
+        address_city: city,
+        address_state: state,
+        address_zip: zip,
+        address_country: country
       });
 
       if (error) {
@@ -215,15 +215,15 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${token}`
           },
           body: JSON.stringify({
             auctionId,
             amount: totalAmount,
             paymentToken: stripeToken.id,
             description: `Payment for ${win.auctionTitle}`,
-            shippingAddress: { line1, city, state, zip, country },
-          }),
+            shippingAddress: { line1, city, state, zip, country }
+          })
         });
 
         const data = await res.json();

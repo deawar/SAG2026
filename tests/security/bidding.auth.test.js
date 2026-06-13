@@ -9,7 +9,7 @@ describe('bid endpoints require authentication', () => {
     // After fix: verifyToken appears before the artwork history handler
     const historyRouteIdx = src.indexOf("'/artwork/:artworkId/history'");
     const verifyTokenIdx  = src.indexOf('verifyToken', historyRouteIdx);
-    const nextRouteIdx    = src.indexOf("router.", historyRouteIdx + 1);
+    const nextRouteIdx    = src.indexOf('router.', historyRouteIdx + 1);
     expect(verifyTokenIdx).toBeGreaterThan(historyRouteIdx);
     expect(verifyTokenIdx).toBeLessThan(nextRouteIdx);
   });
@@ -22,7 +22,7 @@ describe('bid endpoints require authentication', () => {
     );
     const stateRouteIdx   = src.indexOf("'/artwork/:artworkId/state'");
     const verifyTokenIdx  = src.indexOf('verifyToken', stateRouteIdx);
-    const nextRouteIdx    = src.indexOf("router.", stateRouteIdx + 1);
+    const nextRouteIdx    = src.indexOf('router.', stateRouteIdx + 1);
     expect(verifyTokenIdx).toBeGreaterThan(stateRouteIdx);
     expect(verifyTokenIdx).toBeLessThan(nextRouteIdx);
   });
@@ -35,7 +35,7 @@ describe('bid endpoints require authentication', () => {
     );
     const winnerRouteIdx  = src.indexOf("'/auction/:auctionId/winner'");
     const verifyTokenIdx  = src.indexOf('verifyToken', winnerRouteIdx);
-    const nextRouteIdx    = src.indexOf("router.", winnerRouteIdx + 1);
+    const nextRouteIdx    = src.indexOf('router.', winnerRouteIdx + 1);
     expect(verifyTokenIdx).toBeGreaterThan(winnerRouteIdx);
     expect(verifyTokenIdx).toBeLessThan(nextRouteIdx);
   });

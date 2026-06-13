@@ -17,8 +17,8 @@
  */
 
 process.env.NODE_ENV = 'test';
-if (!process.env.JWT_ACCESS_SECRET) process.env.JWT_ACCESS_SECRET = 'test-access-secret';
-if (!process.env.JWT_REFRESH_SECRET) process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
+if (!process.env.JWT_ACCESS_SECRET) {process.env.JWT_ACCESS_SECRET = 'test-access-secret';}
+if (!process.env.JWT_REFRESH_SECRET) {process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';}
 
 // ── Nodemailer mock — captures all sendMail calls ───────────────────────────
 const mockSendMail = jest.fn().mockResolvedValue({ messageId: '<test@example.com>' });
@@ -270,7 +270,7 @@ describe('G13 — Email notification functions', () => {
 
       expect(() => createEmailProvider()).toThrow(/SMTP_HOST/i);
 
-      if (prevHost !== undefined) process.env.SMTP_HOST = prevHost;
+      if (prevHost !== undefined) {process.env.SMTP_HOST = prevHost;}
       process.env.NODE_ENV = 'test';
     });
   });

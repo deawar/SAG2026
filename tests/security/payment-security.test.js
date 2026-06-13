@@ -3,7 +3,7 @@
  * Section 11: Security - Payment & Data Protection Testing
  * Silent Auction Gallery - Payment Security Test Suite
  * ============================================================================
- * 
+ *
  * Tests for:
  * - PCI-DSS payment compliance
  * - Card data tokenization
@@ -11,7 +11,7 @@
  * - GDPR data handling
  * - Payment webhook security
  * - Refund authorization
- * 
+ *
  * Total: 20+ payment security tests
  */
 
@@ -49,7 +49,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
         .set('Authorization', 'Bearer fake_token')
         .send({
           auctionId: 'auction123',
-          amount: 100,
+          amount: 100
           // No token provided
         });
 
@@ -92,7 +92,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
         .set('Authorization', 'Bearer fake_token')
         .send({
           auctionId: 'auction123',
-          amount: 100,
+          amount: 100
           // Invalid payload intentionally
         });
 
@@ -186,7 +186,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
    */
   describe('Fraud Detection & Prevention', () => {
     test('should detect and block velocity abuse (multiple payments)', async () => {
-      const userId = 'suspicious_user_' + Date.now();
+      const userId = `suspicious_user_${Date.now()}`;
 
       // Attempt multiple payments in short time
       for (let i = 0; i < 6; i++) {

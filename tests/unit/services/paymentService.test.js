@@ -10,7 +10,7 @@ const {
   StripeGateway,
   SquareGateway,
   PaymentService,
-  FraudDetectionService,
+  FraudDetectionService
 } = require('../../../src/services/paymentService');
 const crypto = require('crypto');
 
@@ -27,8 +27,8 @@ class MockDatabase {
           token: 'pm_test_token',
           card_brand: 'VISA',
           card_last_four: '4242',
-          payment_method_status: 'ACTIVE',
-        }],
+          payment_method_status: 'ACTIVE'
+        }]
       };
     }
     if (sql.includes('payment_gateways') && sql.includes('SELECT')) {
@@ -36,34 +36,34 @@ class MockDatabase {
         rows: [{
           id: uuidv4(),
           gateway_type: 'STRIPE',
-          api_key_encrypted: 'encrypted_key',
-        }],
+          api_key_encrypted: 'encrypted_key'
+        }]
       };
     }
     if (sql.includes('auctions') && sql.includes('SELECT')) {
       return {
         rows: [{
           platform_fee_percentage: 3.5,
-          platform_fee_minimum: 50,
-        }],
+          platform_fee_minimum: 50
+        }]
       };
     }
     if (sql.includes('transactions') && sql.includes('INSERT')) {
       return {
         rows: [{
           id: uuidv4(),
-          transaction_status: 'COMPLETED',
-        }],
+          transaction_status: 'COMPLETED'
+        }]
       };
     }
     if (sql.includes('SUM')) {
       return {
-        rows: [{ total: 0 }],
+        rows: [{ total: 0 }]
       };
     }
     if (sql.includes('COUNT')) {
       return {
-        rows: [{ count: 0 }],
+        rows: [{ count: 0 }]
       };
     }
     return { rows: [], rowCount: 0 };
@@ -88,9 +88,9 @@ describe('StripeGateway', () => {
             brand: 'visa',
             last4: '4242',
             exp_month: 12,
-            exp_year: 2027,
-          },
-        }),
+            exp_year: 2027
+          }
+        })
       },
       paymentIntents: {
         create: jest.fn().mockResolvedValue({
@@ -98,35 +98,35 @@ describe('StripeGateway', () => {
           status: 'succeeded',
           amount: 100000,
           currency: 'usd',
-          created: Math.floor(Date.now() / 1000),
+          created: Math.floor(Date.now() / 1000)
         }),
         retrieve: jest.fn().mockResolvedValue({
           id: 'pi_test_charge',
           status: 'succeeded',
           amount: 100000,
-          currency: 'usd',
-        }),
+          currency: 'usd'
+        })
       },
       refunds: {
         create: jest.fn().mockResolvedValue({
           id: 're_test_refund',
           status: 'succeeded',
           amount: 100000,
-          created: Math.floor(Date.now() / 1000),
-        }),
+          created: Math.floor(Date.now() / 1000)
+        })
       },
       webhooks: {
         constructEvent: jest.fn().mockReturnValue({
           type: 'payment_intent.succeeded',
           id: 'evt_test',
-          data: { object: {} },
-        }),
-      },
+          data: { object: {} }
+        })
+      }
     };
 
     stripeGateway = new StripeGateway({
       apiKey: 'sk_test_token',
-      webhookSecret: 'whsec_test',
+      webhookSecret: 'whsec_test'
     });
     stripeGateway.stripe = mockStripe;
   });
@@ -139,7 +139,7 @@ describe('StripeGateway', () => {
       cvc: '123',
       cardholderName: 'John Doe',
       billingEmail: 'john@example.com',
-      billingZip: '12345',
+      billingZip: '12345'
     };
 
     const result = await stripeGateway.tokenizePaymentMethod(paymentData);
@@ -158,7 +158,7 @@ describe('StripeGateway', () => {
       cardNumber: 'invalid',
       expiryMonth: 12,
       expiryYear: 2027,
-      cvc: '123',
+      cvc: '123'
     };
 
     await expect(stripeGateway.tokenizePaymentMethod(paymentData))
@@ -173,7 +173,7 @@ describe('StripeGateway', () => {
       description: 'Artwork bid',
       idempotencyKey: uuidv4(),
       customerEmail: 'buyer@example.com',
-      metadata: { auctionId: uuidv4(), buyerId: uuidv4() },
+      metadata: { auctionId: uuidv4(), buyerId: uuidv4() }
     };
 
     const result = await stripeGateway.chargeCard(chargeData);
@@ -191,7 +191,7 @@ describe('StripeGateway', () => {
       token: 'pm_test_token',
       idempotencyKey,
       customerEmail: 'buyer@example.com',
-      metadata: { auctionId: uuidv4(), buyerId: uuidv4() },
+      metadata: { auctionId: uuidv4(), buyerId: uuidv4() }
     };
 
     await stripeGateway.chargeCard(chargeData);
@@ -207,7 +207,7 @@ describe('StripeGateway', () => {
       transactionId: 'pi_test_charge',
       amount: 1000,
       reason: 'requested_by_customer',
-      metadata: { originalTransactionId: uuidv4() },
+      metadata: { originalTransactionId: uuidv4() }
     };
 
     const result = await stripeGateway.refundCharge(refundData);
@@ -252,14 +252,14 @@ describe('StripeGateway', () => {
       currency: 'USD',
       token: 'pm_test_token',
       customerEmail: 'buyer@example.com',
-      metadata: { auctionId: uuidv4(), buyerId: uuidv4() },
+      metadata: { auctionId: uuidv4(), buyerId: uuidv4() }
     };
 
     await stripeGateway.chargeCard(chargeData);
 
     expect(mockStripe.paymentIntents.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        amount: 2550, // 25.50 * 100
+        amount: 2550 // 25.50 * 100
       }),
       expect.any(Object)
     );
@@ -275,7 +275,7 @@ describe('StripeGateway', () => {
       currency: 'USD',
       token: 'pm_test_token',
       customerEmail: 'buyer@example.com',
-      metadata: { auctionId: uuidv4(), buyerId: uuidv4() },
+      metadata: { auctionId: uuidv4(), buyerId: uuidv4() }
     };
 
     await expect(stripeGateway.chargeCard(chargeData))
@@ -301,27 +301,27 @@ describe('PaymentService', () => {
         status: 'completed',
         amount: 1000,
         currency: 'USD',
-        timestamp: new Date(),
+        timestamp: new Date()
       }),
       refundCharge: jest.fn().mockResolvedValue({
         refundId: 'ref_test',
         status: 'completed',
         amount: 1000,
-        timestamp: new Date(),
+        timestamp: new Date()
       }),
       getTransactionStatus: jest.fn().mockResolvedValue({
         transactionId: 'txn_test',
-        status: 'completed',
-      }),
+        status: 'completed'
+      })
     };
 
     mockFraudService = {
       checkTransaction: jest.fn().mockResolvedValue({
         approved: true,
         fraudScore: 10,
-        flaggedRules: [],
+        flaggedRules: []
       }),
-      logTransaction: jest.fn().mockResolvedValue({}),
+      logTransaction: jest.fn().mockResolvedValue({})
     };
 
     paymentService = new PaymentService({
@@ -329,8 +329,8 @@ describe('PaymentService', () => {
       gateways: { STRIPE: mockGateway },
       fraudDetectionService: mockFraudService,
       complianceService: {
-        logTransaction: jest.fn().mockResolvedValue({}),
-      },
+        logTransaction: jest.fn().mockResolvedValue({})
+      }
     });
   });
 
@@ -343,7 +343,7 @@ describe('PaymentService', () => {
       currency: 'USD',
       paymentMethodId: uuidv4(),
       gatewayId: uuidv4(),
-      metadata: { customerEmail: 'buyer@example.com' },
+      metadata: { customerEmail: 'buyer@example.com' }
     };
 
     const result = await paymentService.processPayment(paymentData);
@@ -360,7 +360,7 @@ describe('PaymentService', () => {
       auctionId: uuidv4(),
       artworkId: uuidv4(),
       paymentMethodId: uuidv4(),
-      gatewayId: uuidv4(),
+      gatewayId: uuidv4()
     };
 
     await expect(paymentService.processPayment(paymentData))
@@ -374,7 +374,7 @@ describe('PaymentService', () => {
       auctionId: uuidv4(),
       artworkId: uuidv4(),
       paymentMethodId: uuidv4(),
-      gatewayId: uuidv4(),
+      gatewayId: uuidv4()
     };
 
     await expect(paymentService.processPayment(paymentData))
@@ -390,7 +390,7 @@ describe('PaymentService', () => {
       currency: 'USD',
       paymentMethodId: uuidv4(),
       gatewayId: uuidv4(),
-      metadata: { customerEmail: 'buyer@example.com' },
+      metadata: { customerEmail: 'buyer@example.com' }
     };
 
     await paymentService.processPayment(paymentData);
@@ -409,7 +409,7 @@ describe('PaymentService', () => {
       artworkId: uuidv4(),
       amount: 100000, // Suspiciously high
       paymentMethodId: uuidv4(),
-      gatewayId: uuidv4(),
+      gatewayId: uuidv4()
     };
 
     await expect(paymentService.processPayment(paymentData))
@@ -426,7 +426,7 @@ describe('PaymentService', () => {
       amount: 1000,
       paymentMethodId: uuidv4(),
       gatewayId: uuidv4(),
-      metadata: {},
+      metadata: {}
     };
 
     const result = await paymentService.processPayment(paymentData);
@@ -442,7 +442,7 @@ describe('PaymentService', () => {
       amount: 1000,
       paymentMethodId: uuidv4(),
       gatewayId: uuidv4(),
-      metadata: {},
+      metadata: {}
     };
 
     await paymentService.processPayment(paymentData);
@@ -471,8 +471,8 @@ describe('PaymentService', () => {
   test('Should reject refund of non-completed transaction', async () => {
     mockDb.query = jest.fn().mockResolvedValue({
       rows: [{
-        transaction_status: 'PENDING',
-      }],
+        transaction_status: 'PENDING'
+      }]
     });
 
     await expect(paymentService.refundTransaction(uuidv4(), 'reason'))
@@ -485,8 +485,8 @@ describe('PaymentService', () => {
         id: uuidv4(),
         gateway_transaction_id: 'txn_test',
         gateway_type: 'STRIPE',
-        transaction_status: 'COMPLETED',
-      }],
+        transaction_status: 'COMPLETED'
+      }]
     });
 
     const result = await paymentService.getTransactionStatus(uuidv4());
@@ -510,7 +510,7 @@ describe('FraudDetectionService', () => {
       db: mockDb,
       maxTransactionsPerDay: 10,
       maxAmountPerDay: 10000,
-      maxAmountPerTransaction: 5000,
+      maxAmountPerTransaction: 5000
     });
   });
 
@@ -519,7 +519,7 @@ describe('FraudDetectionService', () => {
       userId: uuidv4(),
       amount: 500,
       paymentMethod: { id: uuidv4() },
-      metadata: { ipAddress: '192.168.1.1' },
+      metadata: { ipAddress: '192.168.1.1' }
     });
 
     expect(result.approved).toBe(true);
@@ -531,7 +531,7 @@ describe('FraudDetectionService', () => {
       userId: uuidv4(),
       amount: 10000, // Exceeds $5000 limit
       paymentMethod: { id: uuidv4() },
-      metadata: { ipAddress: '192.168.1.1' },
+      metadata: { ipAddress: '192.168.1.1' }
     });
 
     expect(result.flaggedRules).toContain('TRANSACTION_AMOUNT_EXCEEDS_LIMIT');
@@ -542,7 +542,7 @@ describe('FraudDetectionService', () => {
       userId: uuidv4(),
       amount: 500,
       paymentMethod: { id: uuidv4() },
-      metadata: { ipAddress: '192.168.1.1' },
+      metadata: { ipAddress: '192.168.1.1' }
     });
 
     expect(typeof result.fraudScore).toBe('number');
@@ -565,7 +565,7 @@ describe('FraudDetectionService', () => {
       userId: uuidv4(),
       amount: 6000, // Exceeds maxAmountPerTransaction (5000)
       paymentMethod: { id: uuidv4() },
-      metadata: { ipAddress: '192.168.1.1' },
+      metadata: { ipAddress: '192.168.1.1' }
     })).rejects.toThrow('TRANSACTION_BLOCKED_FRAUD_DETECTION');
   });
 
@@ -581,7 +581,7 @@ describe('FraudDetectionService', () => {
       userId: uuidv4(),
       amount: 600, // Would exceed $10000 daily limit
       paymentMethod: { id: uuidv4() },
-      metadata: { ipAddress: '192.168.1.1' },
+      metadata: { ipAddress: '192.168.1.1' }
     });
 
     expect(result.flaggedRules).toContain('DAILY_SPENDING_LIMIT_EXCEEDED');
@@ -599,7 +599,7 @@ describe('FraudDetectionService', () => {
       userId: uuidv4(),
       amount: 100,
       paymentMethod: { id: uuidv4() },
-      metadata: { ipAddress: '192.168.1.1' },
+      metadata: { ipAddress: '192.168.1.1' }
     });
 
     expect(result.flaggedRules).toContain('NEW_PAYMENT_METHOD');

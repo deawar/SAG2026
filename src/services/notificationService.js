@@ -853,12 +853,12 @@ function createEmailProvider() {
  */
 async function _checkEmailPref(db, userId, prefKey) {
   try {
-    if (!db || !userId) return true;
+    if (!db || !userId) {return true;}
     const r = await db.query(
       'SELECT * FROM notification_preferences WHERE user_id = $1',
       [userId]
     );
-    if (r.rows.length === 0) return true; // default enabled
+    if (r.rows.length === 0) {return true;} // default enabled
     return r.rows[0][prefKey] !== false;
   } catch (_err) {
     return true; // fail-open
@@ -875,12 +875,12 @@ async function _checkEmailPref(db, userId, prefKey) {
  */
 async function notifyOutbid(emailProvider, db, data) {
   const { userId, email, firstName, artworkTitle, newBidDollars, auctionEndsAt, artworkId, auctionId } = data;
-  if (!await _checkEmailPref(db, userId, 'email_outbid')) return;
+  if (!await _checkEmailPref(db, userId, 'email_outbid')) {return;}
   const baseUrl = process.env.FRONTEND_URL || process.env.SITE_URL || 'https://sag.live';
   let auctionLink = `${baseUrl}/auction-detail.html`;
   if (auctionId) {
     auctionLink += `?id=${auctionId}`;
-    if (artworkId) auctionLink += `&artwork=${artworkId}`;
+    if (artworkId) {auctionLink += `&artwork=${artworkId}`;}
   }
   const tmpl = EmailTemplateService.generateTemplate('outbid-alert', {
     firstName,
@@ -902,7 +902,7 @@ async function notifyOutbid(emailProvider, db, data) {
  */
 async function notifyAuctionWon(emailProvider, db, data) {
   const { userId, email, firstName, artworkTitle, winningBidDollars } = data;
-  if (!await _checkEmailPref(db, userId, 'email_winner')) return;
+  if (!await _checkEmailPref(db, userId, 'email_winner')) {return;}
   const dashboardLink = `${process.env.FRONTEND_URL || process.env.SITE_URL || 'https://sag.live'}/user-dashboard.html`;
   const tmpl = EmailTemplateService.generateTemplate('winner-notification', {
     firstName,
@@ -923,7 +923,7 @@ async function notifyAuctionWon(emailProvider, db, data) {
  */
 async function notifyArtworkStatusChanged(emailProvider, db, data) {
   const { userId, email, firstName, artworkTitle, newStatus, reason } = data;
-  if (!await _checkEmailPref(db, userId, 'email_artwork_status')) return;
+  if (!await _checkEmailPref(db, userId, 'email_artwork_status')) {return;}
   const tmpl = EmailTemplateService.generateTemplate('artwork-status-changed', {
     firstName, artworkTitle, newStatus, reason
   });
@@ -941,7 +941,7 @@ async function notifyArtworkStatusChanged(emailProvider, db, data) {
 async function notifyArtworkShipped(emailProvider, db, data) {
   const { userId, email, firstName, artworkTitle, trackingCarrier, trackingNumber } = data;
   // Re-use email_winner preference: shipping is part of the win fulfilment flow
-  if (!await _checkEmailPref(db, userId, 'email_winner')) return;
+  if (!await _checkEmailPref(db, userId, 'email_winner')) {return;}
   const tmpl = EmailTemplateService.generateTemplate('artwork-shipped', {
     firstName, artworkTitle, trackingCarrier, trackingNumber
   });

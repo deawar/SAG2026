@@ -595,7 +595,7 @@ describe('PayPalGateway', () => {
       await gateway.validateWebhook(webhookEvent, webhookHeaders);
 
       const fetchCall = global.fetch.mock.calls[0];
-      expect(fetchCall[1].headers['Authorization']).toBe('Bearer mock-access-token');
+      expect(fetchCall[1].headers.Authorization).toBe('Bearer mock-access-token');
     });
 
     it('includes all required signature fields in the verification request body', async () => {

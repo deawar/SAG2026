@@ -4,7 +4,7 @@
  * ============================================================================
  * Test Suite for:
  * - SQL Injection prevention
- * - XSS prevention  
+ * - XSS prevention
  * - CSRF protection
  * - Authentication bypass prevention
  * - Authorization/RBAC enforcement
@@ -79,7 +79,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
     });
 
     test('should reject DROP TABLE injection attempts', async () => {
-      const maliciousData = "; DROP TABLE users;--";
+      const maliciousData = '; DROP TABLE users;--';
       const response = await request(app)
         .post('/api/auctions')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -187,7 +187,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
     });
 
     test('should reject tampered JWT signature', async () => {
-      const tamperedToken = validToken.substring(0, validToken.length - 5) + 'XXXXX';
+      const tamperedToken = `${validToken.substring(0, validToken.length - 5)}XXXXX`;
 
       const response = await request(app)
         .get('/api/user/profile')
@@ -313,7 +313,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
     });
 
     test('should prevent duplicate payment processing with idempotency', async () => {
-      const idempotencyKey = 'test-idempotency-key-' + Date.now();
+      const idempotencyKey = `test-idempotency-key-${Date.now()}`;
 
       const response1 = await request(app)
         .post('/api/payments')

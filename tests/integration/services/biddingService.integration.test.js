@@ -209,7 +209,7 @@ describe('Bidding Integration Tests', () => {
 
       // User 1 withdraws
       const updatedBids = bids.map(b => b.bidder === 'user-1' ? { ...b, status: 'withdrawn' } : b);
-      
+
       const activeBids = updatedBids.filter(b => b.status === 'active');
       const newHighest = activeBids.reduce((max, b) => b.amount > max.amount ? b : max);
 

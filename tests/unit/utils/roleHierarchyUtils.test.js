@@ -2,7 +2,7 @@
  * Role Hierarchy Visibility Tests
  * File: tests/unit/utils/roleHierarchyUtils.test.js
  * Created: February 3, 2026
- * 
+ *
  * Tests:
  * - canAccessRole() - role privilege comparison
  * - canViewAuction() - auction visibility by role

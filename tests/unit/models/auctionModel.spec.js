@@ -36,7 +36,7 @@ const BASE_AUCTION = {
   startsAt: future(DAY),
   endsAt: future(DAY * 7),
   platformFeePercentage: 3.5,
-  visibility: 'PUBLIC',
+  visibility: 'PUBLIC'
 };
 
 // ---------------------------------------------------------------------------
@@ -93,7 +93,7 @@ describe('Auction Model', () => {
 
     test('should accept fee of exactly 0', async () => {
       const db = new MockDatabase([
-        { rows: [{ id: 'new-id', title: 'Spring Art Auction', auction_status: 'DRAFT' }], rowCount: 1 },
+        { rows: [{ id: 'new-id', title: 'Spring Art Auction', auction_status: 'DRAFT' }], rowCount: 1 }
       ]);
       const model = new AuctionModel(db);
       const result = await model.create({ ...BASE_AUCTION, platformFeePercentage: 0 }, 'user-id');
@@ -102,7 +102,7 @@ describe('Auction Model', () => {
 
     test('should accept fee of exactly 100', async () => {
       const db = new MockDatabase([
-        { rows: [{ id: 'new-id', title: 'Spring Art Auction', auction_status: 'DRAFT' }], rowCount: 1 },
+        { rows: [{ id: 'new-id', title: 'Spring Art Auction', auction_status: 'DRAFT' }], rowCount: 1 }
       ]);
       const model = new AuctionModel(db);
       const result = await model.create({ ...BASE_AUCTION, platformFeePercentage: 100 }, 'user-id');
@@ -111,7 +111,7 @@ describe('Auction Model', () => {
 
     test('should create auction with DRAFT status', async () => {
       const db = new MockDatabase([
-        { rows: [{ id: 'auction-id', title: 'Spring Art Auction', auction_status: 'DRAFT' }], rowCount: 1 },
+        { rows: [{ id: 'auction-id', title: 'Spring Art Auction', auction_status: 'DRAFT' }], rowCount: 1 }
       ]);
       const model = new AuctionModel(db);
       const result = await model.create(BASE_AUCTION, 'user-id');
@@ -131,7 +131,7 @@ describe('Auction Model', () => {
 
     test('submit() should succeed and return PENDING_APPROVAL', async () => {
       const db = new MockDatabase([
-        { rows: [{ id: 'auction-id', auction_status: 'PENDING_APPROVAL' }], rowCount: 1 },
+        { rows: [{ id: 'auction-id', auction_status: 'PENDING_APPROVAL' }], rowCount: 1 }
       ]);
       const result = await new AuctionModel(db).submit('auction-id');
       expect(result.auction_status).toBe('PENDING_APPROVAL');
@@ -145,7 +145,7 @@ describe('Auction Model', () => {
 
     test('approve() should succeed and return APPROVED', async () => {
       const db = new MockDatabase([
-        { rows: [{ id: 'auction-id', auction_status: 'APPROVED' }], rowCount: 1 },
+        { rows: [{ id: 'auction-id', auction_status: 'APPROVED' }], rowCount: 1 }
       ]);
       const result = await new AuctionModel(db).approve('auction-id', 'admin-id');
       expect(result.auction_status).toBe('APPROVED');
@@ -159,7 +159,7 @@ describe('Auction Model', () => {
 
     test('start() should succeed and return LIVE', async () => {
       const db = new MockDatabase([
-        { rows: [{ id: 'auction-id', auction_status: 'LIVE' }], rowCount: 1 },
+        { rows: [{ id: 'auction-id', auction_status: 'LIVE' }], rowCount: 1 }
       ]);
       const result = await new AuctionModel(db).start('auction-id');
       expect(result.auction_status).toBe('LIVE');
@@ -173,7 +173,7 @@ describe('Auction Model', () => {
 
     test('end() should succeed and return ENDED', async () => {
       const db = new MockDatabase([
-        { rows: [{ id: 'auction-id', auction_status: 'ENDED' }], rowCount: 1 },
+        { rows: [{ id: 'auction-id', auction_status: 'ENDED' }], rowCount: 1 }
       ]);
       const result = await new AuctionModel(db).end('auction-id');
       expect(result.auction_status).toBe('ENDED');
@@ -184,7 +184,7 @@ describe('Auction Model', () => {
         { rows: [{ id: 'a', auction_status: 'PENDING_APPROVAL' }], rowCount: 1 }, // submit
         { rows: [{ id: 'a', auction_status: 'APPROVED' }],          rowCount: 1 }, // approve
         { rows: [{ id: 'a', auction_status: 'LIVE' }],              rowCount: 1 }, // start
-        { rows: [{ id: 'a', auction_status: 'ENDED' }],             rowCount: 1 }, // end
+        { rows: [{ id: 'a', auction_status: 'ENDED' }],             rowCount: 1 } // end
       ]);
       const model = new AuctionModel(db);
 
@@ -228,7 +228,7 @@ describe('Auction Model', () => {
       const start = future(DAY);
       const end = new Date(start.getTime() + 1);
       const db = new MockDatabase([
-        { rows: [{ id: 'new-id', auction_status: 'DRAFT' }], rowCount: 1 },
+        { rows: [{ id: 'new-id', auction_status: 'DRAFT' }], rowCount: 1 }
       ]);
       const result = await new AuctionModel(db).create({ ...BASE_AUCTION, startsAt: start, endsAt: end }, 'user-id');
       expect(result.auction_status).toBe('DRAFT');
@@ -236,7 +236,7 @@ describe('Auction Model', () => {
 
     test('should accept a multi-day auction window', async () => {
       const db = new MockDatabase([
-        { rows: [{ id: 'new-id', auction_status: 'DRAFT' }], rowCount: 1 },
+        { rows: [{ id: 'new-id', auction_status: 'DRAFT' }], rowCount: 1 }
       ]);
       const result = await new AuctionModel(db).create(BASE_AUCTION, 'user-id');
       expect(result.auction_status).toBe('DRAFT');
