@@ -91,6 +91,33 @@ class AuctionsPage {
         }
       }
     });
+
+    // Card image click → open preview overlay
+    document.addEventListener('click', (e) => {
+      const imgArea = e.target.closest('.auction-card-image');
+      if (imgArea) {
+        const card = imgArea.closest('[data-auction-id]');
+        if (card) {
+          const auction = this.auctions.find(a => String(a.id) === card.dataset.auctionId);
+          if (auction) { this.openCardPreview(auction); }
+        }
+      }
+    });
+
+    // Overlay close button, cancel button, and backdrop
+    const overlay = document.getElementById('card-preview-overlay');
+    if (overlay) {
+      document.getElementById('card-preview-close')?.addEventListener('click', () => this.closeCardPreview());
+      document.getElementById('card-preview-cancel')?.addEventListener('click', () => this.closeCardPreview());
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) { this.closeCardPreview(); }
+      });
+    }
+
+    // Escape key closes overlay
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { this.closeCardPreview(); }
+    });
   }
 
   /**
@@ -445,6 +472,60 @@ class AuctionsPage {
       "'": '&#039;'
     };
     return text.replace(/[&<>"']/g, (char) => map[char]);
+  }
+
+  openCardPreview(auction) {
+    const overlay = document.getElementById('card-preview-overlay');
+    if (!overlay) { return; }
+
+    this._previewOpener = document.activeElement;
+    this._previewBodyOverflow = document.body.style.overflow;
+
+    const set = (id, val) => { const el = document.getElementById(id); if (el) { el.textContent = val || ''; } };
+    const img = document.getElementById('card-preview-img');
+    if (img) {
+      img.src = this.escapeHtml(auction.image || '/images/placeholder-art.svg');
+      img.alt = this.escapeHtml(auction.title || '');
+    }
+    set('card-preview-title', auction.title);
+    set('card-preview-school', auction.school || '');
+    set('card-preview-bid', UIComponents.formatCurrency(auction.currentBid || 0));
+    set('card-preview-count', `${auction.bidCount || 0} bids`);
+    const remaining = UIComponents.formatTimeRemaining(new Date(auction.endTime) - Date.now());
+    set('card-preview-time', remaining);
+
+    const cta = document.getElementById('card-preview-cta');
+    if (cta) { cta.href = `/auction-detail.html?id=${encodeURIComponent(auction.id)}`; }
+
+    document.body.style.overflow = 'hidden';
+    overlay.hidden = false;
+    document.getElementById('card-preview-close')?.focus();
+
+    this._previewTrapHandler = (e) => {
+      if (e.key !== 'Tab') { return; }
+      const focusable = Array.from(overlay.querySelectorAll('a[href], button:not([disabled])'));
+      if (!focusable.length) { return; }
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else if (document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
+    };
+    overlay.addEventListener('keydown', this._previewTrapHandler);
+  }
+
+  closeCardPreview() {
+    const overlay = document.getElementById('card-preview-overlay');
+    if (!overlay) { return; }
+    overlay.hidden = true;
+    document.body.style.overflow = this._previewBodyOverflow ?? '';
+    if (this._previewTrapHandler) {
+      overlay.removeEventListener('keydown', this._previewTrapHandler);
+      this._previewTrapHandler = null;
+    }
+    this._previewOpener?.focus();
   }
 }
 

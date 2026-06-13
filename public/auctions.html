@@ -180,6 +180,27 @@
         </div>
     </main>
 
+    <!-- Card Preview Overlay -->
+    <div id="card-preview-overlay" class="card-preview-overlay" role="dialog" aria-modal="true" aria-label="Auction preview" hidden>
+      <div class="card-preview-box">
+        <button id="card-preview-close" class="card-preview-close" aria-label="Close preview">&times;</button>
+        <img id="card-preview-img" class="card-preview-img" src="" alt="">
+        <div>
+          <h2 id="card-preview-title" class="card-preview-title"></h2>
+          <p id="card-preview-school" class="card-preview-school"></p>
+        </div>
+        <div class="card-preview-stats">
+          <span id="card-preview-bid" class="card-preview-bid"></span>
+          <span id="card-preview-count" class="card-preview-count"></span>
+          <span id="card-preview-time" class="card-preview-time"></span>
+        </div>
+        <div class="card-preview-actions">
+          <a id="card-preview-cta" href="#" class="btn btn-primary">View Auction &rarr;</a>
+          <button id="card-preview-cancel" class="btn btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Alert Container -->
     <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
 
