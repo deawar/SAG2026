@@ -190,7 +190,8 @@ module.exports = [
       sourceType: 'commonjs',
       globals: {
         ...globals.node,
-        ...globals.jest
+        ...globals.jest,
+        ...globals.browser
       }
     },
     rules: {
@@ -200,6 +201,29 @@ module.exports = [
         'warn',
         { vars: 'all', args: 'none', caughtErrors: 'none', varsIgnorePattern: '^_' }
       ]
+    }
+  },
+
+  // ── db/ and scripts/ (Node.js CommonJS, run directly with node) ─────────────
+  {
+    files: ['db/**/*.js', 'scripts/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'commonjs',
+      globals: {
+        ...globals.node
+      }
+    },
+    rules: {
+      'no-console': 'off'
+    }
+  },
+
+  // ── artwork-carousel.js: class exposed as browser global via <script> tag ───
+  {
+    files: ['public/js/artwork-carousel.js'],
+    rules: {
+      'no-unused-vars': 'off'
     }
   }
 ];
