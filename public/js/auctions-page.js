@@ -99,7 +99,11 @@ class AuctionsPage {
         const card = imgArea.closest('[data-auction-id]');
         if (card) {
           const auction = this.auctions.find(a => String(a.id) === card.dataset.auctionId);
-          if (auction) { this.openCardPreview(auction); }
+          if (auction) {
+            this.openCardPreview(auction);
+          } else {
+            console.warn('[AuctionsPage] Card preview: auction not found for id', card.dataset.auctionId);
+          }
         }
       }
     });
@@ -114,9 +118,10 @@ class AuctionsPage {
       });
     }
 
-    // Escape key closes overlay
+    // Escape key closes overlay (only when overlay is visible)
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { this.closeCardPreview(); }
+      const overlay = document.getElementById('card-preview-overlay');
+      if (e.key === 'Escape' && overlay && !overlay.hidden) { this.closeCardPreview(); }
     });
   }
 
@@ -484,8 +489,11 @@ class AuctionsPage {
     const set = (id, val) => { const el = document.getElementById(id); if (el) { el.textContent = val || ''; } };
     const img = document.getElementById('card-preview-img');
     if (img) {
-      img.src = this.escapeHtml(auction.image || '/images/placeholder-art.svg');
-      img.alt = this.escapeHtml(auction.title || '');
+      const allowedSrc = /^https?:\/\/|^\//.test(auction.image || '')
+        ? auction.image
+        : '/images/placeholder-art.svg';
+      img.src = allowedSrc;
+      img.alt = auction.title || '';
     }
     set('card-preview-title', auction.title);
     set('card-preview-school', auction.school || '');
