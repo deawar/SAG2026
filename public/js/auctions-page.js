@@ -120,7 +120,6 @@ class AuctionsPage {
 
     // Escape key closes overlay (only when overlay is visible)
     document.addEventListener('keydown', (e) => {
-      const overlay = document.getElementById('card-preview-overlay');
       if (e.key === 'Escape' && overlay && !overlay.hidden) { this.closeCardPreview(); }
     });
   }
