@@ -89,7 +89,7 @@ class AuthMiddleware {
         twoFaEnabled: decoded.twoFaEnabled
       };
 
-      next();
+      return next();
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
         return res.status(401).json({
@@ -150,7 +150,7 @@ class AuthMiddleware {
       // Invalid/expired/revoked token — proceed without user (public access)
     }
 
-    next();
+    return next();
   }
 
   /**
@@ -167,7 +167,7 @@ class AuthMiddleware {
         message: 'Admin accounts must have 2FA enabled. Please complete 2FA setup at /force-2fa-setup.html'
       });
     }
-    next();
+    return next();
   }
 
   /**
@@ -191,7 +191,7 @@ class AuthMiddleware {
         });
       }
 
-      next();
+      return next();
     };
   }
 }

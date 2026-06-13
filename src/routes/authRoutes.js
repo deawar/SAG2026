@@ -237,7 +237,7 @@ module.exports = (db) => {
         }
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   });
 
@@ -323,7 +323,7 @@ module.exports = (db) => {
       if (error.message === 'INVALID_2FA_TOKEN') {
         return res.status(400).json({ success: false, message: 'Invalid 2FA code' });
       }
-      next(error);
+      return next(error);
     }
   });
 
@@ -361,7 +361,7 @@ module.exports = (db) => {
 
       return res.json({ ok: true });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   });
 
@@ -413,7 +413,7 @@ module.exports = (db) => {
         }
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   });
 
@@ -515,7 +515,7 @@ module.exports = (db) => {
         }
       });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   });
 
@@ -556,7 +556,7 @@ module.exports = (db) => {
       if (error.message === 'INVALID_OR_EXPIRED_CODE') {
         return res.status(400).json({ success: false, error: 'invalid_or_expired_code', message: 'The code is invalid or has expired' });
       }
-      next(error);
+      return next(error);
     }
   });
 
@@ -582,7 +582,7 @@ module.exports = (db) => {
 
       return res.json({ ok: true });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   });
 
@@ -609,7 +609,7 @@ module.exports = (db) => {
       if (error.message === 'INVALID_OR_EXPIRED_RESET_TOKEN') {
         return res.status(400).json({ success: false, message: 'This reset link is invalid or has already been used.' });
       }
-      next(error);
+      return next(error);
     }
   });
 
@@ -678,7 +678,7 @@ module.exports = (db) => {
       );
       return res.json({ ok: true, message: 'Consent denied. The account has been removed.' });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -700,7 +700,7 @@ module.exports = (db) => {
       }
       return res.json({ ok: true, message: 'Email verified. You can now log in.' });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -730,7 +730,7 @@ module.exports = (db) => {
       }
       return res.json({ ok: true });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 

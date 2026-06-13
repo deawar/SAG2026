@@ -106,7 +106,7 @@ module.exports = (db) => {
 
       return res.json({ success: true, message: 'Profile updated', data: result.rows[0] });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -132,7 +132,7 @@ module.exports = (db) => {
       if (err.code === '42703') {
         return res.json({ success: true, message: 'Address saved' });
       }
-      next(err);
+      return next(err);
     }
   });
 
@@ -174,7 +174,7 @@ module.exports = (db) => {
 
       return res.json({ success: true, message: 'Password changed successfully' });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -205,7 +205,7 @@ module.exports = (db) => {
 
       return res.json({ success: true, bids: result.rows });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -234,7 +234,7 @@ module.exports = (db) => {
 
       return res.json({ success: true, bids: result.rows });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -277,7 +277,7 @@ module.exports = (db) => {
 
       return res.json({ success: true, win: result.rows[0] });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -314,7 +314,7 @@ module.exports = (db) => {
 
       return res.json({ success: true, wins: result.rows });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -342,7 +342,7 @@ module.exports = (db) => {
 
       return res.json({ success: true, notifications: prefs });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -367,7 +367,7 @@ module.exports = (db) => {
 
       return res.json({ success: true, message: 'Notification preferences saved' });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -388,7 +388,7 @@ module.exports = (db) => {
         twoFactorEnabled: !!result.rows[0]?.totp_enabled
       });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -416,7 +416,7 @@ module.exports = (db) => {
 
       return res.json({ success: true, artwork: result.rows });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -444,7 +444,7 @@ module.exports = (db) => {
 
       return res.json({ success: true, auctions: result.rows });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -504,7 +504,7 @@ module.exports = (db) => {
 
       return res.status(201).json({ success: true, artwork: result.rows[0] });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -528,7 +528,7 @@ module.exports = (db) => {
         }))
       });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -576,7 +576,7 @@ module.exports = (db) => {
           : `${revokedJtis.length} session(s) revoked`
       });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -604,7 +604,7 @@ module.exports = (db) => {
 
       return res.json({ success: true, message: 'Session revoked' });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -672,7 +672,7 @@ module.exports = (db) => {
 
       return res.json({ ok: true });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
@@ -701,7 +701,7 @@ module.exports = (db) => {
 
       return res.json({ success: true, message: 'Submission withdrawn' });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   });
 
