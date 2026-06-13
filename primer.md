@@ -1,5 +1,5 @@
 # Silent Auction Gallery — Session Primer
-**Last updated:** 2026-06-11
+**Last updated:** 2026-06-12
 **Project path:** `c:\Users\Dean.SSCCBISHOP.000\OneDrive\projects\SAG2026\Silent-Auction-Gallery\`
 
 ---
@@ -20,7 +20,7 @@ Start date: 2026-01-26 | Target: Q2 2026
 | 3 | Authentication & Authorization | Complete |
 | 4 | Payment Processing | Complete — PayPal gateway wired end-to-end |
 | 5 | Auction Management API | Complete |
-| 6 | Frontend Development | Complete — auction-detail fully wired, labels page, QR deep-link |
+| 6 | Frontend Development | Complete — responsive layout, lightbox, card preview overlay, QR print labels |
 | 7 | Notification System | Complete — email wired for outbid, won, artwork status, shipped |
 | 8 | Admin Dashboard | Partial — fulfillment tab added; other sections backend complete |
 | 9 | Deployment & Testing | Partial — Playwright installed; live test pending server redeploy + seed |
@@ -64,6 +64,47 @@ No failures. The "force exiting Jest" warning is pre-existing (open handles in b
 
 ---
 
+## What Was Done Session 2026-06-12 — Frontend Responsive + Lightbox + Card Preview
+
+Plan at `docs/superpowers/plans/2026-06-12-frontend-responsive-lightbox.md`. 12 commits on main (b9ce6b8 → b844185). 8 files changed, ~515 insertions.
+
+### Task 1 — CSS Lightbox + Card Preview Overlay (main.css)
+Added `.artwork-lightbox` (z-index:9000) and `.card-preview-overlay` (z-index:8500) as `position:fixed` full-screen overlays toggled with HTML `hidden` attribute. Key details:
+- `[hidden]` rules use `display: none !important` to override `display: flex` parent
+- `.card-preview-close:focus` has `outline: 2px solid var(--color-focus, #1565c0)` (WCAG keyboard focus)
+- `.card-preview-title` uses `font-family: var(--font-heading, 'Cormorant Garant', serif)`
+- `.auction-card-image` global rules (aspect-ratio 4/3, cursor:zoom-in, hover scale 1.04) in main.css
+
+### Task 2 — Responsive Layout Fixes (responsive.css)
+Mobile breakpoints (max-width:640px):
+- `.artwork-image-wrapper` — max-height:55vw, flex centering
+- `.artwork-image` — max-height:55vw, object-fit:contain
+- `.artwork-thumbnails` — horizontal scroll (flex-wrap:nowrap, overflow-x:auto)
+- `.filters-sidebar` — max-height:200px, overflow-y:auto (collapsed sidebar on mobile)
+- `.card-preview-box` mobile — padding:1rem, border-radius:8px
+
+### Task 3 — Lightbox JS (auction-detail.js)
+Replaced native `requestFullscreen()` (unreliable on iOS Safari) with CSS `position:fixed` overlay. Removed `toggleFullscreen()` and dead `showArtworkModal(piece)`. Added `openLightbox(piece)` and `closeLightbox()` with full ARIA focus management:
+- Saves `document.activeElement` as `_lightboxOpener`; restores on close
+- Saves `document.body.style.overflow` as `_bodyOverflow`; restores on close
+- Tab trap via `keydown` handler on the `<dialog>`; removed on close
+- Escape handler guarded: only fires when `!lb.hidden`
+
+### Task 4 — Card Preview JS (auctions-page.js)
+Added `openCardPreview(auction)` and `closeCardPreview()` with same focus management pattern as lightbox. Event delegation on `.auction-card-image` click (looks up auction data via `this.auctions.find()`). URL validation: `img.src` set via regex `/^https?:\/\/|^\//.test(url)` (not `escapeHtml()`, which is ineffective on DOM `.src`). Overlay uses `aria-labelledby="card-preview-title"` (not static `aria-label`).
+
+### Task 5 — QR Print Labels (auction-labels.css + auction-labels.js)
+- QR code size: 100×100 → 160×160 pixels
+- Print layout: `.label-card` is `display:grid; grid-template-columns:1fr 180px`; QR goes in right column via `.label-piece-header`'s nested grid
+- `.label-specs`, `.label-description`, `.label-pricing` get `grid-column: 1/-1` so they span full card width in print
+- `.label-description` uses `-webkit-line-clamp: 2` in print
+
+### HTML Changes
+- `public/auction-detail.html` — added `#artwork-lightbox` dialog before alert container
+- `public/auctions.html` — added `#card-preview-overlay` dialog before alert container
+
+---
+
 ## What Was Done Session 2026-06-11 — Bug Fixes + Security Hardening
 
 Seven fixes committed. Plan at `docs/superpowers/plans/2026-06-11-bug-and-security-fixes.md`.
@@ -81,33 +122,27 @@ Seven fixes committed. Plan at `docs/superpowers/plans/2026-06-11-bug-and-securi
 ### Bug Fix 3 — `closeAuction()` one winner across all artwork (biddingService.js)
 `ORDER BY b.bid_amount DESC LIMIT 1` selected a single highest bid across the whole auction. Multi-artwork auctions left all non-top bids stuck in `ACTIVE` forever.
 
-**Fixed:** `SELECT DISTINCT ON (b.artwork_id) ... ORDER BY b.artwork_id, b.bid_amount DESC` — one winner per artwork piece. Return value now includes `winners` array (array of all winners) alongside backward-compatible `winner` (first winner).
+**Fixed:** `SELECT DISTINCT ON (b.artwork_id) ... ORDER BY b.artwork_id, b.bid_amount DESC` — one winner per artwork piece. Return value now includes `winners` array alongside backward-compatible `winner` (first winner).
 
 ### Security Fix 4 — Unauthenticated bid endpoints (biddingRoutes.js)
-`GET /artwork/:artworkId/history`, `GET /artwork/:artworkId/state`, and `GET /auction/:auctionId/winner` had no auth middleware, exposing bidder names, amounts, and PII to anonymous visitors.
+`GET /artwork/:artworkId/history`, `GET /artwork/:artworkId/state`, and `GET /auction/:auctionId/winner` had no auth middleware.
 
 **Fixed:** `authMiddleware.verifyToken` added to all three routes.
 
 ### Security Fix 5 — Hardcoded JWT fallback secrets (authRoutes.js + userRoutes.js) — CRITICAL
-Both files had `|| 'dev-secret'` fallback for `JWT_ACCESS_SECRET`/`JWT_REFRESH_SECRET`. Attacker could mint valid JWTs on misconfigured deployments.
-
-**Fixed:** Fallbacks removed. App now throws `FATAL: JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be set in environment` at startup if either is missing. Test environment gets these from `tests/setup.env.js` (referenced in `jest.config.js` `setupFiles`).
+Both files had `|| 'dev-secret'` fallback. Removed; app now throws `FATAL: JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be set in environment` at startup.
 
 ### Security Fix 6 — loginLimiter never mounted (authRoutes.js)
-`loginLimiter` (5 req / 15 min) was defined and exported from `rateLimitMiddleware.js` but never imported or applied anywhere, leaving `/login` and `/verify-2fa` with only the broad 100 req/min `apiLimiter`.
-
-**Fixed:** Imported `loginLimiter` in `authRoutes.js`; applied to `POST /login` and `POST /verify-2fa`.
+`loginLimiter` defined but never imported or applied. **Fixed:** Applied to `POST /login` and `POST /verify-2fa`.
 
 ### Security Fix 7 — CORS wildcard + credentials conflict (app.js)
-`origin: '*'` combined with `credentials: true` is browser-rejected and overly permissive.
+`origin: '*'` with `credentials: true` is browser-rejected. **Fixed:** Non-wildcard callback; production origins from `ALLOWED_ORIGINS` env var; dev: localhost:3000/3001.
 
-**Fixed:** Replaced with an allowlist callback. Production origins from `process.env.ALLOWED_ORIGINS` (default `https://sag.live,https://www.sag.live`). Dev origins: `localhost:3000`, `localhost:3001`, `127.0.0.1:3000`. Requests with no `Origin` header (server-to-server) are allowed.
-
-### Known Remaining Issues (not fixed in this pass)
-1. **`validateBid()` is dead code** — `BidController` is never imported by any route file; the method is unreachable.
+### Known Remaining Issues (not fixed)
+1. **`validateBid()` is dead code** — `BidController` is never imported by any route file.
 2. **Winner PII exposure** — `GET /auction/:auctionId/winner` returns winner email to any authenticated user; no role check.
-3. **`POST /api/auth/register` has no rate limiter** — enables email enumeration and bulk account creation.
-4. **Second auction-close path in `auctionService.js` (~line 540)** — uses `ORDER BY ... LIMIT 1` inside an `UPDATE` which is non-standard SQL and may behave unexpectedly on some Postgres versions.
+3. **`POST /api/auth/register` has no rate limiter** — enables email enumeration.
+4. **Second auction-close path in `auctionService.js` (~line 540)** — uses `ORDER BY ... LIMIT 1` inside an `UPDATE` (non-standard SQL).
 
 ---
 
@@ -123,42 +158,27 @@ Eight commits pushed to `origin/main`. Full PayPal payment flow:
 ## What Was Done Session ~2026-05-xx — Mobile Token Fix + Bid Display Fix
 
 ### Mobile "Invalid Token" on QR scan (auction-detail.js)
-When a logged-in desktop user opens an artwork modal and scans the QR, the mobile browser had a stale/expired JWT in localStorage → server returned 401 → old code showed "Invalid Token" error.
-
-**Fixed:** `loadAuction()` now intercepts 401 responses, calls `authManager.clearAuth()` (or `localStorage.removeItem('auth_token')` fallback), and falls back to `_loadPublicPreview()` instead of showing the error.
+**Fixed:** `loadAuction()` now intercepts 401 responses, calls `authManager.clearAuth()`, and falls back to `_loadPublicPreview()`.
 
 ### Carousel current bid off by 100× (artwork-carousel.js + auctionService.js)
-`auctionService.listAuctions` was dividing `current_bid` by 100 (treating DB as cents). Carousel showed "$1.15" instead of "$115.00".
-
-**Fixed:** Removed `/ 100` from `currentBid` mapping in `listAuctions`. Also removed `Math.round(bidAmount * 100)` cents conversion from `bidController.placeBid` (was double-converting).
+**Fixed:** Removed `/ 100` from `currentBid` mapping in `listAuctions`. Removed `Math.round(bidAmount * 100)` from `bidController.placeBid`.
 
 ---
 
 ## What Was Done Session 2026-05-05 — Bidding Fixes + Artwork Seeding
 
 ### Bidding Bug Fix — biddingService.js cents/dollars mismatch
-Service expected cents but routes pass dollars. `currentBid + 100` = $100 increment (wrong), messages divided by 100.
-
-**Fixed 5 locations in biddingService.js:**
-- `minimumBid = currentBid + 100` → `currentBid + 10`
-- Error messages: removed `/100` divisions
-- `newBidDollars: bidAmount / 100` → `bidAmount`
+**Fixed 5 locations:** `minimumBid = currentBid + 100` → `currentBid + 10`; removed `/100` divisions from error messages and `newBidDollars`.
 
 ### Client-side min-bid guard fix — auction-detail.js `submitBid()`
-`this.auction.currentBid` was always undefined (wrong object). Guard was always `$10`.
-
-**Fixed:**
-```js
-const currentBid = this.currentPiece?.currentBid ?? 0;
-const minBid = currentBid + 10;
-```
+**Fixed:** `const currentBid = this.currentPiece?.currentBid ?? 0; const minBid = currentBid + 10;`
 
 ### Artwork seed script
 `db/seeds/seed-artwork.js` — idempotent. 6 JPGs in `public/images/auction-items/`.
 Run: `docker exec sag-app-prod node db/seeds/seed-artwork.js`
 
 ### Browse Auctions button
-`public/index.html` — converted from `<button>` (no handler) to `<a href="/auctions.html">`.
+`public/index.html` — converted from `<button>` to `<a href="/auctions.html">`.
 
 ---
 
@@ -247,6 +267,12 @@ verifyToken → requireAdmin2fa → verifyRole([...]) → handler
 - All `globalThis` stubs set BEFORE `require()`
 - `jest-environment-jsdom` must match jest major version (both `@29`)
 
+### CSS Overlay Pattern (lightbox / card preview)
+- Both overlays use HTML `hidden` attribute for toggle; never use `.hidden` class or `display:none` inline
+- `[hidden]` rules MUST use `display: none !important` to override `display: flex` on parent
+- Focus management: save `document.activeElement`, save `document.body.style.overflow`, focus close button, attach Tab trap handler, restore all on close
+- Escape key guard: check `!overlay.hidden` before calling close — prevents firing when closed
+
 ### Schema Column Naming (key pitfalls)
 - `users.account_status` (not `status`)
 - `auctions.auction_status`, `starts_at`/`ends_at`, `created_by_user_id`
@@ -286,12 +312,16 @@ verifyToken → requireAdmin2fa → verifyRole([...]) → handler
 | `src/routes/adminRoutes.js` | /api/admin/* including /wins (fulfillment list) and /wins/:id/fulfillment (PATCH) |
 | `src/routes/teacherRoutes.js` | /api/teacher/* artwork approve/reject |
 | `src/app.js` | Express app factory; CORS uses origin allowlist callback (no wildcard) |
-| `public/auction-detail.html` | Auction detail page |
-| `public/js/auction-detail.js` | AuctionDetail class — bidding logic, WebSocket, QR deep-link, 401→clearAuth fallback |
+| `public/auction-detail.html` | Auction detail page — includes `#artwork-lightbox` dialog |
+| `public/auctions.html` | Auctions list page — includes `#card-preview-overlay` dialog |
+| `public/js/auction-detail.js` | AuctionDetail class — lightbox open/close, focus trap, Escape guard, QR deep-link |
+| `public/js/auctions-page.js` | AuctionsPage class — card preview open/close, URL validation, focus management |
 | `public/js/artwork-carousel.js` | Homepage carousel — `currentBid` from `listAuctions` (dollars, no /100) |
 | `public/auction-labels.html` | Printable label page — auth-gated (TEACHER/SCHOOL_ADMIN/SITE_ADMIN) |
-| `public/css/auction-labels.css` | Label card layout + @media print stylesheet |
-| `public/js/auction-labels.js` | AuctionLabels class — fetch, render, QR generation |
+| `public/css/main.css` | Global styles — lightbox, card preview overlay, card image aspect ratio/hover |
+| `public/css/responsive.css` | Mobile/tablet breakpoints — 640px mobile artwork height, sidebar collapse, card preview mobile |
+| `public/css/auction-labels.css` | Label card layout (screen 2-col grid) + @media print (CSS grid 1fr/180px) |
+| `public/js/auction-labels.js` | AuctionLabels class — fetch, render, QR generation (160×160px) |
 | `public/images/auction-items/` | 6 student artwork JPGs: BeachRooster, BurgerCat, RainbowSky, Roostertude, SeaLife, UGASmiling |
 | `db/seeds/seed-artwork.js` | Idempotent artwork seed — `docker exec sag-app-prod node db/seeds/seed-artwork.js` |
 | `public/index.html` | Home page — Browse Auctions is `<a href="/auctions.html">` |
@@ -304,7 +334,7 @@ verifyToken → requireAdmin2fa → verifyRole([...]) → handler
 | `tests/security/jwt.secrets.test.js` | Verifies no 'dev-secret' in authRoutes/userRoutes |
 | `tests/security/login.ratelimit.test.js` | Verifies loginLimiter wired on login/verify-2fa |
 | `tests/security/cors.config.test.js` | Verifies no CORS wildcard in app.js |
-| `docs/superpowers/plans/` | Implementation plans (2026-05-04, 2026-05-10, 2026-06-11) |
+| `docs/superpowers/plans/` | Implementation plans (2026-05-04, 2026-05-10, 2026-06-11, 2026-06-12) |
 | `db/migrations/` | All schema migrations |
 | `tests/helpers/createTestApp.js` | Creates Express app with mockDb |
 | `tests/helpers/mockDb.js` | jest.fn() mock for injected db |
@@ -317,3 +347,6 @@ verifyToken → requireAdmin2fa → verifyRole([...]) → handler
 3. Login as bidder → place bid on artwork
 4. Login as second bidder → outbid, verify outbid banner and email notification
 5. Verify bid history, min-increment enforcement, and auction-detail UI
+6. Click artwork image → verify lightbox opens, Escape/click closes, focus returns
+7. Click auction card image on /auctions.html → verify card preview opens with correct data
+8. Open auction-labels page as TEACHER → click Print, verify QR codes are 160px and layout is 2-column
