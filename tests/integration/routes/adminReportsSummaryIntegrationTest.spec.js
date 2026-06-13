@@ -4,8 +4,8 @@
  */
 
 process.env.NODE_ENV = 'test';
-if (!process.env.JWT_ACCESS_SECRET) process.env.JWT_ACCESS_SECRET = 'test-access-secret';
-if (!process.env.JWT_REFRESH_SECRET) process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
+if (!process.env.JWT_ACCESS_SECRET) {process.env.JWT_ACCESS_SECRET = 'test-access-secret';}
+if (!process.env.JWT_REFRESH_SECRET) {process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';}
 
 jest.mock('../../../src/models/index', () => {
   const actual = jest.requireActual('../../../src/models/index');

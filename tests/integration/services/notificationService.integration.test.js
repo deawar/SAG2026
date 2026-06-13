@@ -251,7 +251,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
 
     test('should return 404 for invalid token', async () => {
       const response = await request(app)
-        .post(`/notifications/unsubscribe/invalid-token-123`)
+        .post('/notifications/unsubscribe/invalid-token-123')
         .send({ channel: 'email' });
 
       expect(response.status).toBe(404);
@@ -377,10 +377,10 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
       // This would test database error handling
       // In real environment, temporarily disconnect DB
       // For now, just test that service catches errors
-      
+
       const response = await request(app)
         .post('/notifications')
-        .set('Authorization', `Bearer invalid-format`)
+        .set('Authorization', 'Bearer invalid-format')
         .send({
           type: 'test',
           channel: 'email',

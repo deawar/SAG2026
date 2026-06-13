@@ -697,9 +697,9 @@ router.patch(
       let   idx     = 2;
 
       if (shipped === true && !bid.shipped_at) {
-        fields.push(`shipped_at = CURRENT_TIMESTAMP`);
+        fields.push('shipped_at = CURRENT_TIMESTAMP');
       } else if (shipped === false) {
-        fields.push(`shipped_at = NULL`);
+        fields.push('shipped_at = NULL');
       }
       if (trackingCarrier !== undefined) {
         fields.push(`tracking_carrier = $${idx++}`);
@@ -710,9 +710,9 @@ router.patch(
         values.push(trackingNumber || null);
       }
       if (delivered === true) {
-        fields.push(`delivered_at = CURRENT_TIMESTAMP`);
+        fields.push('delivered_at = CURRENT_TIMESTAMP');
       } else if (delivered === false) {
-        fields.push(`delivered_at = NULL`);
+        fields.push('delivered_at = NULL');
       }
       if (notes !== undefined) {
         fields.push(`fulfillment_notes = $${idx++}`);

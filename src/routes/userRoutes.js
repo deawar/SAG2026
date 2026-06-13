@@ -13,23 +13,23 @@ const UserController = require('../controllers/userController');
 
 /** Mask the last segment of an IPv4 address or last 4 groups of IPv6. */
 function maskIp(ip) {
-  if (!ip) return null;
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(ip)) return ip.replace(/\.\d+$/, '.xxx');
+  if (!ip) {return null;}
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(ip)) {return ip.replace(/\.\d+$/, '.xxx');}
   if (ip.includes(':')) {
     const parts = ip.split(':');
-    return parts.slice(0, 4).join(':') + ':xxxx:xxxx:xxxx:xxxx';
+    return `${parts.slice(0, 4).join(':')}:xxxx:xxxx:xxxx:xxxx`;
   }
   return ip;
 }
 
 /** Return a short human-readable description from a raw User-Agent string. */
 function summarizeUserAgent(ua) {
-  if (!ua) return 'Unknown device';
-  if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS device';
-  if (/Android/i.test(ua)) return 'Android device';
-  if (/Windows/i.test(ua)) return 'Windows device';
-  if (/Macintosh|Mac OS/i.test(ua)) return 'Mac device';
-  if (/Linux/i.test(ua)) return 'Linux device';
+  if (!ua) {return 'Unknown device';}
+  if (/iPhone|iPad|iPod/i.test(ua)) {return 'iOS device';}
+  if (/Android/i.test(ua)) {return 'Android device';}
+  if (/Windows/i.test(ua)) {return 'Windows device';}
+  if (/Macintosh|Mac OS/i.test(ua)) {return 'Mac device';}
+  if (/Linux/i.test(ua)) {return 'Linux device';}
   return ua.substring(0, 60);
 }
 

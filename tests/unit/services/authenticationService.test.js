@@ -11,7 +11,7 @@ const {
   TwoFactorService,
   RBACService,
   SessionService,
-  AuthenticationService,
+  AuthenticationService
 } = require('../../../src/services/authenticationService');
 const crypto = require('crypto');
 
@@ -40,7 +40,7 @@ describe('JWTService', () => {
       accessTokenSecret: process.env.JWT_ACCESS_SECRET,
       refreshTokenSecret: process.env.JWT_REFRESH_SECRET,
       accessTokenExpiry: '15m',
-      refreshTokenExpiry: '7d',
+      refreshTokenExpiry: '7d'
     });
   });
 
@@ -49,7 +49,7 @@ describe('JWTService', () => {
     const userData = {
       email: 'test@example.com',
       role: 'STUDENT',
-      schoolId: uuidv4(),
+      schoolId: uuidv4()
     };
 
     const { token, jti } = jwtService.generateAccessToken(userId, userData);
@@ -73,7 +73,7 @@ describe('JWTService', () => {
     const userData = {
       email: 'test@example.com',
       role: 'TEACHER',
-      schoolId: uuidv4(),
+      schoolId: uuidv4()
     };
 
     const { token } = jwtService.generateAccessToken(userId, userData);
@@ -97,14 +97,14 @@ describe('JWTService', () => {
     const jwtServiceShort = new JWTService({
       accessTokenExpiry: '-1s',
       accessTokenSecret: process.env.JWT_ACCESS_SECRET,
-      refreshTokenSecret: process.env.JWT_REFRESH_SECRET,
+      refreshTokenSecret: process.env.JWT_REFRESH_SECRET
     });
 
     const userId = uuidv4();
     const { token } = jwtServiceShort.generateAccessToken(userId, {
       email: 'test@example.com',
       role: 'STUDENT',
-      schoolId: uuidv4(),
+      schoolId: uuidv4()
     });
 
     // Wait for token to expire
@@ -118,11 +118,11 @@ describe('JWTService', () => {
     const { token } = jwtService.generateAccessToken(userId, {
       email: 'test@example.com',
       role: 'STUDENT',
-      schoolId: uuidv4(),
+      schoolId: uuidv4()
     });
 
     // Tamper with token
-    const tamperedToken = token.slice(0, -10) + 'tamperdata';
+    const tamperedToken = `${token.slice(0, -10)}tamperdata`;
 
     expect(() => jwtService.verifyAccessToken(tamperedToken)).toThrow('TOKEN_INVALID');
   });
@@ -132,7 +132,7 @@ describe('JWTService', () => {
     const { token } = jwtService.generateAccessToken(userId, {
       email: 'test@example.com',
       role: 'STUDENT',
-      schoolId: uuidv4(),
+      schoolId: uuidv4()
     });
 
     const decoded = jwtService.decodeToken(token);
@@ -144,7 +144,7 @@ describe('JWTService', () => {
     const { token } = jwtService.generateAccessToken(userId, {
       email: 'test@example.com',
       role: 'STUDENT',
-      schoolId: uuidv4(),
+      schoolId: uuidv4()
     });
 
     const decoded = jwtService.decodeToken(token);
@@ -157,7 +157,7 @@ describe('JWTService', () => {
     const { token } = jwtService.generateAccessToken(userId, {
       email: 'test@example.com',
       role: 'STUDENT',
-      schoolId: uuidv4(),
+      schoolId: uuidv4()
     });
     const afterTime = Math.floor(Date.now() / 1000);
 
@@ -172,7 +172,7 @@ describe('JWTService', () => {
     const { token, jti } = jwtService.generateAccessToken(userId, {
       email: 'test@example.com',
       role: 'STUDENT',
-      schoolId: uuidv4(),
+      schoolId: uuidv4()
     });
 
     const decoded = jwtService.decodeToken(token);
@@ -184,7 +184,7 @@ describe('JWTService', () => {
     const { token } = jwtService.generateAccessToken(userId, {
       email: 'test@example.com',
       role: 'STUDENT',
-      schoolId: uuidv4(),
+      schoolId: uuidv4()
     });
 
     const decoded = jwtService.decodeToken(token);
@@ -197,7 +197,7 @@ describe('JWTService', () => {
     const { token } = jwtService.generateAccessToken(userId, {
       email: 'test@example.com',
       role: 'STUDENT',
-      schoolId: uuidv4(),
+      schoolId: uuidv4()
     });
 
     const decoded = jwtService.decodeToken(token);
@@ -219,7 +219,7 @@ describe('TwoFactorService', () => {
 
     twoFactorService = new TwoFactorService({
       db: mockDb,
-      windowSize: 2,
+      windowSize: 2
     });
   });
 
@@ -425,7 +425,7 @@ describe('RBACService', () => {
     const resources = [
       { id: 1, schoolId },
       { id: 2, schoolId: uuidv4() },
-      { id: 3, schoolId },
+      { id: 3, schoolId }
     ];
 
     const user = { role: 'SCHOOL_ADMIN', schoolId };
@@ -438,7 +438,7 @@ describe('RBACService', () => {
   test('Should not filter resources for SITE_ADMIN', () => {
     const resources = [
       { id: 1, schoolId: uuidv4() },
-      { id: 2, schoolId: uuidv4() },
+      { id: 2, schoolId: uuidv4() }
     ];
 
     const user = { role: 'SITE_ADMIN' };
@@ -449,8 +449,8 @@ describe('RBACService', () => {
 
   test('Should support role hierarchy', () => {
     const hierarchy = rbacService.roleHierarchy;
-    expect(hierarchy['SITE_ADMIN'].includes('BIDDER')).toBe(true);
-    expect(hierarchy['SCHOOL_ADMIN'].includes('SITE_ADMIN')).toBe(false);
+    expect(hierarchy.SITE_ADMIN.includes('BIDDER')).toBe(true);
+    expect(hierarchy.SCHOOL_ADMIN.includes('SITE_ADMIN')).toBe(false);
   });
 });
 
@@ -462,14 +462,14 @@ describe('Authentication Integration', () => {
   test('JWT token should be verified in authentication flow', () => {
     const jwtService = new JWTService({
       accessTokenSecret: process.env.JWT_ACCESS_SECRET,
-      refreshTokenSecret: process.env.JWT_REFRESH_SECRET,
+      refreshTokenSecret: process.env.JWT_REFRESH_SECRET
     });
 
     const userId = uuidv4();
     const { token } = jwtService.generateAccessToken(userId, {
       email: 'test@example.com',
       role: 'STUDENT',
-      schoolId: uuidv4(),
+      schoolId: uuidv4()
     });
 
     const decoded = jwtService.verifyAccessToken(token);

@@ -23,21 +23,21 @@ const uuidv4 = () => crypto.randomUUID();
 const pool = process.env.NODE_ENV === 'test'
   ? null
   : (() => {
-      const p = new Pool({
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
-        database: process.env.DB_NAME,
-        max: process.env.DB_POOL_MAX || 20,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 2000
-      });
-      p.on('error', (err) => {
-        console.error('Unexpected error on idle client', err);
-      });
-      return p;
-    })();
+    const p = new Pool({
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      host: process.env.DB_HOST,
+      port: process.env.DB_PORT,
+      database: process.env.DB_NAME,
+      max: process.env.DB_POOL_MAX || 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000
+    });
+    p.on('error', (err) => {
+      console.error('Unexpected error on idle client', err);
+    });
+    return p;
+  })();
 
 class Database {
   constructor(config) {
@@ -175,7 +175,7 @@ class UserModel {
    */
   async setVerificationToken(userId, tokenHash, expiresAt) {
     await this.db.query(
-      `UPDATE users SET email_verification_token = $1, email_verification_expires_at = $2 WHERE id = $3`,
+      'UPDATE users SET email_verification_token = $1, email_verification_expires_at = $2 WHERE id = $3',
       [tokenHash, expiresAt, userId]
     );
   }

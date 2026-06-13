@@ -47,7 +47,7 @@ class AuctionLabels {
     try {
       const [auctionRes, artworkRes] = await Promise.all([
         fetch(`/api/auctions/${this.auctionId}`, { headers }),
-        fetch(`/api/auctions/${this.auctionId}/artwork`, { headers }),
+        fetch(`/api/auctions/${this.auctionId}/artwork`, { headers })
       ]);
 
       if (auctionRes.ok) {

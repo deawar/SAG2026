@@ -3,7 +3,7 @@
  * Data Integrity Tests
  * Silent Auction Gallery - Section 10
  * ============================================================================
- * 
+ *
  * Tests for:
  * - Cascade delete behavior
  * - Orphaned record prevention
@@ -11,7 +11,7 @@
  * - Transaction safety (ACID)
  * - Referential integrity
  * - Data consistency
- * 
+ *
  * Total: 28+ tests
  */
 
@@ -424,19 +424,19 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
       const schoolId = uuidv4();
       const auctionId = uuidv4();
       const gatewayId = uuidv4();
-      
+
       await db.query(
         `INSERT INTO schools (id, name, address_line1, city, state_province, postal_code)
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [schoolId, 'Orphan Test School', '555 Test Way', 'Test City', 'TS', '55555']
       );
-      
+
       await db.query(
         `INSERT INTO payment_gateways (id, school_id, gateway_type, api_key_encrypted, api_secret_encrypted, created_by_user_id)
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [gatewayId, schoolId, 'STRIPE', 'key', 'secret', testUserId]
       );
-      
+
       await db.query(
         `INSERT INTO auctions (id, school_id, title, auction_status, starts_at, ends_at, created_by_user_id, payment_gateway_id)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,

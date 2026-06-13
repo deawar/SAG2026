@@ -16,15 +16,15 @@
  */
 
 process.env.NODE_ENV = 'test';
-if (!process.env.JWT_ACCESS_SECRET) process.env.JWT_ACCESS_SECRET = 'test-access-secret';
-if (!process.env.JWT_REFRESH_SECRET) process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
+if (!process.env.JWT_ACCESS_SECRET) {process.env.JWT_ACCESS_SECRET = 'test-access-secret';}
+if (!process.env.JWT_REFRESH_SECRET) {process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';}
 
 // ── Nodemailer mock ──────────────────────────────────────────────────────────
 const mockSendMail = jest.fn().mockResolvedValue({ messageId: '<test@example.com>' });
 jest.mock('nodemailer', () => ({
   createTransport: jest.fn(() => ({
     sendMail: mockSendMail,
-    verify:   jest.fn().mockResolvedValue(true)
+    verify: jest.fn().mockResolvedValue(true)
   }))
 }));
 
@@ -60,14 +60,14 @@ function makeToken(payload = {}) {
 
 function makeBidRow(overrides = {}) {
   return {
-    id:                 'bid-1',
-    placed_by_user_id:  'user-winner',
-    bid_status:         'ACCEPTED',
-    shipped_at:         null,
-    school_id:          'school-1',
-    artwork_title:      'Sunset Over Mountains',
-    winner_email:       'winner@example.com',
-    winner_first_name:  'Alice',
+    id: 'bid-1',
+    placed_by_user_id: 'user-winner',
+    bid_status: 'ACCEPTED',
+    shipped_at: null,
+    school_id: 'school-1',
+    artwork_title: 'Sunset Over Mountains',
+    winner_email: 'winner@example.com',
+    winner_first_name: 'Alice',
     ...overrides
   };
 }

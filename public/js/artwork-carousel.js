@@ -20,14 +20,14 @@ class ArtworkCarousel {
     if (!this.container) { return; }
 
     this.options = {
-      title:       options.title       || 'Artwork Gallery',
-      schoolId:    options.schoolId    || null,
-      role:        options.role        || 'bidder',
+      title: options.title       || 'Artwork Gallery',
+      schoolId: options.schoolId    || null,
+      role: options.role        || 'bidder',
       autoAdvance: options.autoAdvance !== false,
-      interval:    options.interval    || 5000,
-      items:       options.items       || null,
-      onApprove:   options.onApprove   || null,
-      onReject:    options.onReject    || null,
+      interval: options.interval    || 5000,
+      items: options.items       || null,
+      onApprove: options.onApprove   || null,
+      onReject: options.onReject    || null
     };
 
     this.slides       = [];
@@ -105,17 +105,17 @@ class ArtworkCarousel {
       const data = await resp.json();
 
       return (data.data || data.submissions || []).map(s => ({
-        id:               s.id,
-        title:            s.title || 'Untitled',
-        artist:           s.artistName || s.artist_name || '',
-        school:           s.schoolName || '',
-        image:            s.imageUrl   || s.image_url   || '/images/placeholder-art.svg',
-        currentBid:       s.startingBidAmount || s.startingBid || 0,
-        bidCount:         s.bidCount   || 0,
-        endTime:          null,
-        status:           s.status     || 'SUBMITTED',
-        submissionId:     s.id,
-        submissionStatus: s.status     || 'SUBMITTED',
+        id: s.id,
+        title: s.title || 'Untitled',
+        artist: s.artistName || s.artist_name || '',
+        school: s.schoolName || '',
+        image: s.imageUrl   || s.image_url   || '/images/placeholder-art.svg',
+        currentBid: s.startingBidAmount || s.startingBid || 0,
+        bidCount: s.bidCount   || 0,
+        endTime: null,
+        status: s.status     || 'SUBMITTED',
+        submissionId: s.id,
+        submissionStatus: s.status     || 'SUBMITTED'
       }));
     }
 
@@ -130,17 +130,17 @@ class ArtworkCarousel {
     const data = await resp.json();
 
     return (data.auctions || []).map(a => ({
-      id:               a.id,
-      title:            a.title || 'Untitled',
-      artist:           a.artwork?.artist_name || a.artworkArtist || '',
-      school:           a.school || a.schoolName || '',
-      image:            a.image  || a.artwork?.image_url || '/images/placeholder-art.svg',
-      currentBid:       a.currentBid || 0,
-      bidCount:         a.bidCount   || 0,
-      endTime:          a.endTime    || null,
-      status:           a.status     || 'LIVE',
-      submissionId:     a.artworkId  || null,
-      submissionStatus: a.artworkStatus || null,
+      id: a.id,
+      title: a.title || 'Untitled',
+      artist: a.artwork?.artist_name || a.artworkArtist || '',
+      school: a.school || a.schoolName || '',
+      image: a.image  || a.artwork?.image_url || '/images/placeholder-art.svg',
+      currentBid: a.currentBid || 0,
+      bidCount: a.bidCount   || 0,
+      endTime: a.endTime    || null,
+      status: a.status     || 'LIVE',
+      submissionId: a.artworkId  || null,
+      submissionStatus: a.artworkStatus || null
     }));
   }
 
@@ -153,7 +153,7 @@ class ArtworkCarousel {
           <h2 class="ac-title">${this._esc(this.options.title)}</h2>
         </div>
         <div class="ac-skeleton-row">
-          ${[1,2,3].map(() => '<div class="ac-skeleton-card"></div>').join('')}
+          ${[1, 2, 3].map(() => '<div class="ac-skeleton-card"></div>').join('')}
         </div>
       </div>`;
   }
@@ -272,11 +272,11 @@ class ArtworkCarousel {
 
   _renderStatusBadge(status) {
     const map = {
-      LIVE:    { cls: 'active',  label: 'Live' },
-      ENDED:   { cls: 'ended',   label: 'Ended' },
-      DRAFT:   { cls: 'draft',   label: 'Preview' },
+      LIVE: { cls: 'active',  label: 'Live' },
+      ENDED: { cls: 'ended',   label: 'Ended' },
+      DRAFT: { cls: 'draft',   label: 'Preview' }
     };
-    const { cls, label } = map[status] || map['LIVE'];
+    const { cls, label } = map[status] || map.LIVE;
     return `<span class="ac-status-badge status-${cls}" aria-label="Auction status: ${label}">${label}</span>`;
   }
 
@@ -336,7 +336,7 @@ class ArtworkCarousel {
     const item = this.slides[this.currentIndex];
     if (!item) { return; }
     this._liveRegion.setAttribute('aria-label',
-      `${item.title}${item.artist ? ' by ' + item.artist : ''} — ${this.currentIndex + 1} of ${this.slides.length}`);
+      `${item.title}${item.artist ? ` by ${item.artist}` : ''} — ${this.currentIndex + 1} of ${this.slides.length}`);
   }
 
   // ── Event Listeners ──────────────────────────────────────────────────────────

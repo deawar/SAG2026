@@ -17,8 +17,8 @@
  */
 
 process.env.NODE_ENV = 'test';
-if (!process.env.JWT_ACCESS_SECRET) process.env.JWT_ACCESS_SECRET = 'test-access-secret';
-if (!process.env.JWT_REFRESH_SECRET) process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
+if (!process.env.JWT_ACCESS_SECRET) {process.env.JWT_ACCESS_SECRET = 'test-access-secret';}
+if (!process.env.JWT_REFRESH_SECRET) {process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';}
 
 // adminRoutes and tokenBlacklist use pool from models/index directly — mock it so
 // the sessions endpoint and blacklist revoke calls don't need a live PG connection.
@@ -50,11 +50,11 @@ function makeAccessToken(payload = {}, expiresIn = '15m') {
     email: 'user@example.com',
     role: 'BIDDER',
     twoFaEnabled: false,
-    jti: uuidv4(),
+    jti: uuidv4()
   };
   return jwt.sign({ ...defaults, ...payload }, ACCESS_SECRET, {
     algorithm: 'HS256',
-    expiresIn,
+    expiresIn
   });
 }
 
@@ -64,7 +64,7 @@ function makeAdminAccessToken(payload = {}) {
     email: 'admin@example.com',
     role: 'SITE_ADMIN',
     twoFaEnabled: true,
-    ...payload,
+    ...payload
   });
 }
 
@@ -76,7 +76,7 @@ function makeRefreshToken(userId = 'user-1', jti = uuidv4(), expiresIn = '7d') {
       algorithm: 'HS256',
       expiresIn,
       issuer: 'silent-auction-gallery',
-      audience: 'silent-auction-users',
+      audience: 'silent-auction-users'
     }
   );
 }
@@ -95,7 +95,7 @@ function makeUserRow(overrides = {}) {
     school_id: null,
     first_name: 'Test',
     last_name: 'User',
-    ...overrides,
+    ...overrides
   };
 }
 
@@ -238,8 +238,8 @@ describe('G19 — Concurrent session limiting', () => {
           user_agent: 'Mozilla/5.0 (Windows NT 10.0) Chrome/123',
           created_at: new Date('2026-04-10T10:00:00Z'),
           last_used_at: new Date('2026-04-12T08:00:00Z'),
-          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        },
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        }
       ];
 
       mockDb.query
@@ -370,7 +370,7 @@ describe('G19 — Concurrent session limiting', () => {
         // 2nd call: revokeAllExcept
         .mockResolvedValueOnce({
           rows: revokedJtis.map(jti => ({ token_jti: jti })),
-          rowCount: 3,
+          rowCount: 3
         })
         // remaining: blacklist INSERTs + audit log — default empty ok
         .mockResolvedValue({ rows: [], rowCount: 0 });
@@ -408,7 +408,7 @@ describe('G19 — Concurrent session limiting', () => {
       const adminTokenNo2fa = makeAccessToken({
         sub: 'admin-1',
         role: 'SITE_ADMIN',
-        twoFaEnabled: false,
+        twoFaEnabled: false
       });
       const targetUserId = uuidv4();
 

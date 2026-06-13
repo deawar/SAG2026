@@ -20,7 +20,7 @@ class MockDatabase {
       schools: [],
       auctions: [],
       artwork: [],
-      bids: [],
+      bids: []
     };
   }
 
@@ -62,7 +62,7 @@ describe('UserModel', () => {
       phoneNumber: '+1234567890',
       dateOfBirth: new Date('2000-01-01'),
       role: 'STUDENT',
-      schoolId: uuidv4(),
+      schoolId: uuidv4()
     };
 
     // This would require a real database connection
@@ -77,7 +77,7 @@ describe('UserModel', () => {
       password: 'SecurePass123!',
       firstName: 'Jane',
       lastName: 'Smith',
-      role: 'BIDDER',
+      role: 'BIDDER'
     };
 
     // Email validation
@@ -90,7 +90,7 @@ describe('UserModel', () => {
       'notanemail',
       'missing@domain',
       '@nodomain.com',
-      'spaces in@email.com',
+      'spaces in@email.com'
     ];
 
     const validator = require('validator');
@@ -159,7 +159,7 @@ describe('UserModel', () => {
   test('Should enforce COPPA for users under 13', () => {
     const today = new Date();
     const underThirteen = new Date(today.getFullYear() - 12, today.getMonth(), today.getDate());
-    
+
     const age = userModel._calculateAge(underThirteen);
     expect(age).toBeLessThan(13);
   });
@@ -167,7 +167,7 @@ describe('UserModel', () => {
   test('Should allow users 13 and older', () => {
     const today = new Date();
     const thirteenOrOlder = new Date(today.getFullYear() - 13, today.getMonth(), today.getDate() - 1);
-    
+
     const age = userModel._calculateAge(thirteenOrOlder);
     expect(age).toBeGreaterThanOrEqual(13);
   });
@@ -198,7 +198,7 @@ describe('UserModel', () => {
     const testData = 'sensitive_information';
     const encrypted = userModel._encryptData(testData);
     expect(encrypted).not.toBe(testData);
-    
+
     const decrypted = userModel._decryptData(encrypted);
     expect(decrypted).toBe(testData);
   });
@@ -211,7 +211,7 @@ describe('UserModel', () => {
     const accountStatus = {
       isLocked: false,
       status: 'ACTIVE',
-      lockedUntil: null,
+      lockedUntil: null
     };
 
     expect(accountStatus.isLocked).toBe(false);
@@ -275,7 +275,7 @@ describe('SchoolModel', () => {
       postalCode: '12345',
       country: 'US',
       phone: '+1234567890',
-      website: 'https://centralhigh.edu',
+      website: 'https://centralhigh.edu'
     };
 
     expect(schoolData.name).toBeDefined();
@@ -322,7 +322,7 @@ describe('SchoolModel', () => {
   test('Should allow multiple schools in same district', () => {
     const schools = [
       { name: 'School A', district: 'District 1' },
-      { name: 'School B', district: 'District 1' },
+      { name: 'School B', district: 'District 1' }
     ];
 
     expect(schools[0].district).toBe(schools[1].district);
@@ -371,7 +371,7 @@ describe('AuctionModel', () => {
 
   test('Should require auction start and end dates', () => {
     const auctionData = {
-      title: 'Spring Art Auction',
+      title: 'Spring Art Auction'
     };
 
     expect(auctionData.startsAt).toBeUndefined();
@@ -459,7 +459,7 @@ describe('AuctionModel', () => {
   test('Should track approved by user and timestamp', () => {
     const approvalData = {
       approvedByUserId: uuidv4(),
-      approvalNotes: 'Approved after verification',
+      approvalNotes: 'Approved after verification'
     };
 
     expect(approvalData.approvedByUserId).toBeDefined();
@@ -474,7 +474,7 @@ describe('AuctionModel', () => {
   test('Should support charity beneficiary tracking', () => {
     const charityData = {
       charityBeneficiaryName: 'Local Children\'s Hospital',
-      charityWebsiteUrl: 'https://hospital.org',
+      charityWebsiteUrl: 'https://hospital.org'
     };
 
     expect(charityData.charityBeneficiaryName).toBeDefined();
@@ -566,7 +566,7 @@ describe('ArtworkModel', () => {
     const dimensions = {
       width: 50,
       height: 40,
-      depth: 2,
+      depth: 2
     };
 
     expect(dimensions.width).toBeDefined();
@@ -593,7 +593,7 @@ describe('ArtworkModel', () => {
   test('Should allow artwork rejection with reason', () => {
     const rejectionData = {
       status: 'REJECTED',
-      rejectionReason: 'Does not meet quality standards',
+      rejectionReason: 'Does not meet quality standards'
     };
 
     expect(rejectionData.status).toBe('REJECTED');
@@ -619,7 +619,7 @@ describe('ArtworkModel', () => {
   test('Should track highest bid amount', () => {
     const highestBid = {
       bidAmount: 500,
-      totalBids: 3,
+      totalBids: 3
     };
 
     expect(highestBid.bidAmount).toBeGreaterThan(0);

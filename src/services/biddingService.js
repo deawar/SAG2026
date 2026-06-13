@@ -110,7 +110,7 @@ class BiddingService {
           'SELECT id, email, first_name FROM users WHERE id = $1 AND deleted_at IS NULL',
           [prevBidderId]
         );
-        if (prevUserResult.rows.length > 0) prevBidder = prevUserResult.rows[0];
+        if (prevUserResult.rows.length > 0) {prevBidder = prevUserResult.rows[0];}
       }
 
       // Log bid activity for compliance

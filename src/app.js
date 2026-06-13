@@ -79,7 +79,7 @@ function createApp(db) {
   // ==========================================================================
   const allowedOrigins = isProduction
     ? (process.env.ALLOWED_ORIGINS || 'https://sag.live,https://www.sag.live')
-        .split(',').map(o => o.trim())
+      .split(',').map(o => o.trim())
     : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'];
 
   const corsOptions = {
@@ -202,7 +202,7 @@ function createApp(db) {
   });
 
   // Global error handler
-  app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
+  app.use((err, req, res, next) => {
     if (!isTest) {
       console.error('Global Error Handler:', {
         message: err.message,

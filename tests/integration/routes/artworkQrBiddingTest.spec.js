@@ -11,7 +11,7 @@ const mockLocalStorage = (() => {
     getItem: (key) => store[key] ?? null,
     setItem: (key, val) => { store[key] = String(val); },
     removeItem: (key) => { delete store[key]; },
-    clear: () => { store = {}; },
+    clear: () => { store = {}; }
   };
 })();
 Object.defineProperty(globalThis, 'localStorage', { value: mockLocalStorage });
@@ -24,19 +24,19 @@ globalThis.UIComponents = {
   showLoading: jest.fn(() => null),
   hideLoading: jest.fn(),
   createToast: jest.fn(),
-  showModal: jest.fn(),
+  showModal: jest.fn()
 };
 
 globalThis.ThemeManager = { apply: jest.fn() };
 globalThis.WebSocket = jest.fn().mockImplementation(() => ({
   addEventListener: jest.fn(),
   send: jest.fn(),
-  close: jest.fn(),
+  close: jest.fn()
 }));
 globalThis.QRCode = jest.fn();
 globalThis.fetch = jest.fn().mockResolvedValue({
   ok: false,
-  json: async () => ({}),
+  json: async () => ({})
 });
 
 const AuctionDetail = require('../../../public/js/auction-detail.js');
@@ -74,7 +74,7 @@ describe('checkLoginStatus()', () => {
   test('5 — keeps form hidden when auction status is ENDED', () => {
     mockLocalStorage.setItem('auth_token', 'tok');
     const inst = makeInstance({
-      auction: { status: 'ENDED', endTime: new Date(Date.now() + 60_000).toISOString() },
+      auction: { status: 'ENDED', endTime: new Date(Date.now() + 60_000).toISOString() }
     });
     inst.checkLoginStatus();
     expect(document.getElementById('bidding-form-container').style.display).toBe('none');
@@ -83,7 +83,7 @@ describe('checkLoginStatus()', () => {
   test('6 — keeps form hidden when end time is in the past', () => {
     mockLocalStorage.setItem('auth_token', 'tok');
     const inst = makeInstance({
-      auction: { status: 'LIVE', endTime: new Date(Date.now() - 1000).toISOString() },
+      auction: { status: 'LIVE', endTime: new Date(Date.now() - 1000).toISOString() }
     });
     inst.checkLoginStatus();
     expect(document.getElementById('bidding-form-container').style.display).toBe('none');
@@ -92,7 +92,7 @@ describe('checkLoginStatus()', () => {
   test('7 — shows form when LIVE and end time is in the future', () => {
     mockLocalStorage.setItem('auth_token', 'tok');
     const inst = makeInstance({
-      auction: { status: 'LIVE', endTime: new Date(Date.now() + 60_000).toISOString() },
+      auction: { status: 'LIVE', endTime: new Date(Date.now() + 60_000).toISOString() }
     });
     inst.checkLoginStatus();
     expect(document.getElementById('bidding-form-container').style.display).toBe('block');
@@ -103,7 +103,7 @@ describe('checkLoginStatus()', () => {
 
 describe('loadBidHistory()', () => {
   beforeEach(() => {
-    document.body.innerHTML = `<ul id="bid-history-container"></ul>`;
+    document.body.innerHTML = '<ul id="bid-history-container"></ul>';
     mockLocalStorage.clear();
     jest.clearAllMocks();
   });
@@ -113,9 +113,9 @@ describe('loadBidHistory()', () => {
       ok: true,
       json: async () => ({
         data: [
-          { bidder: { displayName: 'Alice' }, amount: 150, timestamp: '2026-01-01T00:00:00Z', status: 'ACTIVE' },
-        ],
-      }),
+          { bidder: { displayName: 'Alice' }, amount: 150, timestamp: '2026-01-01T00:00:00Z', status: 'ACTIVE' }
+        ]
+      })
     });
 
     const inst = makeInstance({ currentPiece: { id: 'art-42' } });
@@ -150,7 +150,7 @@ describe('attachEventListeners() and submitBid()', () => {
   test('8 — submitBid fires on form submit event, not just button click', () => {
     const inst = makeInstance({
       auction: { status: 'LIVE', endTime: new Date(Date.now() + 60_000).toISOString(), currentBid: 100 },
-      currentPiece: { id: 'art-1', title: 'Sunset' },
+      currentPiece: { id: 'art-1', title: 'Sunset' }
     });
     const submitSpy = jest.spyOn(inst, 'submitBid').mockImplementation((e) => e.preventDefault());
     inst.attachEventListeners();
@@ -165,12 +165,12 @@ describe('attachEventListeners() and submitBid()', () => {
   test('9 — successful submitBid shows leading-bidder banner with piece title', async () => {
     globalThis.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ biddingState: { currentBid: 150, totalBids: 3 } }),
+      json: async () => ({ biddingState: { currentBid: 150, totalBids: 3 } })
     });
 
     const inst = makeInstance({
       auction: { status: 'LIVE', endTime: new Date(Date.now() + 60_000).toISOString(), currentBid: 100 },
-      currentPiece: { id: 'art-1', title: 'Sunset' },
+      currentPiece: { id: 'art-1', title: 'Sunset' }
     });
     inst.updateBidInfo = jest.fn();
     inst.loadBidHistory = jest.fn().mockResolvedValue(undefined);
@@ -215,7 +215,7 @@ describe('displayArtworkPiece() min-bid hint', () => {
     inst.displayArtworkPiece({
       id: 'art-1', title: 'Sunset', artistName: 'Alice',
       imageUrl: '', startingPrice: 100, currentBid: 200,
-      bidCount: 3, medium: 'Oil', dimensions: '10x10',
+      bidCount: 3, medium: 'Oil', dimensions: '10x10'
     });
     expect(document.getElementById('min-bid-amount').textContent).toBe('$210.00');
   });
@@ -226,7 +226,7 @@ describe('displayArtworkPiece() min-bid hint', () => {
 describe('_focusArtwork()', () => {
   const artworks = [
     { id: 'art-1', title: 'First', artistName: 'Alice', imageUrl: '', startingPrice: 100, currentBid: null, bidCount: 0, medium: '', dimensions: '' },
-    { id: 'art-2', title: 'Second', artistName: 'Bob', imageUrl: '', startingPrice: 200, currentBid: null, bidCount: 0, medium: '', dimensions: '' },
+    { id: 'art-2', title: 'Second', artistName: 'Bob', imageUrl: '', startingPrice: 200, currentBid: null, bidCount: 0, medium: '', dimensions: '' }
   ];
 
   beforeEach(() => {
@@ -284,7 +284,7 @@ describe('_renderEnhancedAuthWall()', () => {
     const artwork = {
       id: 'art-1', title: 'Sunset', artistName: 'Alice',
       imageUrl: '/img/1.jpg', startingPrice: 100,
-      currentBid: null, bidCount: 0, medium: '', dimensions: '',
+      currentBid: null, bidCount: 0, medium: '', dimensions: ''
     };
     const inst = makeInstance({ artworks: [artwork], focusArtworkId: 'art-1', isVisitor: true });
     inst.renderArtworkGallery = jest.fn();
@@ -316,7 +316,7 @@ describe('_renderEnhancedAuthWall()', () => {
     const artwork = {
       id: 'art-1', title: 'Sunset', artistName: 'Alice',
       imageUrl: '', startingPrice: 100,
-      currentBid: null, bidCount: 0, medium: '', dimensions: '',
+      currentBid: null, bidCount: 0, medium: '', dimensions: ''
     };
     const inst = makeInstance({ artworks: [artwork], focusArtworkId: null, isVisitor: true });
     inst.renderArtworkGallery = jest.fn();
@@ -353,7 +353,7 @@ describe('AuctionLabels', () => {
   }
 
   test('13 — renderLabels renders correct card count for a 5-piece auction', () => {
-    document.body.innerHTML = `<div id="labels-grid"></div>`;
+    document.body.innerHTML = '<div id="labels-grid"></div>';
     const artworks = Array.from({ length: 5 }, (_, i) => ({
       id: `art-${i + 1}`,
       title: `Artwork ${i + 1}`,
@@ -363,7 +363,7 @@ describe('AuctionLabels', () => {
       description: 'A fine piece',
       startingPrice: 100,
       currentBid: null,
-      reservePrice: null,
+      reservePrice: null
     }));
     const inst = makeLabelsInstance({ artworks });
     inst.renderLabels();
@@ -371,11 +371,11 @@ describe('AuctionLabels', () => {
   });
 
   test('14 — each label card has correct data-auction-id and data-artwork-id', () => {
-    document.body.innerHTML = `<div id="labels-grid"></div>`;
+    document.body.innerHTML = '<div id="labels-grid"></div>';
     const artworks = [{
       id: 'art-abc', title: 'Sunset', artistName: 'Alice',
       medium: 'Watercolour', dimensions: '20x30', description: '',
-      startingPrice: 75, currentBid: 100, reservePrice: null,
+      startingPrice: 75, currentBid: 100, reservePrice: null
     }];
     const inst = makeLabelsInstance({ artworks });
     inst.renderLabels();
@@ -392,7 +392,7 @@ describe('AuctionLabels', () => {
       assign: assignSpy,
       pathname: '/auction-labels.html',
       search: '?id=auction-1',
-      origin: 'http://localhost',
+      origin: 'http://localhost'
     };
 
     const inst = makeLabelsInstance();

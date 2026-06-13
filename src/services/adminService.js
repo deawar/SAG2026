@@ -1322,10 +1322,10 @@ class AdminService {
     }
 
     const labels = {
-      gdpr:  { title: 'GDPR Compliance',  description: 'User data privacy and deletion requests' },
+      gdpr: { title: 'GDPR Compliance',  description: 'User data privacy and deletion requests' },
       coppa: { title: 'COPPA Compliance', description: 'Child online privacy protection' },
       ferpa: { title: 'FERPA Compliance', description: 'Student educational records privacy' },
-      ccpa:  { title: 'CCPA Compliance',  description: 'California consumer privacy rights' },
+      ccpa: { title: 'CCPA Compliance',  description: 'California consumer privacy rights' }
     };
 
     const reports = {};

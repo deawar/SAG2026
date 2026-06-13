@@ -199,7 +199,6 @@ class AuctionDetail {
     if (bidCountEl) {
       bidCountEl.textContent = this.auction.totalBids ?? this.auction.bidCount ?? 0;
     }
-
   }
 
   /**
@@ -266,7 +265,7 @@ class AuctionDetail {
         this.bidHistory = (data.data || []).map(b => ({
           bidderName: b.bidder?.displayName ?? 'Anonymous',
           amount: b.amount,
-          createdAt: b.timestamp,
+          createdAt: b.timestamp
         }));
         this.displayBidHistory();
       }
@@ -791,9 +790,7 @@ class AuctionDetail {
       const last = focusable.at(-1);
       if (e.shiftKey) {
         if (document.activeElement === first) { e.preventDefault(); last.focus(); }
-      } else {
-        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
-      }
+      } else if (document.activeElement === last) { e.preventDefault(); first.focus(); }
     };
     lb.addEventListener('keydown', this._lightboxTrapHandler);
   }

@@ -3,7 +3,7 @@
  * Section 11: Security - Authentication & Authorization Testing
  * Silent Auction Gallery - Auth Security Test Suite
  * ============================================================================
- * 
+ *
  * Tests for:
  * - JWT token validation
  * - RBAC enforcement
@@ -11,7 +11,7 @@
  * - Password security
  * - 2FA bypass attempts
  * - Token refresh flows
- * 
+ *
  * Total: 20+ authentication security tests
  */
 
@@ -308,7 +308,7 @@ describe('Authentication & Authorization Security', () => {
         'PASSWORD',           // No lowercase, numbers, special chars
         'Pass1',              // Too short
         'password123',        // No uppercase, special chars
-        'Password!',          // No numbers
+        'Password!'          // No numbers
       ];
 
       for (const pwd of weakPasswords) {
@@ -330,7 +330,7 @@ describe('Authentication & Authorization Security', () => {
         'Qwerty123!',
         'Password123!',
         'Admin123!',
-        '123456789Aa!',
+        '123456789Aa!'
       ];
 
       for (const pwd of commonPasswords) {
@@ -434,7 +434,7 @@ describe('Authentication & Authorization Security', () => {
         .send({
           email: 'child@example.com',
           password: 'ValidPassword123!',
-          dateOfBirth: new Date(Date.now() - 365*24*60*60*1000*10).toISOString(), // 10 years old
+          dateOfBirth: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000 * 10).toISOString(), // 10 years old
           firstName: 'Child',
           lastName: 'User',
           parentalConsentProvided: false
@@ -450,7 +450,7 @@ describe('Authentication & Authorization Security', () => {
         .send({
           email: `child-consent-${Date.now()}@example.com`,
           password: 'ValidPassword123!',
-          dateOfBirth: new Date(Date.now() - 365*24*60*60*1000*10).toISOString(),
+          dateOfBirth: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000 * 10).toISOString(),
           firstName: 'Child',
           lastName: 'User',
           parentalConsentProvided: true,

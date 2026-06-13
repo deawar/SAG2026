@@ -1,10 +1,9 @@
-/* eslint-disable no-unused-vars */
 /**
  * ============================================================================
  * Section 11: Security Audit & Penetration Testing
  * Silent Auction Gallery - Security Test Suite
  * ============================================================================
- * 
+ *
  * Tests for:
  * - OWASP Top 10 vulnerabilities
  * - Input validation & sanitization
@@ -15,7 +14,7 @@
  * - Privilege escalation
  * - Rate limiting
  * - Security headers
- * 
+ *
  * Total: 35+ security tests
  */
 
@@ -108,7 +107,7 @@ describe('Security Audit - OWASP Top 10', () => {
 
     test('should prevent stored XSS in auction titles', async () => {
       const maliciousTitle = '<img src=x onerror="alert(\'xss\')">';
-      
+
       const response = await request(app)
         .post('/api/auctions')
         .set('Authorization', 'Bearer fake_token')
@@ -128,7 +127,7 @@ describe('Security Audit - OWASP Top 10', () => {
 
       // Check for proper Content-Type header
       expect(response.headers['content-type']).toMatch(/json/);
-      
+
       // Should not contain raw HTML
       const body = JSON.stringify(response.body);
       expect(body).not.toMatch(/<script[^>]*>/);
@@ -461,7 +460,7 @@ describe('Security Audit - OWASP Top 10', () => {
 
       // Should not expose Express version or server details
       // Helmet removes the header entirely — undefined is also acceptable
-      expect(response.headers['server'] || '').not.toMatch(/Express|Node/);
+      expect(response.headers.server || '').not.toMatch(/Express|Node/);
     });
   });
 
