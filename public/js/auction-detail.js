@@ -420,9 +420,10 @@ class AuctionDetail {
       });
     }
 
-    // Keyboard: Escape closes lightbox
+    // Keyboard: Escape closes lightbox (only when lightbox is visible)
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { this.closeLightbox(); }
+      const lb = document.getElementById('artwork-lightbox');
+      if (e.key === 'Escape' && lb && !lb.hidden) { this.closeLightbox(); }
     });
   }
 
@@ -771,52 +772,6 @@ class AuctionDetail {
     }
   }
 
-  /**
-     * Open the artwork detail modal for a given piece.
-     */
-  showArtworkModal(piece) {
-    const modal = document.getElementById('artwork-modal');
-    if (!modal) {return;}
-
-    const img = document.getElementById('modal-artwork-img');
-    if (img) {
-      img.src = piece.imageUrl || '';
-      img.alt = piece.title || 'Artwork';
-      img.style.display = piece.imageUrl ? '' : 'none';
-    }
-    const set = (id, val) => {
-      const el = document.getElementById(id);
-      if (el) {el.textContent = val || '-';}
-    };
-    set('artwork-modal-title',       piece.title);
-    set('modal-artwork-artist',      piece.artistName);
-    set('modal-artwork-medium',      piece.medium);
-    set('modal-artwork-dimensions',  piece.dimensions);
-    const openingBid = piece.startingPrice == null ? '-' : UIComponents.formatCurrency(Number(piece.startingPrice));
-    set('modal-artwork-opening-bid', openingBid);
-    let currentBid = openingBid;
-    if (piece.currentBid != null) {currentBid = UIComponents.formatCurrency(Number(piece.currentBid));}
-    set('modal-artwork-current-bid', currentBid);
-
-    // QR code
-    const qrContainer = document.getElementById('modal-artwork-qr');
-    if (qrContainer) {
-      qrContainer.innerHTML = '';
-      const QRCodeLib = globalThis.QRCode;
-      if (QRCodeLib) {
-        this._artworkQr = new QRCodeLib(qrContainer, {
-          text: globalThis.location.href,
-          width: 160,
-          height: 160
-        });
-      } else {
-        qrContainer.textContent = globalThis.location.href;
-      }
-    }
-
-    modal.style.display = 'flex';
-  }
-
   openLightbox(piece) {
     this._lightboxOpener = document.activeElement;
     this._bodyOverflow = document.body.style.overflow;
@@ -830,8 +785,15 @@ class AuctionDetail {
     document.getElementById('lightbox-close')?.focus();
     this._lightboxTrapHandler = (e) => {
       if (e.key !== 'Tab') { return; }
-      e.preventDefault();
-      document.getElementById('lightbox-close')?.focus();
+      const focusable = Array.from(lb.querySelectorAll('a[href], button:not([disabled])'));
+      if (!focusable.length) { return; }
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
     };
     lb.addEventListener('keydown', this._lightboxTrapHandler);
   }
