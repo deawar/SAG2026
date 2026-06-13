@@ -47,14 +47,14 @@ router.post('/place', authMiddleware.verifyToken, async (req, res) => {
       totalBids: state.totalBids
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: result,
       biddingState: state
     });
   } catch (error) {
     console.error('Error placing bid:', error);
-    res.status(400).json({
+    return res.status(400).json({
       success: false,
       message: error.message
     });
@@ -79,13 +79,13 @@ router.post('/withdraw', authMiddleware.verifyToken, async (req, res) => {
 
     const result = await biddingService.withdrawBid(bidId, userId);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: result
     });
   } catch (error) {
     console.error('Error withdrawing bid:', error);
-    res.status(400).json({
+    return res.status(400).json({
       success: false,
       message: error.message
     });

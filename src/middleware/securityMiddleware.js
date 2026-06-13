@@ -46,7 +46,7 @@ const sanitizeInput = (req, res, next) => {
       });
     }
 
-    next();
+    return next();
   } catch (error) {
     console.error('Input sanitization error:', error);
     return res.status(400).json({
@@ -229,7 +229,7 @@ const generateCSRFToken = (req, res, next) => {
 const csrfErrorHandler = (err, req, res, next) => {
   if (err.code !== 'EBADCSRFTOKEN') {return next(err);}
 
-  res.status(403).json({
+  return res.status(403).json({
     success: false,
     message: 'Invalid CSRF token'
   });
@@ -383,7 +383,7 @@ const idempotencyMiddleware = (req, res, next) => {
     return originalJson(data);
   };
 
-  next();
+  return next();
 };
 
 /**

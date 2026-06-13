@@ -23,7 +23,7 @@ router.post('/csv-upload', async (req, res, next) => {
     const result = await TeacherController.uploadCSV(req, res);
     return result;
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
@@ -36,7 +36,7 @@ router.get('/submissions', async (req, res, next) => {
     const result = await TeacherController.getSubmissions(req, res);
     return result;
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
@@ -49,7 +49,7 @@ router.get('/auctions', async (req, res, next) => {
     const result = await TeacherController.getAuctions(req, res);
     return result;
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
@@ -62,7 +62,7 @@ router.get('/tokens/:tokenId', async (req, res, next) => {
     const result = await TeacherController.getTokenDetails(req, res);
     return result;
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
@@ -75,7 +75,7 @@ router.delete('/tokens/:tokenId', async (req, res, next) => {
     const result = await TeacherController.revokeToken(req, res);
     return result;
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
@@ -89,7 +89,7 @@ router.get('/students', async (req, res, next) => {
   try {
     return await TeacherController.getStudents(req, res);
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
@@ -101,7 +101,7 @@ router.get('/teacher-info', async (req, res, next) => {
   try {
     return await TeacherController.getTeacherInfo(req, res);
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
@@ -114,7 +114,7 @@ router.put('/tokens/:tokenId', async (req, res, next) => {
   try {
     return await TeacherController.updateToken(req, res);
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
@@ -127,7 +127,7 @@ router.put('/students/:userId', async (req, res, next) => {
   try {
     return await TeacherController.updateStudent(req, res);
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
@@ -139,7 +139,7 @@ router.delete('/students/:userId', async (req, res, next) => {
   try {
     return await TeacherController.deleteStudent(req, res);
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
@@ -152,7 +152,7 @@ router.post('/send-invites', async (req, res, next) => {
   try {
     return await TeacherController.sendInvites(req, res);
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
@@ -164,7 +164,7 @@ router.put('/submissions/:id/approve', async (req, res, next) => {
   try {
     return await TeacherController.approveSubmission(req, res);
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
@@ -177,7 +177,7 @@ router.put('/submissions/:id/reject', async (req, res, next) => {
   try {
     return await TeacherController.rejectSubmission(req, res);
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 
