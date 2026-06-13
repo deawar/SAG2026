@@ -358,18 +358,23 @@ class AuctionDetail {
       qrBtn.addEventListener('click', () => this.showQRCode());
     }
 
-    // Fullscreen button
+    // Fullscreen button and artwork image — open CSS lightbox
     const fullscreenBtn = document.getElementById('fullscreen-btn');
     if (fullscreenBtn) {
-      fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+      fullscreenBtn.addEventListener('click', () => this.openLightbox(this.currentPiece));
     }
 
-    // Artwork image — click to open detail modal
     const artworkWrapper = document.querySelector('.artwork-image-wrapper');
     if (artworkWrapper) {
-      artworkWrapper.style.cursor = 'pointer';
-      artworkWrapper.addEventListener('click', () => {
-        if (this.currentPiece) {this.showArtworkModal(this.currentPiece);}
+      artworkWrapper.addEventListener('click', () => this.openLightbox(this.currentPiece));
+    }
+
+    // Lightbox close button and backdrop
+    const lightbox = document.getElementById('artwork-lightbox');
+    if (lightbox) {
+      document.getElementById('lightbox-close')?.addEventListener('click', () => this.closeLightbox());
+      lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) { this.closeLightbox(); }
       });
     }
 
@@ -414,6 +419,11 @@ class AuctionDetail {
         globalThis.location.href = `/register.html?returnTo=${returnTo}`;
       });
     }
+
+    // Keyboard: Escape closes lightbox
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { this.closeLightbox(); }
+    });
   }
 
   /**
@@ -807,24 +817,22 @@ class AuctionDetail {
     modal.style.display = 'flex';
   }
 
-  /**
-     * Toggle fullscreen image
-     */
-  toggleFullscreen() {
-    const image = document.querySelector('.artwork-image');
-    if (!image) {return;}
+  openLightbox(piece) {
+    const lb = document.getElementById('artwork-lightbox');
+    const img = document.getElementById('lightbox-img');
+    if (!lb || !img) { return; }
+    img.src = piece?.imageUrl || document.getElementById('artwork-image')?.src || '';
+    img.alt = piece?.title || 'Artwork';
+    lb.hidden = false;
+    document.body.style.overflow = 'hidden';
+    document.getElementById('lightbox-close')?.focus();
+  }
 
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      image.requestFullscreen?.().catch(() => {
-        // Fallback for unsupported browsers
-        UIComponents.createToast({
-          message: 'Fullscreen not supported',
-          type: 'info'
-        });
-      });
-    }
+  closeLightbox() {
+    const lb = document.getElementById('artwork-lightbox');
+    if (!lb) { return; }
+    lb.hidden = true;
+    document.body.style.overflow = '';
   }
 
   /**
