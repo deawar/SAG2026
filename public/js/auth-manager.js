@@ -32,7 +32,7 @@ class AuthManager {
 
       // Handle successful registration response from server
       if (response.success && response.data) {
-        const { accessToken, refreshToken, ...userData } = response.data;
+        const { accessToken, refreshToken, ...userInfo } = response.data;
 
         // Store tokens
         this.setToken(accessToken);
@@ -41,9 +41,9 @@ class AuthManager {
         }
 
         // Store user data
-        this.setUser(userData);
+        this.setUser(userInfo);
 
-        return { success: true, user: userData };
+        return { success: true, user: userInfo };
       }
 
       return { success: false, error: response.message || 'Registration failed' };

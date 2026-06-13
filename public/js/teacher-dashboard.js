@@ -885,9 +885,9 @@ class TeacherDashboard {
     const section = e.target.dataset.section;
 
     // Hide all sections
-    document.querySelectorAll('.dashboard-section').forEach(section => {
-      section.style.display = 'none';
-      section.classList.remove('active');
+    document.querySelectorAll('.dashboard-section').forEach(sectionEl => {
+      sectionEl.style.display = 'none';
+      sectionEl.classList.remove('active');
     });
 
     // Update active link

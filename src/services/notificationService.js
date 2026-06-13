@@ -589,25 +589,25 @@ class NotificationService {
     }
 
     try {
-      let result;
+      let deliveryResult;
 
       if (notification.channel === 'email') {
-        result = await this.sendEmail(notification);
+        deliveryResult = await this.sendEmail(notification);
       } else if (notification.channel === 'sms') {
-        result = await this.sendSMS(notification);
+        deliveryResult = await this.sendSMS(notification);
       } else if (notification.channel === 'in-app') {
-        result = { messageId: 'in-app', status: 'sent' };
+        deliveryResult = { messageId: 'in-app', status: 'sent' };
       }
 
       // Update notification record
       await this.db.query(
-        `UPDATE notifications 
+        `UPDATE notifications
          SET status = 'sent', sent_at = NOW(), delivery_attempts = delivery_attempts + 1
          WHERE id = $1`,
         [notificationId]
       );
 
-      return { status: 'sent', messageId: result.messageId };
+      return { status: 'sent', messageId: deliveryResult.messageId };
     } catch (error) {
       // Record failed attempt
       await this.db.query(
