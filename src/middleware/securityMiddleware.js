@@ -349,6 +349,8 @@ const developmentSecurityHeaders = helmet({
  * Stores mapping of idempotency-key -> response
  */
 const idempotencyMap = new Map();
+const IDEMPOTENCY_MAX_SIZE = 5000;
+const IDEMPOTENCY_KEY_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Idempotency middleware for payment operations
@@ -356,11 +358,10 @@ const idempotencyMap = new Map();
  */
 const idempotencyMiddleware = (req, res, next) => {
   const idempotencyKey = req.headers['idempotency-key'];
+  const isPaymentRoute = req.path.includes('/payments');
 
   if (!idempotencyKey) {
-    // For operations that require idempotency
-    if (['POST', 'PUT', 'DELETE'].includes(req.method) &&
-        req.path.includes('/payments')) {
+    if (['POST', 'PUT', 'DELETE'].includes(req.method) && isPaymentRoute) {
       return res.status(400).json({
         success: false,
         message: 'Idempotency-Key header required for payment operations'
@@ -369,9 +370,30 @@ const idempotencyMiddleware = (req, res, next) => {
     return next();
   }
 
-  // Check if we've seen this key before
+  // Only cache responses for payment routes — other routes ignore the header
+  if (!isPaymentRoute) {
+    return next();
+  }
+
+  // Reject malformed keys to prevent cache poisoning
+  if (!IDEMPOTENCY_KEY_PATTERN.test(idempotencyKey)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Idempotency-Key must be a valid UUID'
+    });
+  }
+
+  // Return cached response for duplicate requests
   if (idempotencyMap.has(idempotencyKey)) {
     return res.status(200).json(idempotencyMap.get(idempotencyKey));
+  }
+
+  // Reject new keys when cache is full to prevent memory exhaustion
+  if (idempotencyMap.size >= IDEMPOTENCY_MAX_SIZE) {
+    return res.status(429).json({
+      success: false,
+      message: 'Too many pending payment operations. Try again shortly.'
+    });
   }
 
   // Intercept res.json() to store response
