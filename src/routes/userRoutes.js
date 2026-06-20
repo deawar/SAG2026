@@ -172,12 +172,16 @@ module.exports = (db) => {
         [newHash, userId]
       );
 
-      // Revoke all active sessions so stolen tokens cannot survive a password change
-      const sessionSvc = new SessionService(db);
-      await sessionSvc.revokeAllSessions(userId);
-      if (req.user?.jti && req.user?.exp) {
-        await tokenBlacklist.revoke(req.user.jti, new Date(req.user.exp * 1000));
-      }
+      // Revoke all active sessions so stolen tokens cannot survive a password change.
+      // revokeAllExcept(userId, null) revokes ALL sessions and returns their JTIs
+      // so every token can be added to the blacklist, not just the caller's.
+      const revokedJtis = await sessionService.revokeAllExcept(userId, null);
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      await Promise.all(
+        revokedJtis.map(jti =>
+          tokenBlacklist.revoke(jti, new Date(Date.now() + sevenDaysMs)).catch(() => {})
+        )
+      );
 
       return res.json({ success: true, message: 'Password changed successfully' });
     } catch (err) {
