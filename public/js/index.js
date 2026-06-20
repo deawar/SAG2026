@@ -19,9 +19,8 @@ async function initializePage() {
   // Load hero carousel
   initCarousel();
 
-  // Load art strip
+  // Load art strip (reveal is called from within initArtStrip after thumbs exist)
   initArtStrip();
-  initArtStripReveal();
 
   // Load featured auctions
   await loadFeaturedAuctions();
@@ -374,6 +373,7 @@ async function initArtStrip() {
     });
     track.appendChild(thumb);
   });
+  initArtStripReveal();
 }
 
 // =====================================================================
