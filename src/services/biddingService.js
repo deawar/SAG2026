@@ -448,7 +448,7 @@ class BiddingService {
   async getAuctionWinner(auctionId) {
     const result = await pool.query(
       `SELECT b.placed_by_user_id, b.bid_amount, b.artwork_id,
-              u.id, u.first_name, u.last_name, u.email,
+              u.first_name, u.last_name,
               a.title as artwork_title
        FROM bids b
        JOIN artwork a ON b.artwork_id = a.id
@@ -472,7 +472,6 @@ class BiddingService {
       winner: {
         id: row.placed_by_user_id,
         name: `${row.first_name} ${row.last_name}`,
-        email: row.email,
         bidAmount: row.bid_amount
       },
       artwork: {
