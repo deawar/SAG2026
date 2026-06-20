@@ -172,6 +172,13 @@ module.exports = (db) => {
         [newHash, userId]
       );
 
+      // Revoke all active sessions so stolen tokens cannot survive a password change
+      const sessionSvc = new SessionService(db);
+      await sessionSvc.revokeAllSessions(userId);
+      if (req.user?.jti && req.user?.exp) {
+        await tokenBlacklist.revoke(req.user.jti, new Date(req.user.exp * 1000));
+      }
+
       return res.json({ success: true, message: 'Password changed successfully' });
     } catch (err) {
       return next(err);
