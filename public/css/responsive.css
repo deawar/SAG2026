@@ -885,3 +885,62 @@
         gap: 0.75rem;
     }
 }
+
+/* ===== Mosaic Responsive ===== */
+@media (max-width: 768px) {
+    /* Hero */
+    .hero-headline {
+        font-size: clamp(2.5rem, 10vw, 4rem);
+    }
+    .hero-ctas {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    /* Art strip */
+    .art-strip-thumb {
+        flex: 0 0 160px;
+        height: 130px;
+    }
+
+    /* Auth split */
+    .auth-split-left {
+        padding: 2rem 1.5rem;
+    }
+    .auth-split-headline {
+        font-size: clamp(1.8rem, 6vw, 2.5rem);
+    }
+
+    /* Teacher stats */
+    .teacher-stats-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    /* Teacher hero */
+    .teacher-hero-inner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .teacher-quick-actions {
+        width: 100%;
+    }
+
+    /* Filter bar */
+    .filter-bar {
+        top: 64px;
+        gap: var(--spacing-sm);
+    }
+}
+
+@media (max-width: 480px) {
+    .teacher-stats-row {
+        grid-template-columns: 1fr;
+    }
+    .teacher-stats-card {
+        border-right: none;
+        border-bottom: 1px solid var(--color-lighter-gray, #e0e0e0);
+    }
+    .hero-sub {
+        max-width: 100%;
+    }
+}

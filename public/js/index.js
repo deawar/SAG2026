@@ -21,6 +21,7 @@ async function initializePage() {
 
   // Load art strip
   initArtStrip();
+  initArtStripReveal();
 
   // Load featured auctions
   await loadFeaturedAuctions();
@@ -373,6 +374,30 @@ async function initArtStrip() {
     });
     track.appendChild(thumb);
   });
+}
+
+// =====================================================================
+// Art Strip Reveal (IntersectionObserver stagger)
+// =====================================================================
+
+function initArtStripReveal() {
+  const track = document.getElementById('art-strip-track');
+  if (!track || !('IntersectionObserver' in window)) {
+    track && track.querySelectorAll('.art-strip-thumb').forEach(el => { el.style.opacity = '1'; });
+    return;
+  }
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) { return; }
+      const thumbs = track.querySelectorAll('.art-strip-thumb');
+      thumbs.forEach((el, i) => {
+        el.style.animationDelay = `${i * 60}ms`;
+        el.classList.add('art-strip-thumb--revealed');
+      });
+      observer.disconnect();
+    });
+  }, { threshold: 0.1 });
+  observer.observe(track);
 }
 
 // =====================================================================
