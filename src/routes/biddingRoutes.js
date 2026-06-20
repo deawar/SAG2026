@@ -39,22 +39,26 @@ router.post('/place', authMiddleware.verifyToken, async (req, res) => {
 
     const result = await biddingService.placeBid(artworkId, userId, normalizedBidAmount);
 
-    // Get updated bidding state
-    const state = await biddingService.getBiddingState(artworkId);
-
-    // Broadcast the confirmed normalized amount, not the raw client value
-    realtimeService.broadcastBidUpdate(state.auctionId, {
-      bidId: result.bidId,
-      artworkId,
-      bidder: userId,
-      amount: normalizedBidAmount,
-      totalBids: state.totalBids
-    });
+    // State-read and broadcast are best-effort — a failure here must NOT turn a
+    // committed bid into a 400 error. Isolate in their own try/catch.
+    let state = null;
+    try {
+      state = await biddingService.getBiddingState(artworkId);
+      realtimeService.broadcastBidUpdate(state.auctionId, {
+        bidId: result.bidId,
+        artworkId,
+        bidder: userId,
+        amount: normalizedBidAmount,
+        totalBids: state.totalBids
+      });
+    } catch (broadcastErr) {
+      console.error('[broadcast] bid update failed:', broadcastErr.message);
+    }
 
     return res.status(200).json({
       success: true,
       data: result,
-      biddingState: state
+      ...(state && { biddingState: state })
     });
   } catch (error) {
     console.error('Error placing bid:', error);
@@ -224,10 +228,14 @@ router.post('/auction/:auctionId/close', authMiddleware.verifyToken, authMiddlew
 
     const result = await biddingService.closeAuction(auctionId);
 
-    // Broadcast auction closure
-    realtimeService.broadcastAuctionStatusChange(auctionId, 'closed', {
-      winner: result.winner
-    });
+    // Best-effort broadcast — failure must not mask the successful closure
+    try {
+      realtimeService.broadcastAuctionStatusChange(auctionId, 'closed', {
+        winner: result.winner
+      });
+    } catch (broadcastErr) {
+      console.error('[broadcast] auction close failed:', broadcastErr.message);
+    }
 
     res.status(200).json({
       success: true,
