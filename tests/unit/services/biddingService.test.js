@@ -80,7 +80,8 @@ describe('BiddingService', () => {
           rows: [{
             id: 'art-123',
             auction_status: 'LIVE',
-            ends_at: new Date(Date.now() - 1000), // Already ended
+            ends_at: new Date(Date.now() - 1000),
+            auction_ended: true, // DB-side NOW() check — simulates ended auction
             created_by_user_id: 'artist-789',
             starting_bid_amount: 10000,
             current_bid: null

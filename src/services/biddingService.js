@@ -27,7 +27,8 @@ class BiddingService {
       // Get artwork and auction info
       const artworkResult = await client.query(
         `SELECT a.*, au.auction_status, au.ends_at, au.id as auction_id,
-                (SELECT MAX(bid_amount) FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE') as current_bid
+                (SELECT MAX(bid_amount) FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE') as current_bid,
+                au.ends_at <= NOW() AS auction_ended
          FROM artwork a
          JOIN auctions au ON a.auction_id = au.id
          WHERE a.id = $1 FOR UPDATE`,
@@ -45,9 +46,8 @@ class BiddingService {
         throw new Error(`Auction is not active. Current status: ${artwork.auction_status}`);
       }
 
-      // Validate auction hasn't ended
-      const now = new Date();
-      if (new Date(artwork.ends_at) <= now) {
+      // Validate auction hasn't ended — use DB clock (NOW()) to avoid app/DB clock skew
+      if (artwork.auction_ended) {
         throw new Error('Auction has ended');
       }
 
