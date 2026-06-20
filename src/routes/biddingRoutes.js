@@ -33,17 +33,21 @@ router.post('/place', authMiddleware.verifyToken, async (req, res) => {
       });
     }
 
-    const result = await biddingService.placeBid(artworkId, userId, bidAmount);
+    // Normalize to 2 decimal places to match DECIMAL(10,2) DB column and
+    // avoid IEEE 754 drift in minimum-bid increment comparisons
+    const normalizedBidAmount = Math.round(bidAmount * 100) / 100;
+
+    const result = await biddingService.placeBid(artworkId, userId, normalizedBidAmount);
 
     // Get updated bidding state
     const state = await biddingService.getBiddingState(artworkId);
 
-    // Broadcast bid update via WebSocket
+    // Broadcast the confirmed normalized amount, not the raw client value
     realtimeService.broadcastBidUpdate(state.auctionId, {
       bidId: result.bidId,
       artworkId,
       bidder: userId,
-      amount: bidAmount,
+      amount: normalizedBidAmount,
       totalBids: state.totalBids
     });
 
