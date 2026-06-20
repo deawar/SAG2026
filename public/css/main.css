@@ -2380,9 +2380,9 @@ tbody tr:hover {
 .step {
     text-align: center;
     padding: var(--spacing-xl) var(--spacing-lg);
-    background-color: var(--color-white);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
+    background-color: transparent;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 .step-number {
