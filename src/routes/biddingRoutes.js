@@ -107,8 +107,9 @@ router.post('/withdraw', authMiddleware.verifyToken, async (req, res) => {
 router.get('/artwork/:artworkId/history', authMiddleware.verifyToken, async (req, res) => {
   try {
     const { artworkId } = req.params;
+    const requestingUserId = req.user.id;
 
-    const history = await biddingService.getBidHistory(artworkId);
+    const history = await biddingService.getBidHistory(artworkId, requestingUserId);
 
     res.status(200).json({
       success: true,
