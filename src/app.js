@@ -214,8 +214,15 @@ function createApp(db) {
     }
 
     const statusCode = err.statusCode || err.status || 500;
-    let message = err.message || 'Internal Server Error';
-    message = encodeHTML(message);
+
+    // Never expose raw error messages for server errors in production —
+    // they can contain DB table/column names, constraint names, or stack info.
+    // Client errors (4xx) use the message because they describe invalid input,
+    // not internal implementation details.
+    const isServerError = statusCode >= 500;
+    const message = (isServerError && isProduction)
+      ? 'An unexpected error occurred. Please try again later.'
+      : encodeHTML(err.message || 'Internal Server Error');
 
     res.status(statusCode).json({
       error: err.name || 'Error',

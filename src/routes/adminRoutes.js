@@ -552,7 +552,7 @@ router.post(
       });
     } catch (error) {
       console.error('Error setting up test gateway:', error);
-      return res.status(500).json({ success: false, message: error.message });
+      return res.status(500).json({ success: false, message: 'Internal server error' });
     }
   }
 );
@@ -577,7 +577,8 @@ router.get(
       );
       return res.json({ success: true, gateways: result.rows });
     } catch (error) {
-      return res.status(500).json({ success: false, message: error.message });
+      console.error('Admin gateways error:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
     }
   }
 );
@@ -645,7 +646,8 @@ router.get(
 
       return res.json({ success: true, wins: result.rows });
     } catch (error) {
-      return res.status(500).json({ success: false, message: error.message });
+      console.error('Admin wins error:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
     }
   }
 );
@@ -755,7 +757,8 @@ router.patch(
 
       return res.json({ success: true, message: 'Fulfillment updated' });
     } catch (error) {
-      return res.status(500).json({ success: false, message: error.message });
+      console.error('Admin fulfillment error:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
     }
   }
 );
@@ -819,7 +822,8 @@ router.delete(
         message: `Force-logged out user: ${revokedJtis.length} session(s) revoked`
       });
     } catch (error) {
-      return res.status(500).json({ success: false, message: error.message });
+      console.error('Admin force-logout error:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
     }
   }
 );
