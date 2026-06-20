@@ -64,6 +64,23 @@
             </div>
         </section>
 
+        <!-- Filter Bar -->
+        <div class="filter-bar" role="search" aria-label="Filter auctions">
+            <label for="bar-filter-school">School</label>
+            <select id="bar-filter-school" name="school" aria-label="Filter by school">
+                <option value="">All Schools</option>
+            </select>
+            <label for="bar-filter-grade">Grade</label>
+            <select id="bar-filter-grade" name="grade" aria-label="Filter by grade">
+                <option value="">All Grades</option>
+            </select>
+            <label for="bar-filter-medium">Medium</label>
+            <select id="bar-filter-medium" name="medium" aria-label="Filter by medium">
+                <option value="">All Media</option>
+            </select>
+            <div id="active-filters" aria-label="Active filters" aria-live="polite" style="display:flex;gap:0.5rem;flex-wrap:wrap;"></div>
+        </div>
+
         <!-- Featured Artwork Carousel -->
         <section class="featured-carousel-section" aria-label="Featured artwork">
             <div class="container">

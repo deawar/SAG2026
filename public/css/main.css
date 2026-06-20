@@ -652,8 +652,8 @@ label {
 
 .form-control:focus {
     outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+    border-color: var(--color-platform-coral, #FF4136);
+    box-shadow: 0 0 0 3px rgba(255, 65, 54, 0.15);
 }
 
 .form-control:disabled {
@@ -1019,17 +1019,94 @@ textarea.form-control {
     outline-offset: 2px;
 }
 
-/* ===== Page Header ===== */
+/* ===== Page Header — Mosaic Dark Mini-Banner ===== */
 .page-header {
-    background-color: var(--color-lightest-gray);
-    padding: var(--spacing-2xl) var(--spacing-lg);
+    background-color: var(--color-platform-dark, #1A1A2E);
+    color: #fff;
+    padding: var(--spacing-xl) var(--spacing-lg);
+    max-height: 200px;
     margin-bottom: var(--spacing-2xl);
     border-radius: var(--radius-lg);
 }
 
 .page-header h1 {
-    margin-bottom: var(--spacing-md);
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    color: #fff;
+    letter-spacing: -0.02em;
+    margin-bottom: var(--spacing-xs);
 }
+
+.page-header p {
+    font-family: var(--font-body);
+    font-weight: 200;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: 0;
+    font-size: var(--font-size-base);
+}
+
+/* ===== Auction Filter Bar ===== */
+.filter-bar {
+    background: #fff;
+    border-bottom: 2px solid var(--color-platform-dark, #1A1A2E);
+    padding: var(--spacing-md) var(--spacing-lg);
+    position: sticky;
+    top: 67px; /* approx navbar height */
+    z-index: calc(var(--z-sticky) - 1);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.filter-bar label {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-platform-dark, #1A1A2E);
+}
+
+.filter-bar select {
+    font-family: var(--font-body);
+    font-weight: 200;
+    font-size: 0.875rem;
+    border: 1.5px solid var(--color-platform-dark, #1A1A2E);
+    border-radius: 0;
+    padding: 6px 12px;
+    background: #fff;
+    color: var(--color-platform-dark, #1A1A2E);
+    cursor: pointer;
+    appearance: auto;
+}
+
+.filter-bar select:focus {
+    outline: 2px solid var(--color-platform-coral, #FF4136);
+    outline-offset: 1px;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: var(--color-platform-coral, #FF4136);
+    color: #fff;
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 0;
+    border: none;
+    cursor: pointer;
+    transition: filter 200ms ease;
+}
+
+.filter-chip:hover { filter: brightness(0.88); }
 
 .page-header-small {
     margin-bottom: var(--spacing-2xl);
