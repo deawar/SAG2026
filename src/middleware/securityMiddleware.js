@@ -151,6 +151,30 @@ const validateInput = (data, schema) => {
 };
 
 /**
+ * Enforce application/json Content-Type on mutation requests to /api/ routes.
+ *
+ * Requests with no Content-Type header are allowed (they have no body).
+ * Requests with an explicit non-JSON Content-Type (e.g. form-encoded) are
+ * rejected with 415 before body parsers can process them, preventing
+ * form-encoded payloads from silently reaching route handlers.
+ */
+const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+const enforceJsonContentType = (req, res, next) => {
+  if (!MUTATION_METHODS.has(req.method) || !req.path.startsWith('/api/')) {
+    return next();
+  }
+  const contentType = req.headers['content-type'];
+  if (contentType && !contentType.startsWith('application/json')) {
+    return res.status(415).json({
+      success: false,
+      message: 'Unsupported Media Type: API requests must use Content-Type: application/json'
+    });
+  }
+  return next();
+};
+
+/**
  * ============================================================================
  * RATE LIMITING
  * ============================================================================
@@ -445,6 +469,9 @@ const securityLogger = (req, res, next) => {
  */
 
 module.exports = {
+  // Content-Type enforcement
+  enforceJsonContentType,
+
   // Input validation
   sanitizeInput,
   validateEmail,
