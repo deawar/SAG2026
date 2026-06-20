@@ -778,6 +778,22 @@ router.delete(
   async (req, res) => {
     try {
       const { userId } = req.params;
+
+      // SCHOOL_ADMIN may only revoke sessions for users within their own school
+      if (req.user.role === 'SCHOOL_ADMIN') {
+        const { pool } = require('../models/index');
+        const targetUser = await pool.query(
+          'SELECT school_id FROM users WHERE id = $1 AND deleted_at IS NULL',
+          [userId]
+        );
+        if (targetUser.rowCount === 0) {
+          return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        if (targetUser.rows[0].school_id !== req.user.schoolId) {
+          return res.status(403).json({ success: false, message: 'Access denied: not your school' });
+        }
+      }
+
       const svc = getAdminSessionService();
 
       const revokedJtis = await svc.revokeAllExcept(userId, null); // revoke ALL
