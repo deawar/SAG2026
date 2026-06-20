@@ -16,34 +16,48 @@ const validator = require('validator');
  * ============================================================================
  */
 
+// Fields that must never be trimmed or escaped — doing so corrupts the value
+// before bcrypt/TOTP/crypto processes it
+const SENSITIVE_FIELDS = new Set(['password', 'oldPassword', 'newPassword', 'secret', 'token', 'backupCode', 'code', 'key']);
+
 /**
- * Sanitize and validate user input
- * Removes NoSQL injection attempts, XSS payloads
+ * Sanitize user input.
+ *
+ * validator.escape() is intentionally NOT used here. HTML-escaping at ingestion
+ * time corrupts passwords, emails, and any field containing ' < > & " before
+ * the value reaches bcrypt or validator.isEmail(). SQL injection is already
+ * prevented by parameterized queries throughout the codebase. XSS prevention
+ * belongs at render/output time, not at API input time.
+ *
+ * This middleware only trims whitespace from non-sensitive string fields and
+ * rejects prototype-pollution keys (__proto__, constructor, prototype).
  */
 const sanitizeInput = (req, res, next) => {
   try {
     // Sanitize body
-    if (req.body) {
-      Object.keys(req.body).forEach(key => {
-        if (typeof req.body[key] === 'string') {
-          // Skip data URLs (base64 images) — validator.escape() corrupts them
-          // by escaping '/' in the MIME type and base64 payload
-          if (req.body[key].startsWith('data:')) {return;}
-          // Remove HTML tags and dangerous characters
-          req.body[key] = validator.trim(req.body[key]);
-          req.body[key] = validator.escape(req.body[key]);
+    if (req.body && typeof req.body === 'object') {
+      for (const key of Object.keys(req.body)) {
+        // Reject prototype pollution attempts
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+          return res.status(400).json({ success: false, message: 'Invalid input detected' });
         }
-      });
+        if (typeof req.body[key] === 'string' && !SENSITIVE_FIELDS.has(key)) {
+          // Skip data URLs (base64 images) — trim would not corrupt them but
+          // keep the check for clarity and forward-compatibility
+          if (!req.body[key].startsWith('data:')) {
+            req.body[key] = validator.trim(req.body[key]);
+          }
+        }
+      }
     }
 
-    // Sanitize query params
+    // Sanitize query params — trim only, no escaping
     if (req.query) {
-      Object.keys(req.query).forEach(key => {
+      for (const key of Object.keys(req.query)) {
         if (typeof req.query[key] === 'string') {
           req.query[key] = validator.trim(req.query[key]);
-          req.query[key] = validator.escape(req.query[key]);
         }
-      });
+      }
     }
 
     return next();
