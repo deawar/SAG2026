@@ -507,7 +507,7 @@ class UserController {
       // 3. Retrieve user
       const user = await this.userModel.getById(decoded.sub);
 
-      // 3. Generate new access token
+      // 3. Generate new access token and a rotated refresh token
       const accessTokenResult = this.authService.jwtService.generateAccessToken(user.id, {
         email: user.email,
         role: user.role,
@@ -515,12 +515,27 @@ class UserController {
         twoFaEnabled: !!user.two_fa_enabled
       });
 
-      // 4. Return new access token
+      const newRefreshTokenResult = this.authService.jwtService.generateRefreshToken(user.id);
+
+      // 4. Invalidate the old refresh token — blacklist JTI and revoke DB session.
+      //    Both are best-effort: a transient DB failure must not lock the user out,
+      //    but the in-memory blacklist still prevents immediate reuse.
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      await tokenBlacklist.revoke(decoded.jti, new Date(Date.now() + sevenDaysMs)).catch(() => {});
+      if (this.authService?.sessionService) {
+        await this.authService.sessionService.revokeSession(decoded.sub, decoded.jti).catch(() => {});
+      }
+
+      // 5. Register the new refresh token as a session
+      await this._createSessionRecord(user.id, newRefreshTokenResult.jti, req);
+
+      // 6. Return both new tokens
       return res.json({
         success: true,
         message: 'Token refreshed successfully',
         data: {
           accessToken: accessTokenResult.token,
+          refreshToken: newRefreshTokenResult.token,
           expiresIn: accessTokenResult.expiresIn
         }
       });
