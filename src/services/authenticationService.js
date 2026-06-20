@@ -1103,8 +1103,8 @@ class AuthenticationService {
       }
     }
 
-    // Dev fallback: print code to stdout (gated on NODE_ENV)
-    if (process.env.NODE_ENV !== 'test') {
+    // Dev fallback: print code to stdout only in development (never in production or test)
+    if (process.env.NODE_ENV === 'development') {
       console.log(`[DEV] Password reset code for ${email}: ${code}`);
     }
   }
