@@ -1274,6 +1274,10 @@ class TokenBlacklistService {
   constructor() {
     // Lazy-loaded to avoid circular dependency at module init time
     this._pool = null;
+    // In-memory cache of recently revoked JTIs so confirmed logouts remain
+    // blocked even during a transient DB outage (fail-open mitigation)
+    this._revokedCache = new Set();
+    this._revokedCacheMax = 2000;
   }
 
   get pool() {
@@ -1281,6 +1285,14 @@ class TokenBlacklistService {
       this._pool = require('../models/index').pool;
     }
     return this._pool;
+  }
+
+  _addToCache(jti) {
+    if (this._revokedCache.size >= this._revokedCacheMax) {
+      // Evict oldest entry when cache is full
+      this._revokedCache.delete(this._revokedCache.values().next().value);
+    }
+    this._revokedCache.add(jti);
   }
 
   /**
@@ -1296,15 +1308,17 @@ class TokenBlacklistService {
        ON CONFLICT (jti) DO NOTHING`,
       [jti, expiresAt]
     );
+    // Cache immediately so the revocation survives a subsequent DB outage
+    this._addToCache(jti);
     // Prune entries already past their natural expiry (non-blocking)
     this.pool.query('DELETE FROM token_blacklist WHERE expires_at < NOW()').catch(() => {});
   }
 
   /**
    * Check whether a JTI has been revoked.
-   * Returns false (not revoked) if the JTI is absent or if the DB is
-   * temporarily unavailable — fail-open keeps the app usable during
-   * transient DB issues while still blocking confirmed logouts.
+   * Checks the in-memory cache first — tokens confirmed revoked in this
+   * process remain blocked even if the DB is temporarily unavailable.
+   * Unknown tokens still fail open during outages.
    * @param {string} jti
    * @returns {Promise<boolean>}
    */
@@ -1312,15 +1326,23 @@ class TokenBlacklistService {
     if (!jti) {
       return false;
     }
+    // Cache hit — known-revoked token, no DB round-trip needed
+    if (this._revokedCache.has(jti)) {
+      return true;
+    }
     try {
       const result = await this.pool.query(
         'SELECT 1 FROM token_blacklist WHERE jti = $1 AND expires_at > NOW()',
         [jti]
       );
-      return result.rows.length > 0;
+      const revoked = result.rows.length > 0;
+      if (revoked) {
+        this._addToCache(jti);
+      }
+      return revoked;
     } catch (_err) {
-      // DB unavailable — fail open to avoid locking everyone out
-      return false;
+      // DB unavailable — cache covers known-revoked tokens; unknown tokens fail open
+      return this._revokedCache.has(jti);
     }
   }
 }
