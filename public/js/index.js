@@ -342,7 +342,7 @@ async function initArtStrip() {
   if (!Array.isArray(items) || items.length === 0) { return; }
   track.innerHTML = '';
   items.slice(0, 8).forEach(item => {
-    if (!item.imageUrl || !/^(https?:|\/|data:image\/)/.test(item.imageUrl)) { return; }
+    if (!item.imageUrl || !/^(https?:|\/)/.test(item.imageUrl)) { return; }
     const thumb = document.createElement('div');
     thumb.className = 'art-strip-thumb';
     thumb.setAttribute('role', 'button');
