@@ -1109,9 +1109,9 @@ textarea.form-control {
 
 /* ===== Auction Cards ===== */
 .auction-card {
-    background-color: white;
-    border: 1px solid var(--color-lighter-gray);
-    border-radius: var(--radius-lg);
+    background: var(--color-surface, #fff);
+    border: 2px solid var(--school-primary, var(--color-platform-dark, #1A1A2E));
+    border-radius: 0;
     overflow: hidden;
     transition: transform var(--transition-normal), box-shadow var(--transition-normal);
     cursor: pointer;
@@ -1123,7 +1123,62 @@ textarea.form-control {
 
 .auction-card:hover {
     transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 8px 24px rgba(26, 26, 46, 0.15);
+    border-color: var(--school-primary, var(--color-platform-dark, #1A1A2E));
+}
+
+/* Auction card Mosaic typography utilities */
+.card-school-name {
+    color: var(--school-primary, var(--color-platform-dark, #1A1A2E));
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.card-title-mosaic {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.1rem;
+    color: var(--color-platform-dark, #1A1A2E);
+    margin-bottom: 0.25rem;
+    line-height: 1.2;
+}
+
+.card-bid-mosaic {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: var(--color-platform-coral, #FF4136);
+}
+
+.card-time-mosaic {
+    font-family: var(--font-body);
+    font-weight: 200;
+    font-size: 0.8rem;
+    color: var(--color-gray, #757575);
+}
+
+.card-bid-link {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-platform-coral, #FF4136);
+    text-decoration: none;
+}
+
+.card-bid-link:hover {
+    text-decoration: underline;
+    color: var(--color-platform-coral, #FF4136);
+}
+
+/* Featured card: larger, left border accent */
+.auction-card.auction-card--featured {
+    border-left: 4px solid var(--school-primary, var(--color-platform-coral, #FF4136));
 }
 
 .auction-card:focus {
@@ -2278,12 +2333,18 @@ tbody tr:hover {
 
 /* Featured Auctions */
 .featured-auctions {
+    background: var(--color-canvas, #F4F4F4);
     padding: var(--spacing-2xl) 0;
 }
 
 .featured-auctions h2 {
-    text-align: center;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: clamp(2rem, 5vw, 3rem);
+    color: var(--color-platform-dark, #1A1A2E);
     margin-bottom: var(--spacing-xl);
+    letter-spacing: -0.02em;
 }
 
 /* Centres a block-level element (e.g. "View All Auctions" link below grid) */
@@ -2295,13 +2356,17 @@ tbody tr:hover {
 
 /* How It Works */
 .how-it-works {
-    background-color: var(--color-lightest-gray);
+    background: var(--color-platform-dark, #1A1A2E);
+    color: #fff;
     padding: var(--spacing-2xl) 0;
-    margin-bottom: var(--spacing-2xl);
-    border-radius: var(--radius-lg);
 }
 
 .how-it-works h2 {
+    color: #fff;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    letter-spacing: -0.02em;
     text-align: center;
     margin-bottom: var(--spacing-xl);
 }
@@ -2321,21 +2386,29 @@ tbody tr:hover {
 }
 
 .step-number {
-    width: 48px;
-    height: 48px;
-    border-radius: var(--radius-full);
-    background-color: var(--color-primary);
-    color: white;
-    font-size: var(--font-size-xl);
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    color: var(--color-platform-coral, #FF4136);
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: clamp(3rem, 8vw, 5rem);
+    line-height: 1;
     margin: 0 auto var(--spacing-md);
 }
 
 .step h3 {
-    margin-bottom: var(--spacing-sm);
+    color: #fff;
+    font-family: var(--font-body);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.step p {
+    color: rgba(255, 255, 255, 0.5);
+    font-family: var(--font-body);
+    font-weight: 200;
 }
 
 /* Call to Action */
