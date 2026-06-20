@@ -194,6 +194,7 @@ describe('BiddingService', () => {
   describe('getBidHistory', () => {
     it('should retrieve bid history for artwork', async () => {
       const artworkId = 'art-123';
+      const requestingUserId = 'user-1';
 
       pool.query = jest.fn().mockResolvedValue({
         rows: [
@@ -202,11 +203,13 @@ describe('BiddingService', () => {
         ]
       });
 
-      const history = await biddingService.getBidHistory(artworkId);
+      const history = await biddingService.getBidHistory(artworkId, requestingUserId);
 
       expect(history).toHaveLength(2);
       expect(history[0].amount).toBe(50000);
+      // Requesting user sees their own name; other bidders are anonymized
       expect(history[0].bidder.displayName).toBe('John Doe');
+      expect(history[1].bidder.displayName).toBe('Bidder #2');
     });
 
     it('should return empty array if no bids exist', async () => {

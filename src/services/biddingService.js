@@ -249,7 +249,7 @@ class BiddingService {
    * @param {string} artworkId - ID of the artwork
    * @returns {Array} Array of bid records sorted by timestamp
    */
-  async getBidHistory(artworkId) {
+  async getBidHistory(artworkId, requestingUserId) {
     const result = await pool.query(
       `SELECT b.id, b.placed_by_user_id, b.bid_amount, b.placed_at, b.bid_status,
               u.first_name, u.last_name
@@ -260,16 +260,33 @@ class BiddingService {
       [artworkId]
     );
 
-    return result.rows.map(row => ({
-      bidId: row.id,
-      bidder: {
-        id: row.placed_by_user_id,
-        displayName: `${row.first_name} ${row.last_name}`
-      },
-      amount: row.bid_amount,
-      timestamp: row.placed_at,
-      status: row.bid_status
-    }));
+    // Assign a stable anonymous label to each unique bidder in order of first
+    // appearance. The requesting user sees their own real name; all others are
+    // anonymized so bidder identities are not exposed to competitors.
+    const bidderLabels = new Map();
+    let counter = 1;
+    for (const row of result.rows) {
+      if (!bidderLabels.has(row.placed_by_user_id)) {
+        bidderLabels.set(row.placed_by_user_id, `Bidder #${counter++}`);
+      }
+    }
+
+    const requestingId = String(requestingUserId);
+    return result.rows.map(row => {
+      const isOwn = String(row.placed_by_user_id) === requestingId;
+      return {
+        bidId: row.id,
+        bidder: {
+          ...(isOwn && { id: row.placed_by_user_id }),
+          displayName: isOwn
+            ? `${row.first_name} ${row.last_name}`
+            : bidderLabels.get(row.placed_by_user_id)
+        },
+        amount: row.bid_amount,
+        timestamp: row.placed_at,
+        status: row.bid_status
+      };
+    });
   }
 
   /**
