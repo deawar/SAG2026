@@ -10,6 +10,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const authMiddleware = require('../middleware/authMiddleware');
 const { loginLimiter } = require('../middleware/rateLimitMiddleware');
+const { passwordResetLimiter } = require('../middleware/securityMiddleware');
 const UserController = require('../controllers/userController');
 const ValidationUtils = require('../utils/validationUtils');
 
@@ -425,9 +426,9 @@ module.exports = (db) => {
  * Body: { setupToken, secret, code, backupCodes }
  * Response: 200 with accessToken + refreshToken (same shape as /login success)
  */
-  router.post('/2fa/force-verify', async (req, res, next) => {
+  router.post('/2fa/force-verify', loginLimiter, async (req, res, next) => {
     try {
-      const { setupToken, secret, code, backupCodes: clientBackupCodes } = req.body;
+      const { setupToken, secret, code } = req.body;
 
       if (!setupToken || !secret || !code) {
         return res.status(400).json({ success: false, message: 'setupToken, secret, and code are required' });
@@ -454,9 +455,8 @@ module.exports = (db) => {
       }
       const user = userResult.rows[0];
 
-      const backupCodes = Array.isArray(clientBackupCodes) && clientBackupCodes.length > 0
-        ? clientBackupCodes
-        : twoFactorService._generateBackupCodes(8);
+      // Always generate backup codes server-side — never accept them from the client
+      const backupCodes = twoFactorService._generateBackupCodes(8);
 
       // Verify TOTP and persist 2FA to DB
       try {
@@ -529,7 +529,7 @@ module.exports = (db) => {
  *           400 { error: 'invalid_or_expired_code' } on bad/expired code
  *           400 { success: false, message: string } on validation failure
  */
-  router.post('/password-reset', async (req, res, next) => {
+  router.post('/password-reset', loginLimiter, async (req, res, next) => {
     try {
       const { email, code, newPassword } = req.body;
 
@@ -569,7 +569,7 @@ module.exports = (db) => {
  * Body: { email: string }
  * Response: 200 { ok: true }
  */
-  router.post('/password-reset/send-code', async (req, res, next) => {
+  router.post('/password-reset/send-code', passwordResetLimiter, async (req, res, next) => {
     try {
       const { email } = req.body;
 

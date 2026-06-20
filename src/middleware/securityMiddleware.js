@@ -198,7 +198,8 @@ const passwordResetLimiter = rateLimit({
     success: false,
     message: 'Too many password reset attempts, please try again later'
   },
-  standardHeaders: true
+  standardHeaders: true,
+  skip: (req) => process.env.NODE_ENV === 'test'
 });
 
 /**
