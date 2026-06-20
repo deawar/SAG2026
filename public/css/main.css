@@ -115,6 +115,14 @@ main {
     --z-modal-backdrop: 1000;
     --z-modal: 1001;
     --z-tooltip: 1002;
+
+    /* ---- Platform Brand Colors (never overridden by school theme) ---- */
+    --color-platform-dark:  #1A1A2E;
+    --color-platform-coral: #FF4136;
+    --color-platform-white: #FFFFFF;
+    --color-canvas:         #F4F4F4;
+    --color-surface:        #FFFFFF;
+    --color-teacher-hero:   #2A3550;
 }
 
 /* ===== Typography ===== */
