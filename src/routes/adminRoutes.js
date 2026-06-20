@@ -605,10 +605,13 @@ router.get(
       const adminSchoolId = req.user.schoolId;
       const showAll       = req.query.status === 'all';
 
-      const schoolFilter = adminRole === 'SCHOOL_ADMIN'
-        ? `AND a.school_id = '${adminSchoolId}'`
-        : '';
-      const shippedFilter = showAll ? '' : 'AND b.shipped_at IS NULL';
+      const queryParams = [];
+      let schoolCondition = '';
+      if (adminRole === 'SCHOOL_ADMIN') {
+        queryParams.push(adminSchoolId);
+        schoolCondition = `AND a.school_id = $${queryParams.length}`;
+      }
+      const shippedCondition = showAll ? '' : 'AND b.shipped_at IS NULL';
 
       const result = await pool.query(
         `SELECT b.id              AS "bidId",
@@ -633,10 +636,11 @@ router.get(
          JOIN   users    u  ON  u.id = b.placed_by_user_id
          WHERE  b.bid_status = 'ACCEPTED'
            AND  a.deleted_at IS NULL
-           ${schoolFilter}
-           ${shippedFilter}
+           ${schoolCondition}
+           ${shippedCondition}
          ORDER  BY b.placed_at DESC
-         LIMIT  200`
+         LIMIT  200`,
+        queryParams
       );
 
       return res.json({ success: true, wins: result.rows });
