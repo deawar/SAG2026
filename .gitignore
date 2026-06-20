@@ -9,8 +9,9 @@ coverage/
 Thumbs.db
 backups/
 uploads/
-# Claude Code AI memory (local tooling state, machine-specific)
+# Claude Code AI memory and Superpowers plugin state (local tooling, machine-specific)
 .claude/
+.superpowers/
 
 # Server-specific config files (belong on the VPS, not in repo)
 ssccbogart.conf
