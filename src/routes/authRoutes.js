@@ -297,7 +297,7 @@ module.exports = (db) => {
  */
   router.post('/2fa/verify', authMiddleware.verifyToken, async (req, res, next) => {
     try {
-      const { secret, code, backupCodes: clientBackupCodes } = req.body;
+      const { secret, code } = req.body;
       const userId = req.user.id;
 
       if (!secret || !code) {
@@ -307,17 +307,17 @@ module.exports = (db) => {
         });
       }
 
-      // Use backup codes sent from setup step; fall back to generating new ones
-      const backupCodes = Array.isArray(clientBackupCodes) && clientBackupCodes.length > 0
-        ? clientBackupCodes
-        : twoFactorService._generateBackupCodes(8);
+      // Always generate backup codes server-side — never accept them from the client.
+      // Returning them in the response is how the user records them.
+      const backupCodes = twoFactorService._generateBackupCodes(8);
 
       // confirmSetup verifies the TOTP code and persists 2FA (secret + backup codes) to DB
       await twoFactorService.confirmSetup(userId, secret, code, backupCodes);
 
       return res.json({
         success: true,
-        message: '2FA enabled successfully'
+        message: '2FA enabled successfully',
+        backupCodes
       });
     } catch (error) {
       if (error.message === 'INVALID_2FA_TOKEN') {
