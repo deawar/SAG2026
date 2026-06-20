@@ -60,14 +60,40 @@
     </header>
 
     <!-- Main Content -->
-    <main id="main-content" class="main-content">
-        <!-- Page Header -->
-        <section class="page-header" role="region" aria-label="Page Header">
-            <div class="container">
-                <h1>Teacher Dashboard</h1>
-                <p>Manage your students and artwork submissions</p>
+    <main id="main-content" class="main-content" style="padding-top:0">
+        <!-- Teacher Hero -->
+        <section class="teacher-hero" role="region" aria-label="Teacher overview">
+            <div class="teacher-hero-inner">
+                <div>
+                    <p class="teacher-hero-greeting">Good morning, <strong id="teacher-name">Teacher</strong>.</p>
+                    <span class="school-badge" id="teacher-school-badge">Loading…</span>
+                </div>
+                <div class="teacher-quick-actions">
+                    <a href="#" class="btn btn-primary" id="create-auction-btn">Create Auction</a>
+                    <a href="#" class="btn btn-secondary" id="review-submissions-btn">Review Submissions</a>
+                </div>
             </div>
         </section>
+
+        <!-- Stats Row -->
+        <div class="teacher-stats-row" role="region" aria-label="Dashboard statistics">
+            <div class="teacher-stats-card">
+                <div class="teacher-stat-number" id="stat-active-auctions">—</div>
+                <div class="teacher-stat-label">Active Auctions</div>
+            </div>
+            <div class="teacher-stats-card">
+                <div class="teacher-stat-number" id="stat-pending-approvals">—</div>
+                <div class="teacher-stat-label">Pending Approvals</div>
+            </div>
+            <div class="teacher-stats-card">
+                <div class="teacher-stat-number" id="stat-bids-today">—</div>
+                <div class="teacher-stat-label">Bids Today</div>
+            </div>
+            <div class="teacher-stats-card">
+                <div class="teacher-stat-number" id="stat-ends-soon">—</div>
+                <div class="teacher-stat-label">Ending Soon</div>
+            </div>
+        </div>
 
         <div class="container">
             <div class="dashboard-container">
@@ -211,7 +237,7 @@
                         </div>
 
                         <div style="margin-bottom:1.5rem;">
-                            <button class="btn btn-primary" id="create-auction-btn" type="button">
+                            <button class="btn btn-primary" id="create-auction-btn-2" type="button">
                                 <span aria-hidden="true">+</span> Create New Auction
                             </button>
                         </div>

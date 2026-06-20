@@ -3360,3 +3360,105 @@ tbody tr:hover {
     max-width: none;
     width: 100%;
 }
+
+/* ===== Teacher Dashboard Hero ===== */
+.teacher-hero {
+    background: var(--color-teacher-hero, #2A3550);
+    color: #fff;
+    padding: clamp(2.5rem, 5vw, 4rem) 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.teacher-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 90% 10%, rgba(255, 65, 54, 0.06), transparent 50%);
+    pointer-events: none;
+}
+
+.teacher-hero-inner {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.teacher-hero-greeting {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 200;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    color: #fff;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+}
+
+.teacher-hero-greeting strong {
+    font-weight: 800;
+}
+
+.school-badge {
+    display: inline-flex;
+    align-items: center;
+    background: var(--school-primary, var(--color-platform-coral, #FF4136));
+    color: #fff;
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.35rem 0.85rem;
+    border-radius: 0;
+    transition: background 300ms ease;
+}
+
+.teacher-quick-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+/* ===== Teacher Stats Row ===== */
+.teacher-stats-row {
+    background: var(--color-canvas, #F4F4F4);
+    border-bottom: 2px solid var(--color-platform-dark, #1A1A2E);
+    padding: 0 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.teacher-stats-card {
+    padding: 1.25rem 1.5rem;
+    border-top: 3px solid var(--school-primary, var(--color-platform-dark, #1A1A2E));
+    border-right: 1px solid var(--color-lighter-gray, #e0e0e0);
+    background: #fff;
+    transition: border-top-color 300ms ease;
+}
+
+.teacher-stats-card:last-child { border-right: none; }
+
+.teacher-stat-number {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 2rem;
+    color: var(--color-platform-dark, #1A1A2E);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.teacher-stat-label {
+    font-family: var(--font-body);
+    font-weight: 200;
+    font-size: 0.75rem;
+    color: var(--color-gray, #757575);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}

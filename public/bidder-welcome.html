@@ -17,91 +17,106 @@
     <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
 
     <style>
-        /* ── Page-specific overrides ─────────────────────────────────── */
+        /* Mosaic overrides for bidder-welcome.html */
         .bidder-hero {
-            background: linear-gradient(135deg, var(--color-primary, #2c3e50) 0%, var(--color-secondary, #3498db) 100%);
+            background: var(--color-platform-dark, #1A1A2E);
             color: #fff;
-            padding: 5rem 1.5rem 4rem;
+            padding: clamp(3rem, 7vw, 5rem) 1.5rem clamp(2.5rem, 6vw, 4rem);
             text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .bidder-hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 80% 50%, rgba(255,65,54,0.07), transparent 55%);
+            pointer-events: none;
         }
         .bidder-hero h1 {
             font-family: var(--font-display);
-            font-size: clamp(2rem, 5vw, 3.5rem);
-            font-weight: 700;
-            line-height: 1.15;
-            margin-bottom: 1rem;
+            font-size: clamp(3rem, 7vw, 6rem);
+            font-weight: 800;
+            font-style: italic;
+            line-height: 0.95;
+            margin-bottom: 1.25rem;
+            letter-spacing: -0.03em;
             color: #fff;
+            position: relative;
+            z-index: 1;
+        }
+        .bidder-hero h1 em {
+            color: var(--color-platform-coral, #FF4136);
+            font-style: italic;
         }
         .bidder-hero p {
-            font-size: 1.2rem;
-            opacity: 0.9;
-            max-width: 560px;
+            font-family: var(--font-body);
+            font-weight: 200;
+            font-size: 1.1rem;
+            color: rgba(255,255,255,0.5);
+            max-width: 480px;
             margin: 0 auto 2.5rem;
+            position: relative;
+            z-index: 1;
         }
         .bidder-hero .btn-hero {
-            display: inline-block;
-            padding: 1rem 2.5rem;
-            background: #fff;
-            color: var(--color-primary, #2c3e50);
-            font-weight: 600;
-            font-size: 1.1rem;
-            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            padding: 14px 30px;
+            background: var(--color-platform-coral, #FF4136);
+            color: #fff;
+            font-family: var(--font-body);
+            font-weight: 800;
+            font-size: 0.9rem;
+            border-radius: 0;
             text-decoration: none;
-            transition: transform 0.15s, box-shadow 0.15s;
+            transition: filter 200ms ease;
+            position: relative;
+            z-index: 1;
         }
-        .bidder-hero .btn-hero:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.18);
-        }
-
+        .bidder-hero .btn-hero:hover { filter: brightness(0.88); }
         .steps-section {
-            padding: 4rem 1.5rem;
-            background: var(--color-surface, #fff);
-        }
-        .steps-section h2 {
-            text-align: center;
-            font-family: var(--font-display);
-            font-size: 2rem;
-            margin-bottom: 3rem;
+            padding: clamp(3rem, 6vw, 5rem) 1.5rem;
+            background: var(--color-canvas, #F4F4F4);
         }
         .steps-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 2rem;
+            gap: 1.5rem;
             max-width: 900px;
             margin: 0 auto;
         }
         .step-card {
-            text-align: center;
-            padding: 2rem 1.5rem;
-            border: 1px solid var(--color-border, #e0e0e0);
-            border-radius: 8px;
+            background: #fff;
+            border: 2px solid var(--color-platform-dark, #1A1A2E);
+            border-radius: 0;
+            padding: 2rem;
         }
-        .step-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-        .step-number {
-            display: inline-block;
-            width: 2rem;
-            height: 2rem;
-            border-radius: 50%;
-            background: var(--color-primary, #2c3e50);
-            color: #fff;
-            font-weight: 700;
-            line-height: 2rem;
-            text-align: center;
-            margin-bottom: 0.75rem;
-            font-size: 0.9rem;
-        }
-        .step-card h3 {
-            font-size: 1.1rem;
+        .step-number-large {
+            font-family: var(--font-display);
+            font-style: italic;
+            font-weight: 800;
+            font-size: 4rem;
+            color: var(--color-platform-coral, #FF4136);
+            line-height: 1;
             margin-bottom: 0.5rem;
         }
-        .step-card p {
+        .step-title {
+            font-family: var(--font-body);
+            font-weight: 800;
+            font-size: 0.85rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--color-platform-dark, #1A1A2E);
+            margin-bottom: 0.5rem;
+        }
+        .step-desc {
+            font-family: var(--font-body);
+            font-weight: 200;
+            color: var(--color-gray, #757575);
             font-size: 0.95rem;
-            color: var(--color-text-muted, #666);
-            line-height: 1.5;
+            line-height: 1.6;
+            margin-bottom: 0;
         }
 
         .info-section {
@@ -200,32 +215,28 @@
 
         <!-- Hero -->
         <section class="bidder-hero" aria-label="Welcome banner">
-            <h1>Support student artists.<br>Bid on art that matters.</h1>
+            <h1>Art worth <em>bidding on.</em></h1>
             <p>Browse auctions from schools you're connected to. Every bid directly funds arts education for students in your community.</p>
             <a href="/register.html?role=BIDDER" class="btn-hero">Create a free bidder account</a>
         </section>
 
         <!-- 3-step explainer -->
         <section class="steps-section" aria-label="How it works">
-            <h2>How it works</h2>
             <div class="steps-grid">
                 <div class="step-card">
-                    <div class="step-number">1</div>
-                    <div class="step-icon" aria-hidden="true">🖼️</div>
-                    <h3>Browse</h3>
-                    <p>Explore curated auctions showcasing original artwork submitted by students at schools you support.</p>
+                    <div class="step-number-large" aria-hidden="true">1</div>
+                    <div class="step-title">Browse</div>
+                    <p class="step-desc">Explore original artwork from student artists at schools near you.</p>
                 </div>
                 <div class="step-card">
-                    <div class="step-number">2</div>
-                    <div class="step-icon" aria-hidden="true">🏷️</div>
-                    <h3>Bid</h3>
-                    <p>Place competitive bids on the pieces you love. You'll be notified in real time if you're outbid.</p>
+                    <div class="step-number-large" aria-hidden="true">2</div>
+                    <div class="step-title">Bid</div>
+                    <p class="step-desc">Place competitive bids on the pieces you love. You'll be notified in real time if you're outbid.</p>
                 </div>
                 <div class="step-card">
-                    <div class="step-number">3</div>
-                    <div class="step-icon" aria-hidden="true">📦</div>
-                    <h3>Pay &amp; Receive</h3>
-                    <p>Win an auction? Complete a secure checkout and we'll arrange delivery of your new artwork.</p>
+                    <div class="step-number-large" aria-hidden="true">3</div>
+                    <div class="step-title">Pay &amp; Receive</div>
+                    <p class="step-desc">Win an auction? Complete a secure checkout and we'll arrange delivery of your new artwork.</p>
                 </div>
             </div>
         </section>

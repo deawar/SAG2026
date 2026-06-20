@@ -128,10 +128,24 @@ class TeacherDashboard {
       sendAllBtn.addEventListener('click', () => this.sendInvites('all'));
     }
 
-    // Create auction button
+    // Create auction button (hero + auctions section)
     const createAuctionBtn = document.getElementById('create-auction-btn');
     if (createAuctionBtn) {
-      createAuctionBtn.addEventListener('click', () => this.showAuctionModal());
+      createAuctionBtn.addEventListener('click', (e) => { e.preventDefault(); this.showAuctionModal(); });
+    }
+    const createAuctionBtn2 = document.getElementById('create-auction-btn-2');
+    if (createAuctionBtn2) {
+      createAuctionBtn2.addEventListener('click', () => this.showAuctionModal());
+    }
+
+    // Review submissions quick-action in hero
+    const reviewSubmissionsBtn = document.getElementById('review-submissions-btn');
+    if (reviewSubmissionsBtn) {
+      reviewSubmissionsBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const link = document.querySelector('.sidebar-link[data-section="submissions"]');
+        if (link) { link.click(); }
+      });
     }
 
     // Auction modal cancel button
@@ -556,6 +570,16 @@ class TeacherDashboard {
     } catch (error) {
       console.error('Failed to load teacher info:', error);
     }
+
+    // Mosaic teacher hero
+    const nameEl  = document.getElementById('teacher-name');
+    const badgeEl = document.getElementById('teacher-school-badge');
+    if (nameEl && this.teacherName) {
+      nameEl.textContent = this.teacherName.split(' ')[0];
+    }
+    if (badgeEl && this.schoolName) {
+      badgeEl.textContent = this.schoolName;
+    }
   }
 
   /**
@@ -918,10 +942,14 @@ class TeacherDashboard {
      */
   async loadTeacherData() {
     // Run independently so one failure doesn't block the other
+    let submissions = [];
+    let auctions = [];
+
     try {
       const submissionsResponse = await this.apiClient.request('GET', '/api/teacher/submissions');
       if (submissionsResponse.success) {
-        this.displaySubmissions(submissionsResponse.data);
+        submissions = submissionsResponse.data || [];
+        this.displaySubmissions(submissions);
       }
     } catch (error) {
       console.error('Error loading submissions:', error);
@@ -931,11 +959,33 @@ class TeacherDashboard {
       // Load auctions
       const auctionsResponse = await this.apiClient.request('GET', '/api/teacher/auctions');
       if (auctionsResponse.success) {
-        this.displayAuctions(auctionsResponse.data);
+        auctions = auctionsResponse.data || [];
+        this.displayAuctions(auctions);
       }
     } catch (error) {
       console.error('Error loading teacher data:', error);
     }
+
+    // Mosaic stats row
+    const setStatEl = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = val != null ? String(val) : '0'; }
+    };
+
+    const activeAuctions = auctions.filter(a => a.auction_status === 'LIVE' || a.auction_status === 'APPROVED').length;
+    const pendingApprovals = submissions.filter(s => s.status === 'SUBMITTED' || s.status === 'PENDING_APPROVAL').length;
+    const endingSoon = auctions.filter(a => {
+      if (a.auction_status !== 'LIVE' && a.auction_status !== 'APPROVED') { return false; }
+      if (!a.ends_at) { return false; }
+      const hoursLeft = (new Date(a.ends_at) - Date.now()) / 36e5;
+      return hoursLeft > 0 && hoursLeft <= 24;
+    }).length;
+    const bidsToday = auctions.reduce((sum, a) => sum + (Number(a.bid_count) || 0), 0);
+
+    setStatEl('stat-active-auctions', activeAuctions);
+    setStatEl('stat-pending-approvals', pendingApprovals);
+    setStatEl('stat-bids-today', bidsToday);
+    setStatEl('stat-ends-soon', endingSoon);
   }
 
   /**
