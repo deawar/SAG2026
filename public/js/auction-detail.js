@@ -140,6 +140,16 @@ class AuctionDetail {
     const schoolEl = document.getElementById('school-name');
     if (schoolEl) {schoolEl.textContent = this.auction.schoolName || this.auction.schoolId || 'N/A';}
 
+    // Mosaic: school context bar
+    const ctxBar  = document.getElementById('school-context-bar');
+    const ctxName = document.getElementById('school-context-name');
+    const ctxAuct = document.getElementById('school-context-auction');
+    if (ctxBar && ctxName && ctxAuct) {
+      ctxName.textContent = this.auction.schoolName || '';
+      ctxAuct.textContent = this.auction.title || '';
+      ctxBar.hidden = !(this.auction.schoolName || this.auction.title);
+    }
+
     // Update breadcrumb
     const breadcrumb = document.getElementById('breadcrumb-title');
     if (breadcrumb) {breadcrumb.textContent = this.auction.title || 'Auction Details';}
