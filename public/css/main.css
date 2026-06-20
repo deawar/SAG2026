@@ -226,9 +226,9 @@ a:focus {
 
 /* ===== Navigation Bar ===== */
 .navbar {
-    background-color: var(--color-white);
-    border-bottom: 1px solid var(--color-lighter-gray);
-    box-shadow: var(--shadow-sm);
+    background-color: var(--color-platform-white, #fff);
+    border-bottom: 3px solid var(--color-platform-dark, #1A1A2E);
+    box-shadow: none;
     position: sticky;
     top: 0;
     z-index: var(--z-sticky);
@@ -250,8 +250,8 @@ a:focus {
 
 .logo {
     font-size: var(--font-size-2xl);
-    font-weight: 700;
-    color: var(--color-primary);
+    font-weight: 800;
+    color: var(--color-platform-dark, #1A1A2E);
     text-decoration: none;
     display: flex;
     align-items: center;
@@ -265,15 +265,15 @@ a:focus {
 }
 
 .logo-img {
-    height: 100px;
-    width: auto;
-    max-width: 150px;
-    object-fit: contain;
-    border-radius: 50%;
+    display: none;
 }
 
 .logo-text {
     letter-spacing: -0.02em;
+}
+
+.logo-dot {
+    color: var(--color-platform-coral, #FF4136);
 }
 
 .navbar-nav {
@@ -287,26 +287,28 @@ a:focus {
 }
 
 .nav-link {
-    color: var(--color-dark-gray);
+    color: var(--color-platform-dark, #1A1A2E);
     text-decoration: none;
-    font-weight: 500;
-    font-size: 14px;
+    font-family: var(--font-body);
+    font-weight: 200;
+    font-size: 13px;
     padding: 7px 15px;
-    border-radius: 8px;
+    border-radius: 0;
     border: 1.5px solid transparent;
     display: inline-flex;
     align-items: center;
     backface-visibility: hidden;
     transform: translate3d(0, 0, 0);
     transition: all .3s;
-    letter-spacing: 0.01em;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     white-space: nowrap;
     cursor: pointer;
 }
 
 .nav-link:hover {
-    color: var(--color-primary);
-    border-color: var(--color-primary);
+    color: var(--color-platform-coral, #FF4136);
+    border-color: var(--color-platform-coral, #FF4136);
     background-color: transparent;
     text-decoration: none;
     transform: translate3d(0, -1px, 0);
@@ -318,10 +320,10 @@ a:focus {
 }
 
 .nav-link.active {
-    background-color: var(--color-primary);
-    border-color: var(--color-primary);
+    background-color: var(--color-platform-dark, #1A1A2E);
+    border-color: var(--color-platform-dark, #1A1A2E);
     color: #fff;
-    font-weight: 600;
+    font-weight: 800;
 }
 
 .navbar-auth {
@@ -467,15 +469,19 @@ a:focus {
     outline-offset: 2px;
 }
 
-/* Primary Button */
+/* Primary Button — Mosaic coral */
 .btn-primary {
-    background-color: var(--color-primary);
+    background-color: var(--color-platform-coral, #FF4136);
     color: #fff;
+    border-radius: 0;
+    font-family: var(--font-body);
+    font-weight: 800;
 }
 
 .btn-primary:hover {
-    background-color: var(--color-primary-dark);
-    opacity: 0.92;
+    background-color: var(--color-platform-coral, #FF4136);
+    filter: brightness(0.88);
+    opacity: 1;
     transform: translate3d(0, -2px, 0);
     text-decoration: none;
     color: #fff;
@@ -493,19 +499,23 @@ a:focus {
     opacity: 1;
 }
 
-/* Secondary Button */
+/* Secondary Button — Mosaic ghost */
 .btn-secondary {
     background-color: transparent;
-    color: var(--color-primary);
-    border: 2px solid var(--color-primary);
-    height: 50px;
+    color: var(--color-platform-dark, #1A1A2E);
+    border: 1.5px solid var(--color-platform-dark, #1A1A2E);
+    border-radius: 0;
+    font-family: var(--font-body);
+    font-weight: 200;
 }
 
 .btn-secondary:hover {
-    background-color: var(--color-primary);
+    background-color: var(--color-platform-dark, #1A1A2E);
     color: #fff;
+    border-color: var(--color-platform-dark, #1A1A2E);
     transform: translate3d(0, -2px, 0);
     text-decoration: none;
+    filter: none;
 }
 
 .btn-secondary:active {
