@@ -218,40 +218,6 @@ const paymentLimiter = rateLimit({
 
 /**
  * ============================================================================
- * CSRF PROTECTION
- * ============================================================================
- */
-
-const csrf = require('csurf');
-
-// CSRF protection middleware
-const csrfProtection = csrf({ cookie: false, httpOnly: true });
-
-/**
- * Generate CSRF token and send to client
- */
-const generateCSRFToken = (req, res, next) => {
-  res.locals.csrfToken = req.csrfToken();
-  res.json({
-    success: true,
-    csrfToken: req.csrfToken()
-  });
-};
-
-/**
- * CSRF error handler
- */
-const csrfErrorHandler = (err, req, res, next) => {
-  if (err.code !== 'EBADCSRFTOKEN') {return next(err);}
-
-  return res.status(403).json({
-    success: false,
-    message: 'Invalid CSRF token'
-  });
-};
-
-/**
- * ============================================================================
  * SQL INJECTION PREVENTION
  * ============================================================================
  */
@@ -490,11 +456,6 @@ module.exports = {
   authLimiter,
   passwordResetLimiter,
   paymentLimiter,
-
-  // CSRF protection
-  csrfProtection,
-  csrfErrorHandler,
-  generateCSRFToken,
 
   // SQL injection prevention
   escapeSQLSpecialChars,
