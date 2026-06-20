@@ -19,6 +19,9 @@ async function initializePage() {
   // Load hero carousel
   initCarousel();
 
+  // Load art strip
+  initArtStrip();
+
   // Load featured auctions
   await loadFeaturedAuctions();
 
@@ -321,6 +324,50 @@ function escapeHtml(text) {
  * Handle 2FA verification
  * @param {Event} event
  */
+// =====================================================================
+// Art Strip (Home Page)
+// =====================================================================
+
+async function initArtStrip() {
+  const track = document.getElementById('art-strip-track');
+  if (!track) { return; }
+  let items;
+  try {
+    const res = await fetch('/api/auctions/carousel');
+    if (!res.ok) { return; }
+    items = await res.json();
+  } catch (_) {
+    return; // fail silently — art strip is non-critical
+  }
+  if (!Array.isArray(items) || items.length === 0) { return; }
+  track.innerHTML = '';
+  items.slice(0, 8).forEach(item => {
+    if (!item.imageUrl || !/^(https?:|\/|data:image\/)/.test(item.imageUrl)) { return; }
+    const thumb = document.createElement('div');
+    thumb.className = 'art-strip-thumb';
+    thumb.setAttribute('role', 'button');
+    thumb.setAttribute('tabindex', '0');
+    thumb.setAttribute('aria-label', `${item.title || 'Artwork'} — view auction`);
+    const bid = item.currentBid != null
+      ? `<span class="art-strip-price">$${Number(item.currentBid).toFixed(2)}</span>`
+      : '';
+    const imgAlt = (item.title || 'Student artwork').replace(/"/g, '&quot;');
+    thumb.innerHTML =
+      `<img src="${item.imageUrl}" alt="${imgAlt}" loading="lazy">` +
+      `<div class="art-strip-overlay">${bid}</div>`;
+    const navigate = () => {
+      if (item.auctionId) {
+        window.location.href = `/auction-detail.html?id=${encodeURIComponent(item.auctionId)}`;
+      }
+    };
+    thumb.addEventListener('click', navigate);
+    thumb.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(); }
+    });
+    track.appendChild(thumb);
+  });
+}
+
 // =====================================================================
 // Hero Carousel
 // =====================================================================

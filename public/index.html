@@ -78,21 +78,23 @@
 
     <!-- Main Content -->
     <main id="main-content" class="main-content">
-        <!-- Hero Section -->
-        <section class="hero" role="region" aria-label="Hero Section">
-            <div class="hero-content">
-                <h1>Silent Auction Gallery</h1>
-                <p class="hero-subtitle">Supporting Education Through Art</p>
-                <div class="hero-image" style="margin-bottom:50px;">
-                    <div class="hero-carousel" id="hero-carousel" aria-label="Artwork showcase">
-                        <div class="carousel-track" id="carousel-track"></div>
-                        <button class="carousel-btn carousel-prev" id="carousel-prev" aria-label="Previous artwork" style="display:none">&#8249;</button>
-                        <button class="carousel-btn carousel-next" id="carousel-next" aria-label="Next artwork">&#8250;</button>
-                        <div class="carousel-dots" id="carousel-dots"></div>
-                        <div class="carousel-info" id="carousel-info"></div>
-                    </div>
+        <!-- Hero Section — Mosaic Dark Banner -->
+        <section class="hero" role="region" aria-label="Home hero">
+            <div class="hero-inner">
+                <span class="hero-eyebrow">Spring 2026 · Student Art Showcase</span>
+                <h1 class="hero-headline">Art that <em class="hero-accent">changes</em> everything.</h1>
+                <p class="hero-sub">Original student artwork. Every bid funds school programs.</p>
+                <div class="hero-ctas">
+                    <a href="/auctions.html" class="btn btn-primary" id="browse-auctions-btn">Browse Auctions</a>
+                    <a href="/bidder-welcome.html" class="btn btn-hero-ghost">How it works</a>
                 </div>
-                <a href="/auctions.html" class="btn btn-large" id="browse-auctions-btn">Browse Auctions</a>
+            </div>
+        </section>
+
+        <!-- Art Strip -->
+        <section class="art-strip" role="region" aria-label="Featured artworks">
+            <div class="art-strip-track" id="art-strip-track">
+                <!-- Populated by initArtStrip() in index.js from /api/auctions/carousel -->
             </div>
         </section>
 
@@ -212,16 +214,6 @@
                 <button type="submit" class="btn btn-primary">Create Account</button>
             </form>
             <p class="text-center">Already have an account? <button class="link-btn" id="switch-to-login">Login</button></p>
-        </div>
-    </div>
-
-    <!-- Artwork Lightbox (homepage fullscreen view) -->
-    <div id="artwork-lightbox-home" class="artwork-lightbox-home" role="dialog" aria-modal="true" aria-label="Artwork fullscreen view" hidden>
-        <button id="lightbox-home-close" class="lightbox-home-close" aria-label="Close fullscreen view">&times;</button>
-        <img id="lightbox-home-img" class="lightbox-home-img" src="" alt="">
-        <div class="lightbox-home-info">
-            <div class="lightbox-home-title" id="lightbox-home-title"></div>
-            <div class="lightbox-home-meta" id="lightbox-home-meta"></div>
         </div>
     </div>
 
