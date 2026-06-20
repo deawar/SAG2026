@@ -21,7 +21,8 @@ const {
   sanitizeInput,
   idempotencyMiddleware,
   securityLogger,
-  encodeHTML
+  encodeHTML,
+  enforceJsonContentType
 } = require('./middleware/securityMiddleware');
 
 /**
@@ -115,6 +116,7 @@ function createApp(db) {
   // BODY PARSING & STATIC FILES
   // ==========================================================================
   app.use(express.static(path.join(__dirname, '..', 'public')));
+  app.use(enforceJsonContentType);
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
