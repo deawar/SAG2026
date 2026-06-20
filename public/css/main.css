@@ -1014,6 +1014,11 @@ textarea.form-control {
     text-decoration: none;
 }
 
+.btn-hero-ghost:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.9);
+    outline-offset: 2px;
+}
+
 /* ===== Page Header ===== */
 .page-header {
     background-color: var(--color-lightest-gray);
@@ -2270,13 +2275,6 @@ tbody tr:hover {
 }
 
 /* ===== Homepage Sections ===== */
-
-/* Hero subtitle */
-.hero-subtitle {
-    font-size: var(--font-size-xl);
-    opacity: 0.9;
-    margin-bottom: var(--spacing-xl);
-}
 
 /* Featured Auctions */
 .featured-auctions {
