@@ -224,6 +224,12 @@ a:focus {
     flex: 1;
 }
 
+/* Home page: hero is flush to nav, no container padding */
+.main-content:has(.hero) {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
 /* ===== Navigation Bar ===== */
 .navbar {
     background-color: var(--color-platform-white, #fff);
@@ -902,230 +908,110 @@ textarea.form-control {
     border-top: 1px solid var(--color-lighter-gray);
 }
 
-/* ===== Hero Section ===== */
+/* ===== Hero Section — Mosaic Dark Banner ===== */
 .hero {
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
-    color: white;
-    padding: var(--spacing-2xl) var(--spacing-lg);
-    text-align: center;
-    border-radius: var(--radius-lg);
-    margin-bottom: var(--spacing-2xl);
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-2xl);
-}
-
-.hero-content {
-    flex: 1;
-    min-width: 0;
-}
-
-.hero-image {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.hero-img {
-    max-width: 100%;
-    height: auto;
-    max-height: 320px;
-}
-
-/* ===== Hero Carousel ===== */
-.hero-carousel {
+    background: var(--color-platform-dark, #1A1A2E);
+    color: #fff;
+    padding: clamp(3rem, 8vw, 6rem) 2rem clamp(2.5rem, 6vw, 5rem);
     position: relative;
-    width: 100%;
-    aspect-ratio: 4 / 3;
-    border-radius: var(--radius-md);
     overflow: hidden;
-    background: #111;
-    cursor: pointer;
+    margin-bottom: 0;
+    border-radius: 0;
 }
 
-.carousel-track {
+.hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 85% 50%, rgba(255, 65, 54, 0.07), transparent 60%);
+    pointer-events: none;
+}
+
+.hero-inner {
     position: relative;
-    width: 100%;
-    height: 100%;
+    z-index: 1;
+    max-width: 900px;
 }
 
-.carousel-slide {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    transition: opacity 0.7s ease;
-}
-
-.carousel-slide.active {
-    opacity: 1;
-}
-
-.carousel-img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-
-.carousel-btn {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(0, 0, 0, 0.45);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 38px;
-    height: 38px;
-    font-size: 1.6rem;
-    line-height: 1;
-    cursor: pointer;
-    z-index: 10;
+.hero-eyebrow {
     display: flex;
     align-items: center;
-    justify-content: center;
-    transition: background 0.2s;
+    gap: 0.75rem;
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-platform-coral, #FF4136);
+    margin-bottom: 1.5rem;
 }
 
-.carousel-btn:hover {
-    background: rgba(0, 0, 0, 0.75);
+.hero-eyebrow::before {
+    content: '';
+    display: inline-block;
+    width: 2rem;
+    height: 1.5px;
+    background: var(--color-platform-coral, #FF4136);
+    flex-shrink: 0;
 }
 
-.carousel-prev { left: 10px; }
-.carousel-next { right: 10px; }
-
-.carousel-dots {
-    position: absolute;
-    bottom: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 7px;
-    z-index: 10;
+.hero-headline {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: clamp(4rem, 10vw, 8rem);
+    line-height: 0.95;
+    color: #fff;
+    margin-bottom: 2rem;
+    letter-spacing: -0.03em;
 }
 
-.carousel-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.45);
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    transition: background 0.2s;
+.hero-accent {
+    color: var(--color-platform-coral, #FF4136);
+    font-style: italic;
 }
 
-.carousel-dot.active {
-    background: white;
-}
-
-.carousel-info {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(0, 0, 0, 0.68);
-    color: white;
-    padding: var(--spacing-sm) var(--spacing-md);
-    transform: translateY(100%);
-    transition: transform 0.3s ease;
-    z-index: 10;
-    cursor: pointer;
-}
-
-.carousel-info.visible {
-    transform: translateY(0);
-}
-
-.carousel-info-title {
-    font-weight: 600;
-    font-size: var(--font-size-sm);
-    margin-bottom: 2px;
-}
-
-.carousel-info-meta {
-    font-size: var(--font-size-xs);
-    opacity: 0.85;
-}
-
-/* ===== Home Page Artwork Lightbox ===== */
-.artwork-lightbox-home {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.93);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 9000;
-    padding: var(--spacing-lg);
-}
-
-.artwork-lightbox-home[hidden] {
-    display: none;
-}
-
-.lightbox-home-img {
-    max-width: min(95vw, 1200px);
-    max-height: 72vh;
-    object-fit: contain;
-    border-radius: var(--radius-sm);
-    display: block;
-}
-
-.lightbox-home-info {
-    color: white;
-    text-align: center;
-    margin-top: var(--spacing-md);
-    max-width: 600px;
-}
-
-.lightbox-home-title {
-    font-family: var(--font-heading);
-    font-size: var(--font-size-xl);
-    font-weight: 600;
-    margin-bottom: var(--spacing-xs);
-}
-
-.lightbox-home-meta {
-    font-size: var(--font-size-sm);
-    opacity: 0.85;
+.hero-sub {
+    font-family: var(--font-body);
+    font-weight: 200;
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 2.5rem;
+    max-width: 480px;
     line-height: 1.6;
 }
 
-.lightbox-home-close {
-    position: absolute;
-    top: var(--spacing-md);
-    right: var(--spacing-md);
-    background: none;
-    border: none;
-    color: white;
-    font-size: 2.5rem;
+.hero-ctas {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.btn-hero-ghost {
+    background: transparent;
+    border: 1.5px solid rgba(255, 255, 255, 0.45);
+    color: #fff;
+    border-radius: 0;
+    padding: 14px 30px;
+    font-family: var(--font-body);
+    font-weight: 200;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 200ms ease, background 200ms ease;
+    height: 50px;
+    white-space: nowrap;
     cursor: pointer;
-    line-height: 1;
-    padding: 0.25rem 0.5rem;
-    border-radius: var(--radius-sm);
-    transition: background 0.2s;
-    z-index: 1;
+    font-size: 15px;
 }
 
-.lightbox-home-close:hover {
-    background: rgba(255, 255, 255, 0.15);
-}
-
-.hero h1 {
-    color: white;
-    font-size: var(--font-size-4xl);
-    margin-bottom: var(--spacing-lg);
-}
-
-.hero p {
-    font-size: var(--font-size-lg);
-    margin-bottom: var(--spacing-xl);
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
+.btn-hero-ghost:hover {
+    border-color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    text-decoration: none;
 }
 
 /* ===== Page Header ===== */
@@ -3118,4 +3004,64 @@ tbody tr:hover {
 
 .card-preview-actions .btn {
     flex: 1;
+}
+
+/* ===== Art Strip (Home Page) ===== */
+.art-strip {
+    background: #fff;
+    border-top: 3px solid var(--color-platform-dark, #1A1A2E);
+    border-bottom: 3px solid var(--color-platform-dark, #1A1A2E);
+    overflow: hidden;
+}
+
+.art-strip-track {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.art-strip-track::-webkit-scrollbar { display: none; }
+
+.art-strip-thumb {
+    flex: 0 0 200px;
+    height: 160px;
+    position: relative;
+    cursor: pointer;
+    scroll-snap-align: start;
+    border-right: 1px solid var(--color-platform-dark, #1A1A2E);
+    overflow: hidden;
+}
+
+.art-strip-thumb:last-child { border-right: none; }
+
+.art-strip-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 200ms ease;
+}
+
+.art-strip-thumb:hover img { transform: scale(1.04); }
+
+.art-strip-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 0.5rem 0.75rem;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.65));
+    opacity: 0;
+    transition: opacity 200ms ease;
+}
+
+.art-strip-thumb:hover .art-strip-overlay { opacity: 1; }
+
+.art-strip-price {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 0.875rem;
+    color: #fff;
 }
