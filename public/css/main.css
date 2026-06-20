@@ -3276,3 +3276,87 @@ tbody tr:hover {
     font-size: 0.875rem;
     color: var(--color-gray, #757575);
 }
+
+/* ===== Auth Pages — Mosaic Split Layout ===== */
+.auth-page {
+    padding-top: 0;
+    padding-bottom: 0;
+    min-height: calc(100vh - 67px);
+    display: grid;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .auth-page {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.auth-split-left {
+    background: var(--color-platform-dark, #1A1A2E);
+    padding: clamp(3rem, 6vw, 5rem) clamp(2rem, 5vw, 4rem);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.auth-split-left::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 20% 80%, rgba(255, 65, 54, 0.08), transparent 55%);
+    pointer-events: none;
+}
+
+.auth-split-headline {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 800;
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    color: #fff;
+    line-height: 1.0;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+.auth-split-headline em {
+    color: var(--color-platform-coral, #FF4136);
+    font-style: italic;
+}
+
+.auth-split-sub {
+    font-family: var(--font-body);
+    font-weight: 200;
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.5);
+    position: relative;
+    z-index: 1;
+    line-height: 1.6;
+    margin-bottom: 0;
+}
+
+.auth-split-right {
+    background: #fff;
+    padding: clamp(2rem, 5vw, 4rem) clamp(1.5rem, 4vw, 3rem);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Override old auth-container / auth-card sizing inside split */
+.auth-page .auth-container {
+    display: contents;
+}
+
+.auth-page .auth-card {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    max-width: none;
+    width: 100%;
+}
