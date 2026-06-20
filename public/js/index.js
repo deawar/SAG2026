@@ -348,13 +348,20 @@ async function initArtStrip() {
     thumb.setAttribute('role', 'button');
     thumb.setAttribute('tabindex', '0');
     thumb.setAttribute('aria-label', `${item.title || 'Artwork'} — view auction`);
-    const bid = item.currentBid != null
-      ? `<span class="art-strip-price">$${Number(item.currentBid).toFixed(2)}</span>`
-      : '';
-    const imgAlt = (item.title || 'Student artwork').replace(/"/g, '&quot;');
-    thumb.innerHTML =
-      `<img src="${item.imageUrl}" alt="${imgAlt}" loading="lazy">` +
-      `<div class="art-strip-overlay">${bid}</div>`;
+    const img = document.createElement('img');
+    img.src = item.imageUrl;
+    img.alt = item.title || 'Student artwork';
+    img.loading = 'lazy';
+    thumb.appendChild(img);
+    const overlay = document.createElement('div');
+    overlay.className = 'art-strip-overlay';
+    if (item.currentBid != null) {
+      const priceSpan = document.createElement('span');
+      priceSpan.className = 'art-strip-price';
+      priceSpan.textContent = `$${Number(item.currentBid).toFixed(2)}`;
+      overlay.appendChild(priceSpan);
+    }
+    thumb.appendChild(overlay);
     const navigate = () => {
       if (item.auctionId) {
         window.location.href = `/auction-detail.html?id=${encodeURIComponent(item.auctionId)}`;
