@@ -142,8 +142,9 @@ describe('G14 — PATCH /api/admin/wins/:id/fulfillment', () => {
     const bid   = makeBidRow({ school_id: 'school-B' }); // different school
 
     mockPool.query
-      .mockResolvedValueOnce({ rows: [], rowCount: 0 })     // tokenBlacklist.isRevoked
-      .mockResolvedValueOnce({ rows: [bid], rowCount: 1 })  // SELECT bid
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 })                       // tokenBlacklist.isRevoked
+      .mockResolvedValueOnce({ rows: [{ school_id: 'school-A' }], rowCount: 1 }) // authMiddleware: school_id lookup for SCHOOL_ADMIN
+      .mockResolvedValueOnce({ rows: [bid], rowCount: 1 })                    // SELECT bid
       .mockResolvedValue({ rows: [], rowCount: 0 });
 
     const res = await request(app)
