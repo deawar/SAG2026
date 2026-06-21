@@ -151,6 +151,18 @@ const validateInput = (data, schema) => {
 };
 
 /**
+ * Set Permissions-Policy header to deny browser features this app never uses.
+ * Helmet 7 does not include a built-in for this header, so it is set manually.
+ */
+const PERMISSIONS_POLICY =
+  'camera=(), microphone=(), geolocation=(), usb=(), payment=(), display-capture=()';
+
+const setPermissionsPolicy = (req, res, next) => {
+  res.setHeader('Permissions-Policy', PERMISSIONS_POLICY);
+  return next();
+};
+
+/**
  * Enforce application/json Content-Type on mutation requests to /api/ routes.
  *
  * Requests with no Content-Type header are allowed (they have no body).
@@ -469,6 +481,9 @@ const securityLogger = (req, res, next) => {
  */
 
 module.exports = {
+  // Security headers
+  setPermissionsPolicy,
+
   // Content-Type enforcement
   enforceJsonContentType,
 
