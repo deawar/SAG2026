@@ -80,11 +80,10 @@ services:
       TOTP_ISSUER: ${TOTP_ISSUER:-SAG2026}
       TOTP_WINDOW: ${TOTP_WINDOW:-1}
       
-      # SMTP Configuration
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      # SMTP Configuration — loaded directly from env_file (.env.prod)
+      # Do NOT re-declare SMTP_* vars here: the ${VAR} syntax expands from the
+      # host shell, which overrides the env_file value with an empty string when
+      # the var is not exported in the VPS session.
       
       # Stripe Configuration
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
