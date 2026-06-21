@@ -903,9 +903,13 @@
         height: 130px;
     }
 
-    /* Auth split */
+    /* Auth split — stacked mobile layout */
     .auth-split-left {
         padding: 2rem 1.5rem;
+        min-height: 30vh;
+    }
+    .auth-split-right {
+        min-height: 70vh;
     }
     .auth-split-headline {
         font-size: clamp(1.8rem, 6vw, 2.5rem);
