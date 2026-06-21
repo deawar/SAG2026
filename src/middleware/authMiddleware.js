@@ -5,6 +5,7 @@
 
 const jwt = require('jsonwebtoken');
 const { tokenBlacklist } = require('../services/authenticationService');
+const { pool } = require('../models/index');
 
 class AuthMiddleware {
   /**
@@ -82,12 +83,33 @@ class AuthMiddleware {
         userId,
         sub: userId,
         role: decoded.role,
-        schoolId: decoded.schoolId,
+        schoolId: null,
         email: decoded.email,
         jti: decoded.jti,
         exp: decoded.exp,
         twoFaEnabled: decoded.twoFaEnabled
       };
+
+      // 9. Hydrate school_id from DB for SCHOOL_ADMIN only.
+      //    SCHOOL_ADMIN uses schoolId for cross-school authorization checks, so
+      //    the JWT claim cannot be trusted — a school reassignment must take effect
+      //    immediately. SITE_ADMIN ignores schoolId; other roles have no admin checks.
+      //    When pool is unavailable (test env), fall back to the JWT claim so
+      //    manually-crafted test tokens continue to supply the expected value.
+      if (pool && req.user.role === 'SCHOOL_ADMIN') {
+        try {
+          const { rows } = await pool.query(
+            'SELECT school_id FROM users WHERE id = $1 AND deleted_at IS NULL',
+            [userId]
+          );
+          req.user.schoolId = rows[0]?.school_id ?? null;
+        } catch (dbErr) {
+          console.error('[auth] school_id lookup failed:', dbErr.message);
+          // Fail closed: null never grants unintended cross-school access.
+        }
+      } else {
+        req.user.schoolId = decoded.schoolId ?? null;
+      }
 
       return next();
     } catch (error) {
@@ -138,12 +160,23 @@ class AuthMiddleware {
             userId,
             sub: userId,
             role: decoded.role,
-            schoolId: decoded.schoolId,
+            schoolId: decoded.schoolId ?? null,
             email: decoded.email,
             jti: decoded.jti,
             exp: decoded.exp,
             twoFaEnabled: decoded.twoFaEnabled
           };
+          if (pool && decoded.role === 'SCHOOL_ADMIN') {
+            try {
+              const { rows } = await pool.query(
+                'SELECT school_id FROM users WHERE id = $1 AND deleted_at IS NULL',
+                [userId]
+              );
+              req.user.schoolId = rows[0]?.school_id ?? null;
+            } catch (dbErr) {
+              console.error('[auth] optional school_id lookup failed:', dbErr.message);
+            }
+          }
         }
       }
     } catch (_e) {

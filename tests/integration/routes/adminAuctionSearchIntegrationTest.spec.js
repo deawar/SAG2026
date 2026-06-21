@@ -116,6 +116,9 @@ describe('GET /api/admin/auctions/search', () => {
     const token = makeToken({ userId: 'sadmin-1', role: 'SCHOOL_ADMIN', schoolId: 'school-uuid-1', twoFaEnabled: true });
 
     mockPool.query
+      // authMiddleware: school_id lookup for SCHOOL_ADMIN
+      .mockResolvedValueOnce({ rows: [{ school_id: 'school-uuid-1' }], rowCount: 1 })
+      // adminService.verifyAdminAccess
       .mockResolvedValueOnce({ rows: [SCHOOL_ADMIN_ROW], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [AUCTION_ROW], rowCount: 1 });
 

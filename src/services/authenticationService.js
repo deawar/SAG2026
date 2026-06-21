@@ -41,7 +41,6 @@ class JWTService {
       jti,
       email: userData.email,
       role: userData.role,
-      schoolId: userData.schoolId,
       iat: Math.floor(Date.now() / 1000),
       ...(userData.purpose && { purpose: userData.purpose }),
       ...(userData.twoFaEnabled !== undefined && { twoFaEnabled: userData.twoFaEnabled })
