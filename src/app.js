@@ -22,7 +22,8 @@ const {
   idempotencyMiddleware,
   securityLogger,
   encodeHTML,
-  enforceJsonContentType
+  enforceJsonContentType,
+  setPermissionsPolicy
 } = require('./middleware/securityMiddleware');
 
 /**
@@ -51,23 +52,9 @@ function createApp(db) {
 
   // CSP is enabled in production and test; relaxed in development so local
   // assets are not blocked during active development.
-  // Permissions-Policy: deny browser features this app never needs.
-  // Applied in all environments so development builds match production behaviour.
-  const permissionsPolicyConfig = {
-    policy: {
-      camera: [],
-      microphone: [],
-      geolocation: [],
-      usb: [],
-      payment: [],
-      'display-capture': []
-    }
-  };
-
   if (isProduction || isTest) {
     app.use(helmet({
       crossOriginResourcePolicy: { policy: 'cross-origin' },
-      permissionsPolicy: permissionsPolicyConfig,
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
@@ -85,10 +72,12 @@ function createApp(db) {
     // Development: minimal helmet so assets aren't blocked
     app.use(helmet({
       contentSecurityPolicy: false,
-      crossOriginResourcePolicy: { policy: 'cross-origin' },
-      permissionsPolicy: permissionsPolicyConfig
+      crossOriginResourcePolicy: { policy: 'cross-origin' }
     }));
   }
+
+  // Helmet 7 has no built-in for Permissions-Policy — set it manually on all responses
+  app.use(setPermissionsPolicy);
 
   // ==========================================================================
   // CORS
