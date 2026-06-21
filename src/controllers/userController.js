@@ -9,6 +9,13 @@ const crypto = require('crypto');
 const ValidationUtils = require('../utils/validationUtils');
 const { tokenBlacklist } = require('../services/authenticationService');
 
+// Per-account 2FA failure tracker (in-memory; resets on restart).
+// Provides account-level lockout independent of IP so rotating IPs cannot
+// bypass the limit. Complements the existing IP-based loginLimiter.
+const _twoFaFailures = new Map(); // userId → { count, lockedUntil }
+const TWO_FA_MAX_ATTEMPTS = 5;
+const TWO_FA_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+
 class UserController {
   constructor(userModel, authenticationService) {
     this.userModel = userModel;
@@ -585,7 +592,20 @@ class UserController {
         return res.status(401).json({ success: false, message: 'Token invalid or expired' });
       }
 
-      // 1. Retrieve user
+      // 1. Per-account lockout check — prevents brute force across rotating IPs
+      const failRec = _twoFaFailures.get(userId);
+      if (failRec?.lockedUntil) {
+        if (failRec.lockedUntil > Date.now()) {
+          return res.status(429).json({
+            success: false,
+            message: 'Too many failed 2FA attempts. Please try again later.'
+          });
+        }
+        // Lockout window elapsed — reset
+        _twoFaFailures.delete(userId);
+      }
+
+      // 2. Retrieve user
       const user = await this.userModel.getById(userId, true);
 
       if (!user.two_fa_enabled || !user.two_fa_secret) {
@@ -595,15 +615,24 @@ class UserController {
         });
       }
 
-      // 2. Verify 2FA code
+      // 3. Verify 2FA code
       const isValid = this.authService.twoFactorService.verifyToken(user.two_fa_secret, code);
 
       if (!isValid) {
+        const rec = _twoFaFailures.get(userId) || { count: 0, lockedUntil: null };
+        rec.count += 1;
+        if (rec.count >= TWO_FA_MAX_ATTEMPTS) {
+          rec.lockedUntil = Date.now() + TWO_FA_LOCKOUT_MS;
+        }
+        _twoFaFailures.set(userId, rec);
         return res.status(400).json({
           success: false,
           message: 'Invalid 2FA code'
         });
       }
+
+      // Clear failure record on success
+      _twoFaFailures.delete(userId);
 
       // 3. Generate access token
       const accessTokenResult = this.authService.jwtService.generateAccessToken(user.id, {
