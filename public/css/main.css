@@ -3278,16 +3278,21 @@ tbody tr:hover {
 }
 
 /* ===== Auth Pages — Mosaic Split Layout ===== */
-.auth-page {
-    padding-top: 0;
-    padding-bottom: 0;
+/* :has() selector targets only split-layout pages (login, register, 2fa-verify).
+   Higher specificity (2 classes) overrides old .auth-page gradient/padding rules
+   and the responsive.css base-level .auth-page padding, without affecting
+   old-style centered-card pages (password-reset, 2fa-setup, force-2fa-setup). */
+.auth-page:has(.auth-split-left) {
+    padding: 0;
+    background: none;
     min-height: calc(100vh - 67px);
     display: grid;
     grid-template-columns: 1fr;
+    align-items: stretch;
 }
 
 @media (min-width: 768px) {
-    .auth-page {
+    .auth-page:has(.auth-split-left) {
         grid-template-columns: 1fr 1fr;
     }
 }
@@ -3347,12 +3352,12 @@ tbody tr:hover {
     justify-content: center;
 }
 
-/* Override old auth-container / auth-card sizing inside split */
-.auth-page .auth-container {
+/* Override auth-container / auth-card sizing inside split layout only */
+.auth-page:has(.auth-split-left) .auth-container {
     display: contents;
 }
 
-.auth-page .auth-card {
+.auth-page:has(.auth-split-left) .auth-card {
     border: none;
     border-radius: 0;
     box-shadow: none;
