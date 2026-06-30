@@ -31,7 +31,7 @@
     "express-rate-limit": "^7.5.1",
     "helmet": "^7.0.0",
     "jsonwebtoken": "^9.0.3",
-    "nodemailer": "^7.0.13",
+    "nodemailer": "^9.0.1",
     "pg": "^8.17.2",
     "qrcode": "^1.5.4",
     "speakeasy": "^2.0.0",
