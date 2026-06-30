@@ -912,7 +912,7 @@ textarea.form-control {
 .hero {
     background: var(--color-platform-dark, #1A1A2E);
     color: #fff;
-    padding: clamp(3rem, 8vw, 6rem) 2rem clamp(2.5rem, 6vw, 5rem);
+    padding: clamp(3rem, 8vw, 6rem) clamp(1rem, 5vw, 2rem) clamp(2.5rem, 6vw, 5rem);
     position: relative;
     overflow: hidden;
     margin-bottom: 0;
@@ -1024,7 +1024,6 @@ textarea.form-control {
     background-color: var(--color-platform-dark, #1A1A2E);
     color: #fff;
     padding: var(--spacing-xl) var(--spacing-lg);
-    max-height: 200px;
     margin-bottom: var(--spacing-2xl);
     border-radius: var(--radius-lg);
 }
@@ -1528,12 +1527,80 @@ tbody tr:hover {
     color: white;
     padding: var(--spacing-2xl) var(--spacing-lg);
     margin-top: auto;
-    text-align: center;
     font-size: var(--font-size-sm);
 }
 
+/* Footer inner layout — responsive columns via responsive.css */
+.footer-content {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
+    text-align: left;
+}
+
+.footer-section h3 {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.45);
+    margin-bottom: var(--spacing-md);
+}
+
+.footer-section ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.footer-section p {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-relaxed);
+}
+
+.footer-section a {
+    color: rgba(255, 255, 255, 0.6);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+    transition: color var(--transition-fast);
+}
+
+.footer-section a:hover {
+    color: var(--color-platform-coral, #FF4136);
+}
+
+.footer-bottom {
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    padding-top: var(--spacing-lg);
+    text-align: center;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.social-links {
+    display: flex;
+    gap: var(--spacing-lg);
+    align-items: center;
+}
+
+.social-links a {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: var(--font-size-xl);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+    line-height: 1;
+}
+
+.social-links a:hover {
+    color: var(--color-platform-coral, #FF4136);
+}
+
+/* Override old single-link color rule — section links handle their own color */
 .footer a {
-    color: var(--color-primary-light);
+    color: inherit;
 }
 
 /* ===== Breadcrumb ===== */

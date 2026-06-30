@@ -948,3 +948,79 @@
         max-width: 100%;
     }
 }
+
+/* ===== Layout Polish — Phone / Tablet / Desktop ===== */
+
+/* --- Footer: responsive column layout --- */
+@media (min-width: 641px) {
+    .footer-content {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (min-width: 1025px) {
+    .footer-content {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* --- Page header: remove border-radius on mobile so it reads as a full-width band --- */
+@media (max-width: 768px) {
+    .page-header {
+        border-radius: 0;
+        margin-bottom: var(--spacing-xl);
+    }
+    /* Trim main-content top gap on non-hero pages — dark band sits closer to navbar */
+    .main-content:not(:has(.hero)) {
+        padding-top: var(--spacing-lg);
+    }
+}
+
+/* --- CTA section: full-width on mobile (remove radius that creates floating-card look) --- */
+@media (max-width: 640px) {
+    .cta-section {
+        border-radius: 0;
+        margin-left: calc(-1 * var(--spacing-lg));
+        margin-right: calc(-1 * var(--spacing-lg));
+        padding-left: var(--spacing-lg);
+        padding-right: var(--spacing-lg);
+    }
+}
+
+/* --- Filter bar: label+select pairs in a compact 2-column grid on phone --- */
+@media (max-width: 640px) {
+    .filter-bar {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: var(--spacing-xs) var(--spacing-md);
+        padding: var(--spacing-sm) var(--spacing-md);
+        align-items: center;
+    }
+    .filter-bar label {
+        white-space: nowrap;
+    }
+    .filter-bar select {
+        width: 100%;
+        min-width: 0;
+        padding: 8px 10px;
+        font-size: 15px; /* prevent iOS zoom on focus */
+    }
+}
+
+/* --- Navbar auth: keep buttons side-by-side on intermediate tablet (641–768px) --- */
+@media (min-width: 641px) and (max-width: 768px) {
+    .navbar-auth {
+        flex-direction: row;
+        width: auto;
+    }
+    .navbar-auth .btn {
+        width: auto;
+    }
+}
+
+/* --- Auction grid: single column on very small phones --- */
+@media (max-width: 400px) {
+    .auctions-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+}
