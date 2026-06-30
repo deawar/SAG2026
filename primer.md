@@ -1,6 +1,6 @@
 # SAG2026 — Project Primer
 
-**Last updated:** 2026-06-21
+**Last updated:** 2026-06-29
 **Project path:** `c:\Users\Dean.SSCCBISHOP.000\OneDrive\projects\SAG2026\Silent-Auction-Gallery\`
 
 ---
@@ -132,8 +132,8 @@ School colors NEVER appear in: global nav, hero, auth pages.
 
 ## Key Frontend Files Modified (Mosaic)
 
-- **`public/css/main.css`** — All Mosaic CSS (nav, hero, cards, auth, teacher, animations); split auth layout uses `.auth-page:has(.auth-split-left)` for scoping
-- **`public/css/responsive.css`** — Mosaic breakpoints appended (768px + 480px); mobile auth split gets `min-height: 30vh / 70vh` for panel sizing
+- **`public/css/main.css`** — All Mosaic CSS (nav, hero, cards, auth, teacher, animations); split auth layout uses `.auth-page:has(.auth-split-left)` for scoping; footer inner layout CSS added (`.footer-content`, `.footer-section`, `.footer-bottom`, `.social-links`); hero padding uses `clamp()` on horizontal axis; `.page-header` `max-height: 200px` removed
+- **`public/css/responsive.css`** — Mosaic breakpoints + mobile auth split (`min-height: 30vh / 70vh`); responsive review additions: footer 2-col (641px) / 4-col (1025px) grid; page-header border-radius removed on mobile; CTA full-bleed negative margins on ≤640px; filter bar 2-column grid on ≤640px; navbar-auth inline on 641–768px; auction grid 1-col on ≤400px
 - **`public/css/theme.css`** — Font vars (`--font-display`, `--font-body`, `--font-mono`) and color vars
 - **`public/js/index.js`** — `initArtStrip()` (carousel fetch + DOM build) + `initArtStripReveal()` (IntersectionObserver stagger)
 - **`public/js/auction-detail.js`** — School context bar populated in `displayAuction()`

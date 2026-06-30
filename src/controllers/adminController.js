@@ -51,6 +51,10 @@ class AdminController {
     this.listPayments = this.listPayments.bind(this);
     this.processRefund = this.processRefund.bind(this);
     this.getPaymentStatistics = this.getPaymentStatistics.bind(this);
+    this.exportRevenueReport = this.exportRevenueReport.bind(this);
+    this.exportActivityReport = this.exportActivityReport.bind(this);
+    this.exportPerformanceReport = this.exportPerformanceReport.bind(this);
+    this.exportComplianceReport = this.exportComplianceReport.bind(this);
     this.getReportsSummary = this.getReportsSummary.bind(this);
     this.generateGDPRReport = this.generateGDPRReport.bind(this);
     this.generateCOPPAReport = this.generateCOPPAReport.bind(this);
@@ -714,6 +718,54 @@ class AdminController {
         success: true,
         statistics
       });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * ========== CSV REPORT EXPORT ENDPOINTS (4 methods) ==========
+   */
+
+  async exportRevenueReport(req, res) {
+    try {
+      const csv = await adminService.generateRevenueReportCSV(req.user.id);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="revenue-report-${Date.now()}.csv"`);
+      return res.status(200).send(csv);
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  async exportActivityReport(req, res) {
+    try {
+      const csv = await adminService.generateActivityReportCSV(req.user.id);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="activity-report-${Date.now()}.csv"`);
+      return res.status(200).send(csv);
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  async exportPerformanceReport(req, res) {
+    try {
+      const csv = await adminService.generatePerformanceReportCSV(req.user.id);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="performance-report-${Date.now()}.csv"`);
+      return res.status(200).send(csv);
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  async exportComplianceReport(req, res) {
+    try {
+      const csv = await adminService.generateComplianceReportCSV(req.user.id);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="compliance-report-${Date.now()}.csv"`);
+      return res.status(200).send(csv);
     } catch (error) {
       return this.handleError(error, res);
     }

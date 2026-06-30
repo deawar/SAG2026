@@ -352,6 +352,43 @@ router.get(
 );
 
 // ============================================================================
+// CSV Report Export Routes (4 routes)
+// Must be declared before /reports/:type* patterns to avoid param capture
+// ============================================================================
+
+router.get(
+  '/reports/revenue/export',
+  verifyToken,
+  requireAdmin2fa,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  adminController.exportRevenueReport
+);
+
+router.get(
+  '/reports/activity/export',
+  verifyToken,
+  requireAdmin2fa,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  adminController.exportActivityReport
+);
+
+router.get(
+  '/reports/performance/export',
+  verifyToken,
+  requireAdmin2fa,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  adminController.exportPerformanceReport
+);
+
+router.get(
+  '/reports/compliance/export',
+  verifyToken,
+  requireAdmin2fa,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  adminController.exportComplianceReport
+);
+
+// ============================================================================
 // Compliance Reporting Routes (4 routes)
 // ============================================================================
 
@@ -855,6 +892,12 @@ router.delete(
   - GET    /api/admin/payments
   - POST   /api/admin/payments/:paymentId/refund
   - GET    /api/admin/payments/statistics
+
+  CSV REPORT EXPORTS (4 routes):
+  - GET    /api/admin/reports/revenue/export
+  - GET    /api/admin/reports/activity/export
+  - GET    /api/admin/reports/performance/export
+  - GET    /api/admin/reports/compliance/export
 
   COMPLIANCE REPORTING (4 routes):
   - GET    /api/admin/reports/gdpr

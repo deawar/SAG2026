@@ -1057,6 +1057,193 @@ class AdminService {
   }
 
   /**
+   * ========== CSV REPORT EXPORTS (4 methods) ==========
+   */
+
+  /**
+   * Revenue report CSV — all completed transactions (last 12 months)
+   */
+  async generateRevenueReportCSV(adminId) {
+    const admin = await this.verifyAdminAccess(adminId);
+
+    let query = `
+      SELECT
+        t.id            AS transaction_id,
+        t.created_at    AS date,
+        t.total_amount  AS amount,
+        t.transaction_status AS status,
+        a.title         AS auction_title,
+        s.name          AS school_name
+      FROM transactions t
+      LEFT JOIN auctions a ON a.id = t.auction_id
+      LEFT JOIN schools  s ON s.id = a.school_id
+      WHERE t.created_at >= NOW() - INTERVAL '12 months'
+    `;
+    const params = [];
+
+    if (admin.role === 'SCHOOL_ADMIN') {
+      query += ` AND a.school_id = $${params.length + 1}`;
+      params.push(admin.school_id);
+    }
+
+    query += ' ORDER BY t.created_at DESC';
+
+    const result = await pool.query(query, params);
+
+    const header = 'Transaction ID,Date,Amount,Status,Auction Title,School\n';
+    const rows = result.rows.map(r =>
+      [
+        r.transaction_id,
+        new Date(r.date).toISOString(),
+        r.amount,
+        r.status,
+        `"${(r.auction_title || '').replace(/"/g, '""')}"`,
+        `"${(r.school_name || '').replace(/"/g, '""')}"`
+      ].join(',')
+    );
+    return header + rows.join('\n');
+  }
+
+  /**
+   * User activity report CSV — admin audit log (last 90 days)
+   */
+  async generateActivityReportCSV(adminId) {
+    const admin = await this.verifyAdminAccess(adminId);
+
+    let query = `
+      SELECT
+        l.id           AS log_id,
+        l.created_at   AS date,
+        l.action,
+        l.resource_type,
+        l.resource_id,
+        l.reason,
+        u.email        AS admin_email
+      FROM admin_audit_logs l
+      LEFT JOIN users u ON u.id = l.admin_id
+      WHERE l.created_at >= NOW() - INTERVAL '90 days'
+    `;
+    const params = [];
+
+    if (admin.role === 'SCHOOL_ADMIN') {
+      query += ` AND l.admin_id = $${params.length + 1}`;
+      params.push(adminId);
+    }
+
+    query += ' ORDER BY l.created_at DESC LIMIT 5000';
+
+    const result = await pool.query(query, params);
+
+    const header = 'Log ID,Date,Action,Resource Type,Resource ID,Reason,Admin Email\n';
+    const rows = result.rows.map(r =>
+      [
+        r.log_id,
+        new Date(r.date).toISOString(),
+        r.action,
+        r.resource_type,
+        r.resource_id,
+        `"${(r.reason || '').replace(/"/g, '""')}"`,
+        `"${(r.admin_email || '').replace(/"/g, '""')}"`
+      ].join(',')
+    );
+    return header + rows.join('\n');
+  }
+
+  /**
+   * Auction performance report CSV — auctions with bid counts and totals
+   */
+  async generatePerformanceReportCSV(adminId) {
+    const admin = await this.verifyAdminAccess(adminId);
+
+    let query = `
+      SELECT
+        a.id            AS auction_id,
+        a.title,
+        a.auction_status AS status,
+        a.start_date,
+        a.end_date,
+        s.name          AS school_name,
+        COUNT(b.id)     AS bid_count,
+        COALESCE(MAX(b.amount), 0) AS highest_bid,
+        COALESCE(SUM(b.amount), 0) AS total_bids
+      FROM auctions a
+      LEFT JOIN schools s ON s.id = a.school_id
+      LEFT JOIN bids    b ON b.auction_id = a.id
+    `;
+    const params = [];
+
+    if (admin.role === 'SCHOOL_ADMIN') {
+      query += ` WHERE a.school_id = $${params.length + 1}`;
+      params.push(admin.school_id);
+    }
+
+    query += ' GROUP BY a.id, a.title, a.auction_status, a.start_date, a.end_date, s.name ORDER BY a.end_date DESC LIMIT 1000';
+
+    const result = await pool.query(query, params);
+
+    const header = 'Auction ID,Title,Status,Start Date,End Date,School,Bid Count,Highest Bid,Total Bids\n';
+    const rows = result.rows.map(r =>
+      [
+        r.auction_id,
+        `"${(r.title || '').replace(/"/g, '""')}"`,
+        r.status,
+        r.start_date ? new Date(r.start_date).toISOString() : '',
+        r.end_date   ? new Date(r.end_date).toISOString()   : '',
+        `"${(r.school_name || '').replace(/"/g, '""')}"`,
+        r.bid_count,
+        r.highest_bid,
+        r.total_bids
+      ].join(',')
+    );
+    return header + rows.join('\n');
+  }
+
+  /**
+   * Compliance & audit trail report CSV — all stored compliance reports
+   */
+  async generateComplianceReportCSV(adminId) {
+    const admin = await this.verifyAdminAccess(adminId);
+
+    let query = `
+      SELECT
+        cr.id           AS report_id,
+        cr.report_type,
+        cr.start_date,
+        cr.end_date,
+        cr.created_at   AS generated_at,
+        u.email         AS generated_by,
+        s.name          AS school_name
+      FROM compliance_reports cr
+      LEFT JOIN users   u ON u.id = cr.generated_by
+      LEFT JOIN schools s ON s.id = cr.school_id
+    `;
+    const params = [];
+
+    if (admin.role === 'SCHOOL_ADMIN') {
+      query += ` WHERE cr.school_id = $${params.length + 1}`;
+      params.push(admin.school_id);
+    }
+
+    query += ' ORDER BY cr.created_at DESC LIMIT 1000';
+
+    const result = await pool.query(query, params);
+
+    const header = 'Report ID,Type,Start Date,End Date,Generated At,Generated By,School\n';
+    const rows = result.rows.map(r =>
+      [
+        r.report_id,
+        r.report_type,
+        r.start_date ? new Date(r.start_date).toISOString() : '',
+        r.end_date   ? new Date(r.end_date).toISOString()   : '',
+        new Date(r.generated_at).toISOString(),
+        `"${(r.generated_by || '').replace(/"/g, '""')}"`,
+        `"${(r.school_name || '').replace(/"/g, '""')}"`
+      ].join(',')
+    );
+    return header + rows.join('\n');
+  }
+
+  /**
    * ========== COMPLIANCE & AUDITING (4 methods) ==========
    */
 
