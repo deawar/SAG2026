@@ -223,6 +223,7 @@ describe('Teacher approval gate', () => {
       .set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(403);
+    expect(res.body.error).toBe('CROSS_SCHOOL_ACCESS_DENIED');
   });
 
   // ---------------------------------------------------------------------------
