@@ -734,7 +734,7 @@ class UserController {
   }
 
   /**
-   * Send an email verification link. Suppressed in test mode.
+   * Send an email verification link. Raw link logged only in development mode (NODE_ENV=development).
    * Uses the same SMTP pattern as authenticationService._sendResetCodeEmail.
    */
   async _sendVerificationEmail(email, firstName, userId, rawToken) {
@@ -770,7 +770,7 @@ class UserController {
   }
 
   /**
-   * Send parental consent request email. Suppressed in test mode.
+   * Send parental consent request email. Raw link logged only in development mode (NODE_ENV=development).
    */
   async _sendParentConsentEmail(parentEmail, childFirstName, userId, rawToken) {
     const appUrl = process.env.APP_URL || 'https://sag.live';
