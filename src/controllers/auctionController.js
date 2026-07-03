@@ -594,10 +594,10 @@ class AuctionController {
         result.rows
       );
 
-      // ===== CRITICAL: Map to public shape first (reading artist_name before sanitizer strips it),
-      // then apply sanitizeArrayByRole as defense-in-depth on the camelCase output.
-      // Note: the explicit mapping already excludes all raw PII; createdByUserId is intentionally
-      // omitted and artistName is reduced via publicArtistName (Task 5, child-safety). =====
+      // ===== CRITICAL (child-safety, Task 5): the explicit whitelist map below is the ONLY
+      // sanitization step here. sanitizeArrayByRole is intentionally NOT called — it would delete
+      // artist_name before publicArtistName could reduce it. The map cherry-picks only safe fields:
+      // createdByUserId is omitted and artistName is reduced to "First L." via publicArtistName. =====
       const mappedArtwork = filteredArtwork.map(piece => ({
         id: piece.id,         // used by submitBid (this.currentPiece?.id)
         artworkId: piece.id,  // kept for any callers using the old key
