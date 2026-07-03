@@ -783,7 +783,7 @@ class AuctionService {
    * @param {string} auctionId - ID of the auction
    * @returns {Object} Winner details with artwork
    */
-  async getAuctionWinner(auctionId) {
+  async getAuctionWinner(auctionId, { includeEmail = false } = {}) {
     const result = await pool.query(
       `SELECT
         a.id as artwork_id, a.title,
@@ -799,14 +799,17 @@ class AuctionService {
 
     const winners = result.rows
       .filter(row => row.winner_id)
-      .map(row => ({
-        artworkId: row.artwork_id,
-        artworkTitle: row.title,
-        winnerId: row.winner_id,
-        winnerName: `${row.first_name} ${row.last_name}`,
-        winnerEmail: row.email,
-        winningBid: row.winning_bid
-      }));
+      .map(row => {
+        const w = {
+          artworkId: row.artwork_id,
+          artworkTitle: row.title,
+          winnerId: row.winner_id,
+          winnerName: `${row.first_name} ${row.last_name}`,
+          winningBid: row.winning_bid
+        };
+        if (includeEmail) { w.winnerEmail = row.email; }
+        return w;
+      });
 
     return {
       success: true,
