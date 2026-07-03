@@ -171,6 +171,7 @@ class UserController {
       const sanitizedPhone = phone ? ValidationUtils.sanitizeString(phone, 20) : null;
 
       // 7. Create user in database
+      const isTeacher = finalRole === 'TEACHER';
       const user = await this.userModel.create({
         email: sanitizedEmail,
         password,
@@ -179,7 +180,8 @@ class UserController {
         phoneNumber: sanitizedPhone,
         dateOfBirth,
         schoolId,
-        role: finalRole
+        role: finalRole,
+        accountStatus: isTeacher ? 'PENDING_APPROVAL' : undefined
       });
 
       // 8. Generate and store email verification token (24h expiry)
@@ -195,7 +197,10 @@ class UserController {
       return res.status(201).json({
         ok: true,
         requiresVerification: true,
-        message: 'Registration successful. Please check your email to verify your account.'
+        requiresApproval: isTeacher,
+        message: isTeacher
+          ? 'Registration successful. Verify your email, then a school administrator must approve your teacher account before you can sign in.'
+          : 'Registration successful. Please check your email to verify your account.'
       });
     } catch (error) {
       // Map model/validation error codes to user-facing 400/409 responses
@@ -300,7 +305,16 @@ class UserController {
         });
       }
 
-      // 4c. Check if account is active
+      // 4c. Teacher approval gate: verified but not yet approved by a school admin
+      if (user.role === 'TEACHER' && user.account_status === 'PENDING_APPROVAL') {
+        return res.status(403).json({
+          success: false,
+          error: 'pending_teacher_approval',
+          message: 'Your teacher account is awaiting school administrator approval.'
+        });
+      }
+
+      // 4d. Check if account is active
       if (user.account_status !== 'ACTIVE') {
         return res.status(403).json({
           success: false,
