@@ -594,31 +594,31 @@ class AuctionController {
         result.rows
       );
 
-      // ===== CRITICAL: Sanitize sensitive fields for STUDENT/BIDDER =====
-      const sanitizedArtwork = roleHierarchyUtils.sanitizeArrayByRole(
-        filteredArtwork,
-        req.user.role
-      );
+      // ===== CRITICAL: Map to public shape first (reading artist_name before sanitizer strips it),
+      // then apply sanitizeArrayByRole as defense-in-depth on the camelCase output.
+      // Note: the explicit mapping already excludes all raw PII; createdByUserId is intentionally
+      // omitted and artistName is reduced via publicArtistName (Task 5, child-safety). =====
+      const mappedArtwork = filteredArtwork.map(piece => ({
+        id: piece.id,         // used by submitBid (this.currentPiece?.id)
+        artworkId: piece.id,  // kept for any callers using the old key
+        title: piece.title,
+        description: piece.description,
+        imageUrl: piece.image_url,
+        medium: piece.medium || null,
+        dimensions: (piece.dimensions_width_cm && piece.dimensions_height_cm)
+          ? `${piece.dimensions_width_cm} × ${piece.dimensions_height_cm} cm`
+          : null,
+        startingPrice: piece.starting_bid_amount,
+        currentBid: piece.current_bid,
+        bidCount: parseInt(piece.bid_count),
+        artistName: publicArtistName(piece.artist_name)
+        // createdByUserId removed from public response (child-safety: Task 5)
+      }));
 
       return res.status(200).json({
         success: true,
-        count: sanitizedArtwork.length,
-        artwork: sanitizedArtwork.map(piece => ({
-          id: piece.id,         // used by submitBid (this.currentPiece?.id)
-          artworkId: piece.id,  // kept for any callers using the old key
-          title: piece.title,
-          description: piece.description,
-          imageUrl: piece.image_url,
-          medium: piece.medium || null,
-          dimensions: (piece.dimensions_width_cm && piece.dimensions_height_cm)
-            ? `${piece.dimensions_width_cm} × ${piece.dimensions_height_cm} cm`
-            : null,
-          startingPrice: piece.starting_bid_amount,
-          currentBid: piece.current_bid,
-          bidCount: parseInt(piece.bid_count),
-          artistName: piece.artist_name,
-          createdByUserId: piece.created_by_user_id
-        }))
+        count: mappedArtwork.length,
+        artwork: mappedArtwork
       });
     } catch (error) {
       console.error('Error retrieving auction artwork:', error);

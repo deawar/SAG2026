@@ -153,6 +153,75 @@ describe('Auction bids list PII', () => {
   });
 });
 
+/** An artwork row as returned by the getAuctionArtwork SQL query */
+function makeArtworkRow(overrides = {}) {
+  return {
+    id: 'art-1',
+    title: 'Burger Cat',
+    description: 'A cat eating a burger',
+    image_url: 'https://example.com/art.jpg',
+    medium: 'Oil',
+    dimensions_width_cm: 30,
+    dimensions_height_cm: 40,
+    starting_bid_amount: '10.00',
+    current_bid: '15.00',
+    bid_count: '2',
+    artist_name: 'Joyce Chen',
+    created_by_user_id: 'user-student-42',
+    school_id: 'school-1',
+    auction_id: 'auc-1',
+    artwork_status: 'APPROVED',
+    deleted_at: null,
+    created_at: new Date('2026-01-01T10:00:00Z'),
+    ...overrides
+  };
+}
+
+describe('Public artwork PII', () => {
+  let app;
+
+  beforeAll(() => { mockDb.reset(); app = createApp(mockDb); });
+
+  beforeEach(() => {
+    mockPool.query.mockReset();
+    mockPool.query.mockResolvedValue({ rows: [], rowCount: 0 });
+    mockDb.reset();
+  });
+
+  test('BIDDER sees reduced artistName and no createdByUserId', async () => {
+    const token = makeToken({ userId: 'user-bidder-1', role: 'BIDDER', schoolId: null });
+
+    mockPool.query
+      // Only one query: the artwork SELECT (no prior auction lookup)
+      .mockResolvedValueOnce({
+        rows: [
+          makeArtworkRow({ id: 'art-1', artist_name: 'Joyce Chen', created_by_user_id: 'user-student-42' }),
+          makeArtworkRow({ id: 'art-2', artist_name: 'Sam Williams', created_by_user_id: 'user-student-99' })
+        ],
+        rowCount: 2
+      });
+
+    const res = await request(app)
+      .get('/api/auctions/auc-1/artwork')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.artwork.length).toBe(2);
+
+    for (const art of res.body.artwork) {
+      // Must NOT expose internal userId
+      expect(art).not.toHaveProperty('createdByUserId');
+      // artistName must match "First L." reduced form (e.g. "Joyce C.")
+      expect(art.artistName).toMatch(/^\S+( \S\.)?$/);
+    }
+
+    // Spot-check the exact reduced values
+    expect(res.body.artwork[0].artistName).toBe('Joyce C.');
+    expect(res.body.artwork[1].artistName).toBe('Sam W.');
+  });
+});
+
 describe('Auction winner PII', () => {
   let app;
 
