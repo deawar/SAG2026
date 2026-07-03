@@ -131,7 +131,11 @@ describe('G16 — POST /api/auth/register (BIDDER)', () => {
     expect(res.status).toBe(400);
   });
 
-  test('BIDDER duplicate email → 409 with already_registered_can_bid code', async () => {
+  test('BIDDER duplicate email → 409 with generic neutral message (no account-existence hint)', async () => {
+    // Task 6: duplicate-email responses are now generic to prevent email enumeration.
+    // The old 'already_registered_can_bid' code and "already have an account" message
+    // have been replaced with a neutral response that does not confirm whether the
+    // address is registered.
     mockDb.query
       .mockResolvedValueOnce({ rows: [], rowCount: 0 })  // uniqueness check (first call)
       .mockRejectedValueOnce(Object.assign(new Error('duplicate key'), { code: '23505' })); // DB unique violation
@@ -141,8 +145,10 @@ describe('G16 — POST /api/auth/register (BIDDER)', () => {
       .send(bidderPayload());
 
     expect(res.status).toBe(409);
-    expect(res.body.code).toBe('already_registered_can_bid');
-    expect(res.body.message).toMatch(/already have an account/i);
+    expect(res.body.message).toBe('If this email is available, your account has been created. Check your inbox to verify.');
+    // Must NOT contain any account-existence hint
+    expect(res.body.code).toBeUndefined();
+    expect(res.body.message).not.toMatch(/already have an account/i);
   });
 
   test('student registration (accountType=student) still works', async () => {

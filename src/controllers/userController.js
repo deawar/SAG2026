@@ -204,20 +204,13 @@ class UserController {
       });
     } catch (error) {
       // Map model/validation error codes to user-facing 400/409 responses
-      // Bidder duplicate: student already has an account and can bid without re-registering
-      if (
-        (error.message === 'EMAIL_ALREADY_EXISTS' || error.code === '23505') &&
-        req.body.accountType === 'bidder'
-      ) {
-        return res.status(409).json({
-          success: false,
-          code: 'already_registered_can_bid',
-          message: 'You already have an account. Students can bid directly — just log in with your existing credentials.'
-        });
+      // Generic duplicate-email response — avoids confirming whether an address exists
+      const NEUTRAL_DUP = 'If this email is available, your account has been created. Check your inbox to verify.';
+      if (error.message === 'EMAIL_ALREADY_EXISTS' || error.code === '23505') {
+        return res.status(409).json({ success: false, message: NEUTRAL_DUP });
       }
 
       const validationErrors = {
-        'EMAIL_ALREADY_EXISTS': { status: 409, message: 'Email already registered' },
         'INVALID_EMAIL': { status: 400, message: 'Invalid email format' },
         'PASSWORD_TOO_SHORT': { status: 400, message: 'Password must be at least 12 characters' },
         'PASSWORD_MISSING_UPPERCASE': { status: 400, message: 'Password must contain an uppercase letter' },
@@ -235,10 +228,6 @@ class UserController {
       const mapped = validationErrors[error.message];
       if (mapped) {
         return res.status(mapped.status).json({ success: false, message: mapped.message });
-      }
-      // PostgreSQL unique constraint violation (e.g. email already exists at DB level)
-      if (error.code === '23505') {
-        return res.status(409).json({ success: false, message: 'Email already registered' });
       }
       return next(error);
     }
@@ -287,7 +276,19 @@ class UserController {
         });
       }
 
-      // 4. COPPA guard: block login if parental consent is still pending or denied
+      // 4. Verify password FIRST — no account-state information before identity is proven
+      const passwordValid = await this.userModel.checkPassword(password, user.password_hash);
+
+      if (!passwordValid) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials'
+        });
+      }
+
+      // 5. Identity proven — now surface actionable account-state messages
+
+      // 5a. COPPA guard: block login if parental consent is still pending or denied
       if (user.requires_parental_consent && user.parental_consent_status !== 'granted') {
         return res.status(403).json({
           success: false,
@@ -296,7 +297,7 @@ class UserController {
         });
       }
 
-      // 4b. Check email verification before account status
+      // 5b. Check email verification before account status
       if (!user.email_verified_at) {
         return res.status(403).json({
           success: false,
@@ -305,7 +306,7 @@ class UserController {
         });
       }
 
-      // 4c. Teacher approval gate: verified but not yet approved by a school admin
+      // 5c. Teacher approval gate: verified but not yet approved by a school admin
       if (user.role === 'TEACHER' && user.account_status === 'PENDING_APPROVAL') {
         return res.status(403).json({
           success: false,
@@ -314,21 +315,11 @@ class UserController {
         });
       }
 
-      // 4d. Check if account is active
+      // 5d. Check if account is active
       if (user.account_status !== 'ACTIVE') {
         return res.status(403).json({
           success: false,
           message: 'Account is inactive'
-        });
-      }
-
-      // 5. Verify password
-      const passwordValid = await this.userModel.checkPassword(password, user.password_hash);
-
-      if (!passwordValid) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid credentials'
         });
       }
 
