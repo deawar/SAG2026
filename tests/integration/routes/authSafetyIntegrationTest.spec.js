@@ -217,8 +217,10 @@ describe('Consent/verification link logging gated to development (Task 7)', () =
 
   test('_sendParentConsentEmail DOES log the consent link when NODE_ENV=development', async () => {
     const prev = process.env.NODE_ENV;
+    const prevSmtp = process.env.SMTP_HOST;
     const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
     process.env.NODE_ENV = 'development';
+    delete process.env.SMTP_HOST;   // force the no-SMTP fallback so no real email is attempted
     try {
       await makeController()._sendParentConsentEmail(
         'parent@example.com', 'Kid', 'user-id-789', 'rawtoken789'
@@ -228,13 +230,16 @@ describe('Consent/verification link logging gated to development (Task 7)', () =
     } finally {
       spy.mockRestore();
       process.env.NODE_ENV = prev;
+      process.env.SMTP_HOST = prevSmtp;
     }
   });
 
   test('_sendVerificationEmail DOES log the verify link when NODE_ENV=development', async () => {
     const prev = process.env.NODE_ENV;
+    const prevSmtp = process.env.SMTP_HOST;
     const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
     process.env.NODE_ENV = 'development';
+    delete process.env.SMTP_HOST;   // force the no-SMTP fallback so no real email is attempted
     try {
       await makeController()._sendVerificationEmail(
         'user@example.com', 'User', 'user-id-abc', 'rawtokenabc'
@@ -244,6 +249,7 @@ describe('Consent/verification link logging gated to development (Task 7)', () =
     } finally {
       spy.mockRestore();
       process.env.NODE_ENV = prev;
+      process.env.SMTP_HOST = prevSmtp;
     }
   });
 });
