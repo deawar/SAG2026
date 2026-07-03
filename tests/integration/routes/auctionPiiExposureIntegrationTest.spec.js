@@ -62,6 +62,97 @@ describe('Public carousel PII', () => {
   });
 });
 
+/** A bid row as returned by the getBidsForAuction SQL query */
+function makeBidRow(overrides = {}) {
+  return {
+    id: 'bid-1',
+    artwork_id: 'art-1',
+    artwork_title: 'Test Artwork',
+    bid_amount: '100.00',
+    placed_at: new Date('2026-01-01T10:00:00Z'),
+    id_of_bidder: 'user-bidder-1',
+    first_name: 'Alice',
+    last_name: 'Smith',
+    ...overrides
+  };
+}
+
+describe('Auction bids list PII', () => {
+  let app;
+
+  beforeAll(() => { mockDb.reset(); app = createApp(mockDb); });
+
+  beforeEach(() => {
+    mockPool.query.mockReset();
+    mockPool.query.mockResolvedValue({ rows: [], rowCount: 0 });
+    mockDb.reset();
+  });
+
+  test('STUDENT sees "Bidder #N", not real names', async () => {
+    const token = makeToken({ userId: 'user-student-1', role: 'STUDENT', schoolId: 'school-1' });
+
+    mockPool.query
+      // query 1: auction lookup
+      .mockResolvedValueOnce({ rows: [{ id: 'auc-1', school_id: 'school-1' }], rowCount: 1 })
+      // query 2: bids rows — two bids from the same bidder, one from a different bidder
+      .mockResolvedValueOnce({
+        rows: [
+          makeBidRow({ id: 'bid-1', id_of_bidder: 'user-a', first_name: 'Alice', last_name: 'Smith' }),
+          makeBidRow({ id: 'bid-2', id_of_bidder: 'user-b', first_name: 'Bob', last_name: 'Jones' }),
+          makeBidRow({ id: 'bid-3', id_of_bidder: 'user-a', first_name: 'Alice', last_name: 'Smith' })
+        ],
+        rowCount: 3
+      });
+
+    const res = await request(app)
+      .get('/api/auctions/auc-1/bids')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    // Every bidderName must be anonymized
+    for (const b of res.body.bids) {
+      expect(b.bidderName).toMatch(/^Bidder #\d+$/);
+    }
+
+    // Two bids from the same bidder (user-a) must get the same label
+    expect(res.body.bids[0].bidderName).toBe(res.body.bids[2].bidderName);
+
+    // Two different bidders must get different labels
+    expect(res.body.bids[0].bidderName).not.toBe(res.body.bids[1].bidderName);
+  });
+
+  test('SCHOOL_ADMIN sees real bidder names', async () => {
+    const token = makeToken({ userId: 'user-admin-1', role: 'SCHOOL_ADMIN', schoolId: 'school-1' });
+
+    mockPool.query
+      // query 0: auth middleware hydrates school_id from DB for SCHOOL_ADMIN
+      .mockResolvedValueOnce({ rows: [{ school_id: 'school-1' }], rowCount: 1 })
+      // query 1: auction lookup
+      .mockResolvedValueOnce({ rows: [{ id: 'auc-1', school_id: 'school-1' }], rowCount: 1 })
+      // query 2: bids rows
+      .mockResolvedValueOnce({
+        rows: [
+          makeBidRow({ id: 'bid-1', id_of_bidder: 'user-a', first_name: 'Alice', last_name: 'Smith' }),
+          makeBidRow({ id: 'bid-2', id_of_bidder: 'user-b', first_name: 'Bob', last_name: 'Jones' })
+        ],
+        rowCount: 2
+      });
+
+    const res = await request(app)
+      .get('/api/auctions/auc-1/bids')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    // Admins must see real names
+    expect(res.body.bids[0].bidderName).toBe('Alice Smith');
+    expect(res.body.bids[1].bidderName).toBe('Bob Jones');
+  });
+});
+
 describe('Auction winner PII', () => {
   let app;
 

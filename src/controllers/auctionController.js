@@ -516,7 +516,7 @@ class AuctionController {
       const bidsResult = await pool.query(
         `SELECT b.id, b.artwork_id, aw.title AS artwork_title,
                 b.bid_amount, b.placed_at,
-                u.first_name, u.last_name
+                u.id AS id_of_bidder, u.first_name, u.last_name
          FROM bids b
          JOIN artwork aw ON aw.id = b.artwork_id
          JOIN users u ON u.id = b.placed_by_user_id
@@ -526,16 +526,30 @@ class AuctionController {
         [auctionId]
       );
 
+      const isAdmin = ['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(req.user.role);
+      const anon = new Map();
+      let counter = 0;
+
       return res.status(200).json({
         success: true,
-        bids: bidsResult.rows.map(row => ({
-          id: row.id,
-          artworkId: row.artwork_id,
-          artworkTitle: row.artwork_title,
-          bidderName: `${row.first_name} ${row.last_name}`,
-          amount: row.bid_amount,
-          createdAt: row.placed_at
-        }))
+        bids: bidsResult.rows.map(row => {
+          let bidderName;
+          if (isAdmin) {
+            bidderName = `${row.first_name} ${row.last_name}`;
+          } else {
+            const key = row.id_of_bidder || `${row.first_name}|${row.last_name}`;
+            if (!anon.has(key)) { anon.set(key, ++counter); }
+            bidderName = `Bidder #${anon.get(key)}`;
+          }
+          return {
+            id: row.id,
+            artworkId: row.artwork_id,
+            artworkTitle: row.artwork_title,
+            bidderName,
+            amount: row.bid_amount,
+            createdAt: row.placed_at
+          };
+        })
       });
     } catch (error) {
       console.error('Error retrieving bids for auction:', error);
