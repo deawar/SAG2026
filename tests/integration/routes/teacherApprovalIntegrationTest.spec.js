@@ -107,13 +107,16 @@ describe('Teacher approval gate', () => {
   // Test 3: Login blocked for verified teacher still in PENDING_APPROVAL
   // ---------------------------------------------------------------------------
   test('verified teacher with PENDING_APPROVAL status cannot log in', async () => {
-    // getByEmail returns a teacher who is email_verified_at but still PENDING_APPROVAL
+    // getByEmail returns a teacher who is email_verified_at but still PENDING_APPROVAL.
+    // Password check runs FIRST (security reorder Task 6), so the hash must match the
+    // supplied password so the request reaches the state-403 guard.
+    // Hash below matches 'ValidPass123!@#' (bcrypt, 10 rounds).
     mockDb.query
       .mockResolvedValueOnce({
         rows: [{
           id: 'teacher-1',
           email: 'teacher@example.com',
-          password_hash: '$2b$12$notarealhashjustplaceholder123456789',
+          password_hash: '$2b$10$sSHC/GTNoeDgt/u.lll/PeCCpykyWJyCKzoC0VtZwduy8OxbPSb8m',
           role: 'TEACHER',
           account_status: 'PENDING_APPROVAL',
           email_verified_at: new Date('2026-01-01'),
@@ -139,12 +142,15 @@ describe('Teacher approval gate', () => {
   // Test 4: Login is also blocked for email-unverified teacher in PENDING_APPROVAL
   // ---------------------------------------------------------------------------
   test('unverified teacher with PENDING_APPROVAL status gets email_not_verified', async () => {
+    // Password check runs FIRST (security reorder Task 6), so the hash must match the
+    // supplied password so the request reaches the state-403 guard.
+    // Hash below matches 'ValidPass123!@#' (bcrypt, 10 rounds).
     mockDb.query
       .mockResolvedValueOnce({
         rows: [{
           id: 'teacher-1',
           email: 'teacher@example.com',
-          password_hash: '$2b$12$notarealhashjustplaceholder123456789',
+          password_hash: '$2b$10$sSHC/GTNoeDgt/u.lll/PeCCpykyWJyCKzoC0VtZwduy8OxbPSb8m',
           role: 'TEACHER',
           account_status: 'PENDING_APPROVAL',
           email_verified_at: null,   // Not yet verified
