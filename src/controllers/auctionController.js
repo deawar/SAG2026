@@ -7,6 +7,7 @@
 const auctionService = require('../services/auctionService');
 const { pool } = require('../models/index');
 const roleHierarchyUtils = require('../utils/roleHierarchyUtils');
+const { publicArtistName } = require('../utils/piiUtils');
 
 class AuctionController {
   /**
@@ -192,9 +193,8 @@ class AuctionController {
         artwork: result.rows.map(aw => ({
           id: aw.id,
           title: aw.title,
-          artistName: aw.artist_name,
+          artistName: publicArtistName(aw.artist_name),
           medium: aw.medium || null,
-          artistGrade: aw.artist_grade || null,
           imageUrl: aw.image_url,
           auctionId: aw.auction_id
         }))
