@@ -86,11 +86,12 @@ describe('Auction Routes Integration Tests', () => {
       expect(res.body.success).toBe(true);
       expect(Array.isArray(res.body.bids)).toBe(true);
       expect(res.body.bids).toHaveLength(2);
+      // Non-admin (BIDDER) sees anonymized bidder name — real name is no longer exposed
       expect(res.body.bids[0]).toMatchObject({
         id: 'bid-1',
         artworkId: 'art-1',
         artworkTitle: 'Sunrise',
-        bidderName: 'Alice Smith',
+        bidderName: 'Bidder #1',
         amount: '150.00'
       });
     });
