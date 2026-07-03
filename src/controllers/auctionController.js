@@ -476,8 +476,8 @@ class AuctionController {
   async getAuctionWinner(req, res) {
     try {
       const { auctionId } = req.params;
-
-      const result = await auctionService.getAuctionWinner(auctionId);
+      const isAdmin = req.user && ['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(req.user.role);
+      const result = await auctionService.getAuctionWinner(auctionId, { includeEmail: isAdmin });
 
       return res.status(200).json(result);
     } catch (error) {
