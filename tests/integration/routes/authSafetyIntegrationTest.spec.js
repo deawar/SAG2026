@@ -162,3 +162,88 @@ describe('Duplicate-email registration returns neutral message (Task 6)', () => 
     expect(res.body.code).toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Test suite C: raw link logging gated to development only (Task 7)
+//
+// Approach: unit-test the two helper methods directly rather than driving the
+// full register flow.  A full integration path would need bcrypt (slow, ~12
+// rounds), correct mockDb query sequences, and must survive rate limiters —
+// all of which add fragility without exercising the security-critical code
+// path any more thoroughly.  The guard is a single if-condition in each
+// helper; a focused unit test is the right level.
+// ---------------------------------------------------------------------------
+
+describe('Consent/verification link logging gated to development (Task 7)', () => {
+  const UserController = require('../../../src/controllers/userController');
+
+  // Minimal stub — the helpers only need the class instantiated; they do not
+  // call any userModel or authService methods themselves.
+  function makeController() {
+    return new UserController({}, {});
+  }
+
+  test('_sendParentConsentEmail does NOT log the consent link when NODE_ENV=production', async () => {
+    const prev = process.env.NODE_ENV;
+    const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    process.env.NODE_ENV = 'production';
+    try {
+      await makeController()._sendParentConsentEmail(
+        'parent@example.com', 'Kid', 'user-id-123', 'rawtoken123'
+      );
+      const logged = spy.mock.calls.flat().join(' ');
+      expect(logged).not.toMatch(/consent|verify|token=|http/i);
+    } finally {
+      spy.mockRestore();
+      process.env.NODE_ENV = prev;
+    }
+  });
+
+  test('_sendVerificationEmail does NOT log the verify link when NODE_ENV=production', async () => {
+    const prev = process.env.NODE_ENV;
+    const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    process.env.NODE_ENV = 'production';
+    try {
+      await makeController()._sendVerificationEmail(
+        'user@example.com', 'User', 'user-id-456', 'rawtoken456'
+      );
+      const logged = spy.mock.calls.flat().join(' ');
+      expect(logged).not.toMatch(/consent|verify|token=|http/i);
+    } finally {
+      spy.mockRestore();
+      process.env.NODE_ENV = prev;
+    }
+  });
+
+  test('_sendParentConsentEmail DOES log the consent link when NODE_ENV=development', async () => {
+    const prev = process.env.NODE_ENV;
+    const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    process.env.NODE_ENV = 'development';
+    try {
+      await makeController()._sendParentConsentEmail(
+        'parent@example.com', 'Kid', 'user-id-789', 'rawtoken789'
+      );
+      const logged = spy.mock.calls.flat().join(' ');
+      expect(logged).toMatch(/consent/i);
+    } finally {
+      spy.mockRestore();
+      process.env.NODE_ENV = prev;
+    }
+  });
+
+  test('_sendVerificationEmail DOES log the verify link when NODE_ENV=development', async () => {
+    const prev = process.env.NODE_ENV;
+    const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    process.env.NODE_ENV = 'development';
+    try {
+      await makeController()._sendVerificationEmail(
+        'user@example.com', 'User', 'user-id-abc', 'rawtokenabc'
+      );
+      const logged = spy.mock.calls.flat().join(' ');
+      expect(logged).toMatch(/verify/i);
+    } finally {
+      spy.mockRestore();
+      process.env.NODE_ENV = prev;
+    }
+  });
+});
