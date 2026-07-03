@@ -3,6 +3,8 @@
 /**
  * Reduce a minor's name to a public-safe "First L." form.
  * Accepts either ("First", "Last") or a single "First Last" string.
+ * A compound surname containing a space uses the FIRST surname word's initial
+ * (e.g. "Van Der Berg" → "Van D.").
  */
 function publicArtistName(first, last) {
   if (!first) { return ''; }
