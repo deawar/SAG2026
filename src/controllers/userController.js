@@ -764,7 +764,7 @@ class UserController {
       }
     }
 
-    if (process.env.NODE_ENV !== 'test') {
+    if (process.env.NODE_ENV === 'development') {
       console.log(`[DEV] Email verification link for ${email}: ${verifyUrl}`);
     }
   }
@@ -826,7 +826,7 @@ class UserController {
       }
     }
 
-    if (process.env.NODE_ENV !== 'test') {
+    if (process.env.NODE_ENV === 'development') {
       console.log(`[DEV] Parental consent link for ${parentEmail} (child: ${childFirstName}): ${consentUrl}`);
     }
   }
