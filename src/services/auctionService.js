@@ -7,6 +7,7 @@
 const { pool } = require('../models/index');
 const { getSharedEmailProvider, notifyAuctionWon } = require('./notificationService');
 const QRCode = require('qrcode');
+const { publicArtistName } = require('../utils/piiUtils');
 
 class AuctionService {
   /**
@@ -804,7 +805,9 @@ class AuctionService {
           artworkId: row.artwork_id,
           artworkTitle: row.title,
           winnerId: row.winner_id,
-          winnerName: `${row.first_name} ${row.last_name}`,
+          winnerName: includeEmail
+            ? `${row.first_name} ${row.last_name}`
+            : publicArtistName(row.first_name, row.last_name),
           winningBid: row.winning_bid
         };
         if (includeEmail) { w.winnerEmail = row.email; }

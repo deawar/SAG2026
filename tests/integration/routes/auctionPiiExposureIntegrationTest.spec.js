@@ -259,6 +259,58 @@ describe('Auction winner PII', () => {
     }
   });
 
+  test('BIDDER receives reduced winnerName ("First L."), not full name', async () => {
+    const token = makeToken({ userId: 'user-bidder-1', role: 'BIDDER', schoolId: 'school-1' });
+
+    mockPool.query.mockImplementation((sql) => {
+      const q = typeof sql === 'string' ? sql : (sql?.text || '');
+      if (q.includes('FROM artwork')) {
+        return Promise.resolve({
+          rows: [makeWinnerRow({ first_name: 'Ava', last_name: 'Rodriguez' })],
+          rowCount: 1
+        });
+      }
+      return Promise.resolve({ rows: [], rowCount: 0 });
+    });
+
+    const res = await request(app)
+      .get('/api/auctions/auction-1/winner')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.winners.length).toBeGreaterThan(0);
+    const w = res.body.winners[0];
+    // Must match "First L." reduced form
+    expect(w.winnerName).toMatch(/^\S+ \S\.$/);
+    expect(w.winnerName).toBe('Ava R.');
+    // Must NOT contain the full last name
+    expect(w.winnerName).not.toContain('Rodriguez');
+  });
+
+  test('SITE_ADMIN receives full winnerName "First Last"', async () => {
+    const token = makeToken({ userId: 'user-admin-1', role: 'SITE_ADMIN', schoolId: 'school-1' });
+
+    mockPool.query.mockImplementation((sql) => {
+      const q = typeof sql === 'string' ? sql : (sql?.text || '');
+      if (q.includes('FROM artwork')) {
+        return Promise.resolve({
+          rows: [makeWinnerRow({ first_name: 'Ava', last_name: 'Rodriguez' })],
+          rowCount: 1
+        });
+      }
+      return Promise.resolve({ rows: [], rowCount: 0 });
+    });
+
+    const res = await request(app)
+      .get('/api/auctions/auction-1/winner')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.winners.length).toBeGreaterThan(0);
+    const w = res.body.winners[0];
+    expect(w.winnerName).toBe('Ava Rodriguez');
+  });
+
   test('SITE_ADMIN sees winner name and winnerEmail', async () => {
     const token = makeToken({ userId: 'user-admin-1', role: 'SITE_ADMIN', schoolId: 'school-1' });
 
@@ -280,5 +332,100 @@ describe('Auction winner PII', () => {
     for (const w of res.body.winners) {
       expect(w).toHaveProperty('winnerEmail', 'alice@example.com');
     }
+  });
+});
+
+/** A bidding-service winner row (bids JOIN artwork JOIN users) */
+function makeBiddingWinnerRow(overrides = {}) {
+  return {
+    placed_by_user_id: 'user-winner-99',
+    bid_amount: '250.00',
+    artwork_id: 'artwork-77',
+    first_name: 'Nina',
+    last_name: 'Patel',
+    artwork_title: 'Starry Night II',
+    ...overrides
+  };
+}
+
+describe('Bidding winner endpoint PII (GET /api/bidding/auction/:id/winner)', () => {
+  let app;
+
+  beforeAll(() => { mockDb.reset(); app = createApp(mockDb); });
+
+  beforeEach(() => {
+    mockPool.query.mockReset();
+    mockPool.query.mockResolvedValue({ rows: [], rowCount: 0 });
+    mockDb.reset();
+  });
+
+  test('BIDDER gets reduced name and NO id field', async () => {
+    const token = makeToken({ userId: 'user-bidder-2', role: 'BIDDER', schoolId: null });
+
+    mockPool.query.mockImplementation((sql) => {
+      const q = typeof sql === 'string' ? sql : (sql?.text || '');
+      if (q.includes('FROM bids')) {
+        return Promise.resolve({ rows: [makeBiddingWinnerRow()], rowCount: 1 });
+      }
+      return Promise.resolve({ rows: [], rowCount: 0 });
+    });
+
+    const res = await request(app)
+      .get('/api/bidding/auction/auction-42/winner')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.hasWinner).toBe(true);
+
+    const winner = res.body.data.winner;
+    // Reduced "First L." form
+    expect(winner.name).toMatch(/^\S+ \S\.$/);
+    expect(winner.name).toBe('Nina P.');
+    // Raw userId MUST be absent for non-admin
+    expect(winner).not.toHaveProperty('id');
+  });
+
+  test('SITE_ADMIN gets full name and id field', async () => {
+    const token = makeToken({ userId: 'user-admin-2', role: 'SITE_ADMIN', schoolId: null });
+
+    mockPool.query.mockImplementation((sql) => {
+      const q = typeof sql === 'string' ? sql : (sql?.text || '');
+      if (q.includes('FROM bids')) {
+        return Promise.resolve({ rows: [makeBiddingWinnerRow()], rowCount: 1 });
+      }
+      return Promise.resolve({ rows: [], rowCount: 0 });
+    });
+
+    const res = await request(app)
+      .get('/api/bidding/auction/auction-42/winner')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.hasWinner).toBe(true);
+
+    const winner = res.body.data.winner;
+    expect(winner.name).toBe('Nina Patel');
+    expect(winner.id).toBe('user-winner-99');
+  });
+
+  test('SCHOOL_ADMIN gets full name and id field', async () => {
+    const token = makeToken({ userId: 'user-admin-3', role: 'SCHOOL_ADMIN', schoolId: 'school-1' });
+
+    mockPool.query.mockImplementation((sql) => {
+      const q = typeof sql === 'string' ? sql : (sql?.text || '');
+      if (q.includes('FROM bids')) {
+        return Promise.resolve({ rows: [makeBiddingWinnerRow({ first_name: 'Tom', last_name: 'Chen', placed_by_user_id: 'user-555' })], rowCount: 1 });
+      }
+      return Promise.resolve({ rows: [], rowCount: 0 });
+    });
+
+    const res = await request(app)
+      .get('/api/bidding/auction/auction-42/winner')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.winner.name).toBe('Tom Chen');
+    expect(res.body.data.winner.id).toBe('user-555');
   });
 });

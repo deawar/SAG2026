@@ -8,7 +8,7 @@ const router = express.Router();
 const biddingService = require('../services/biddingService');
 const realtimeService = require('../services/realtimeService');
 const authMiddleware = require('../middleware/authMiddleware');
-const { stripWinnerEmail } = require('../utils/piiUtils');
+const { publicArtistName } = require('../utils/piiUtils');
 
 /**
  * POST /api/bidding/place
@@ -203,8 +203,9 @@ router.get('/user/active', authMiddleware.verifyToken, async (req, res) => {
 router.get('/auction/:auctionId/winner', authMiddleware.verifyToken, async (req, res) => {
   try {
     const { auctionId } = req.params;
+    const isAdmin = ['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(req.user.role);
 
-    const winner = await biddingService.getAuctionWinner(auctionId);
+    const winner = await biddingService.getAuctionWinner(auctionId, { includeFullIdentity: isAdmin });
 
     res.status(200).json({
       success: true,
@@ -232,7 +233,9 @@ router.post('/auction/:auctionId/close', authMiddleware.verifyToken, authMiddlew
     // Best-effort broadcast — failure must not mask the successful closure
     try {
       realtimeService.broadcastAuctionStatusChange(auctionId, 'closed', {
-        winner: stripWinnerEmail(result.winner)
+        winner: result.winner
+          ? { name: publicArtistName(result.winner.name), bidAmount: result.winner.bidAmount }
+          : null
       });
     } catch (broadcastErr) {
       console.error('[broadcast] auction close failed:', broadcastErr.message);

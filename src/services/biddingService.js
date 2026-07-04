@@ -6,6 +6,7 @@
 
 const { pool } = require('../models/index');
 const { getSharedEmailProvider, notifyOutbid } = require('./notificationService');
+const { publicArtistName } = require('../utils/piiUtils');
 
 class BiddingService {
   /**
@@ -460,9 +461,12 @@ class BiddingService {
   /**
    * Get auction winner information
    * @param {string} auctionId - ID of the auction
+   * @param {Object} options
+   * @param {boolean} options.includeFullIdentity - When true (admin), return full name and raw userId.
+   *   When false (default / non-admin), return reduced name and omit id.
    * @returns {Object} Winner details and artwork
    */
-  async getAuctionWinner(auctionId) {
+  async getAuctionWinner(auctionId, { includeFullIdentity = false } = {}) {
     const result = await pool.query(
       `SELECT b.placed_by_user_id, b.bid_amount, b.artwork_id,
               u.first_name, u.last_name,
@@ -484,13 +488,13 @@ class BiddingService {
 
     const row = result.rows[0];
 
+    const winner = includeFullIdentity
+      ? { id: row.placed_by_user_id, name: `${row.first_name} ${row.last_name}`, bidAmount: row.bid_amount }
+      : { name: publicArtistName(row.first_name, row.last_name), bidAmount: row.bid_amount };
+
     return {
       hasWinner: true,
-      winner: {
-        id: row.placed_by_user_id,
-        name: `${row.first_name} ${row.last_name}`,
-        bidAmount: row.bid_amount
-      },
+      winner,
       artwork: {
         id: row.artwork_id,
         title: row.artwork_title
