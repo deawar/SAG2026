@@ -1206,15 +1206,15 @@ class AdminService {
 
     let query = `
       SELECT
-        cr.id           AS report_id,
+        cr.id                  AS report_id,
         cr.report_type,
-        cr.start_date,
-        cr.end_date,
-        cr.created_at   AS generated_at,
-        u.email         AS generated_by,
-        s.name          AS school_name
+        cr.report_period_start AS start_date,
+        cr.report_period_end   AS end_date,
+        cr.created_at          AS generated_at,
+        u.email                AS generated_by,
+        s.name                 AS school_name
       FROM compliance_reports cr
-      LEFT JOIN users   u ON u.id = cr.generated_by
+      LEFT JOIN users   u ON u.id = cr.generated_by_user_id
       LEFT JOIN schools s ON s.id = cr.school_id
     `;
     const params = [];
