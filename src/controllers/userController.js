@@ -323,8 +323,8 @@ class UserController {
         });
       }
 
-      // 6a. Admin 2FA enforcement: admins without 2FA must set it up before accessing the app
-      const adminRoles = ['SITE_ADMIN', 'SCHOOL_ADMIN'];
+      // 6a. Staff 2FA enforcement: admins and teachers without 2FA must set it up before accessing the app
+      const adminRoles = ['SITE_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'];
       if (adminRoles.includes(user.role) && !user.two_fa_enabled) {
         const setupToken = this.authService.jwtService.generateAccessToken(user.id, {
           email: user.email,
@@ -336,7 +336,7 @@ class UserController {
 
         return res.status(200).json({
           success: true,
-          message: '2FA setup required for admin accounts',
+          message: '2FA setup required for staff accounts',
           data: {
             requiresTwoFactorSetup: true,
             setupToken: setupToken.token,

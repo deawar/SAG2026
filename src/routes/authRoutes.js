@@ -341,13 +341,13 @@ module.exports = (db) => {
     try {
       const userId = req.user.id;
 
-      // G5/G17: admins cannot disable 2FA — it is mandatory for their role
-      const adminRoles = ['SITE_ADMIN', 'SCHOOL_ADMIN'];
+      // G5/G17: admins and teachers cannot disable 2FA — it is mandatory for staff roles
+      const adminRoles = ['SITE_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'];
       if (adminRoles.includes(req.user.role)) {
         return res.status(403).json({
           success: false,
           error: 'admin_2fa_mandatory',
-          message: 'Admin accounts cannot disable 2FA. Two-factor authentication is mandatory for admin roles.'
+          message: 'Staff accounts (admins and teachers) cannot disable two-factor authentication.'
         });
       }
 

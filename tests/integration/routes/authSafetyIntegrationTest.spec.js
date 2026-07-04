@@ -164,6 +164,74 @@ describe('Duplicate-email registration returns neutral message (Task 6)', () => 
 });
 
 // ---------------------------------------------------------------------------
+// Test suite D: TEACHER mandatory 2FA enforcement (Task 9)
+//
+// An ACTIVE, email-verified TEACHER with two_fa_enabled=false must be routed
+// to the 2FA-setup flow on login (200 + requiresTwoFactorSetup), and must be
+// blocked from disabling 2FA (403).
+// ---------------------------------------------------------------------------
+
+describe('TEACHER mandatory 2FA enforcement (Task 9)', () => {
+  let app;
+
+  beforeEach(() => {
+    app = createTestApp();
+  });
+
+  test('ACTIVE approved TEACHER without 2FA is routed to mandatory 2FA setup on login', async () => {
+    const bcrypt = require('bcrypt');
+    const password = 'TeacherPass123!';
+    const hash = await bcrypt.hash(password, 1);
+
+    // Minimal ACTIVE, email-verified TEACHER row with two_fa_enabled=false
+    mockDb.query.mockResolvedValueOnce({
+      rows: [{
+        id: 'teacher-task9-1',
+        email: 'teacher-task9@example.com',
+        password_hash: hash,
+        first_name: 'Task9',
+        last_name: 'Teacher',
+        role: 'TEACHER',
+        account_status: 'ACTIVE',
+        email_verified_at: new Date('2026-01-01'),
+        two_fa_enabled: false,
+        requires_parental_consent: false,
+        parental_consent_status: 'not_required',
+        school_id: 'school-1',
+        created_at: new Date()
+      }],
+      rowCount: 1
+    });
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'teacher-task9@example.com', password });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.requiresTwoFactorSetup).toBe(true);
+    expect(res.body.data.setupToken).toBeDefined();
+    expect(res.body.data.accessToken).toBeUndefined();
+  });
+
+  test('TEACHER calling disable-2FA endpoint receives 403 (cannot disable mandatory 2FA)', async () => {
+    const jwt = require('jsonwebtoken');
+    const SECRET = process.env.JWT_ACCESS_SECRET;
+    const teacherToken = jwt.sign(
+      { userId: 'teacher-task9-2', role: 'TEACHER', schoolId: 'school-1' },
+      SECRET,
+      { algorithm: 'HS256' }
+    );
+
+    const res = await request(app)
+      .post('/api/auth/2fa/disable')
+      .set('Authorization', `Bearer ${teacherToken}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('admin_2fa_mandatory');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Test suite C: raw link logging gated to development only (Task 7)
 //
 // Approach: unit-test the two helper methods directly rather than driving the

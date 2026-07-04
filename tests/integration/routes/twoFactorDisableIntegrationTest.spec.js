@@ -37,8 +37,9 @@ describe('POST /api/auth/2fa/disable', () => {
     expect(res.status).toBe(401);
   });
 
-  test('returns 200 and clears 2FA fields for authenticated user', async () => {
-    const token = makeToken({ userId: 'user-1', role: 'TEACHER', schoolId: 'school-1' });
+  test('returns 200 and clears 2FA fields for authenticated non-staff user', async () => {
+    // TEACHER is now staff — use BIDDER to verify the happy path still works
+    const token = makeToken({ userId: 'user-1', role: 'BIDDER', schoolId: null });
 
     // UPDATE users → success
     mockDb.query
@@ -54,8 +55,20 @@ describe('POST /api/auth/2fa/disable', () => {
     expect(res.body.ok).toBe(true);
   });
 
-  test('UPDATE clears two_fa_enabled, two_fa_secret, and backup_codes', async () => {
+  test('returns 403 for TEACHER (Task 9: 2FA is mandatory for teachers)', async () => {
     const token = makeToken({ userId: 'user-1', role: 'TEACHER', schoolId: 'school-1' });
+
+    const res = await request(app)
+      .post('/api/auth/2fa/disable')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('admin_2fa_mandatory');
+  });
+
+  test('UPDATE clears two_fa_enabled, two_fa_secret, and backup_codes', async () => {
+    // Use BIDDER (non-staff) so the disable request reaches the UPDATE
+    const token = makeToken({ userId: 'user-1', role: 'BIDDER', schoolId: null });
 
     mockDb.query
       .mockResolvedValueOnce({ rows: [], rowCount: 1 })
