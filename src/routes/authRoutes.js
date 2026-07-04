@@ -332,7 +332,7 @@ module.exports = (db) => {
  * POST /api/auth/2fa/disable
  * Disable 2FA for the authenticated user
  * Auth: Required
- * Note: blocked for SITE_ADMIN and SCHOOL_ADMIN — admins must always have 2FA.
+ * Note: blocked for SITE_ADMIN, SCHOOL_ADMIN, and TEACHER — staff accounts must always have 2FA.
  *
  * Body: none (auth token is sufficient proof of account control)
  * Response: 200 { ok: true }
