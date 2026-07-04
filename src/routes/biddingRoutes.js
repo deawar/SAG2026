@@ -8,6 +8,7 @@ const router = express.Router();
 const biddingService = require('../services/biddingService');
 const realtimeService = require('../services/realtimeService');
 const authMiddleware = require('../middleware/authMiddleware');
+const { stripWinnerEmail } = require('../utils/piiUtils');
 
 /**
  * POST /api/bidding/place
@@ -47,7 +48,6 @@ router.post('/place', authMiddleware.verifyToken, async (req, res) => {
       realtimeService.broadcastBidUpdate(state.auctionId, {
         bidId: result.bidId,
         artworkId,
-        bidder: userId,
         amount: normalizedBidAmount,
         totalBids: state.totalBids
       });
@@ -232,7 +232,7 @@ router.post('/auction/:auctionId/close', authMiddleware.verifyToken, authMiddlew
     // Best-effort broadcast — failure must not mask the successful closure
     try {
       realtimeService.broadcastAuctionStatusChange(auctionId, 'closed', {
-        winner: result.winner
+        winner: stripWinnerEmail(result.winner)
       });
     } catch (broadcastErr) {
       console.error('[broadcast] auction close failed:', broadcastErr.message);
