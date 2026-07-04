@@ -1292,7 +1292,7 @@ class AdminService {
 
     // Store report
     const reportResult = await pool.query(
-      `INSERT INTO compliance_reports (report_type, generated_by, school_id, start_date, end_date, summary)
+      `INSERT INTO compliance_reports (report_type, generated_by_user_id, school_id, report_period_start, report_period_end, report_content)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id`,
       ['GDPR', adminId, schoolId, startDate, endDate, JSON.stringify(report.summary)]
@@ -1353,7 +1353,7 @@ class AdminService {
 
     // Store report
     const reportResult = await pool.query(
-      `INSERT INTO compliance_reports (report_type, generated_by, school_id, start_date, end_date, summary)
+      `INSERT INTO compliance_reports (report_type, generated_by_user_id, school_id, report_period_start, report_period_end, report_content)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id`,
       ['COPPA', adminId, schoolId, startDate, endDate, JSON.stringify(report.summary)]
@@ -1404,7 +1404,7 @@ class AdminService {
 
     // Store report
     const reportResult = await pool.query(
-      `INSERT INTO compliance_reports (report_type, generated_by, school_id, start_date, end_date, summary)
+      `INSERT INTO compliance_reports (report_type, generated_by_user_id, school_id, report_period_start, report_period_end, report_content)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id`,
       ['FERPA', adminId, schoolId, startDate, endDate, JSON.stringify(report.summary)]
@@ -1465,7 +1465,7 @@ class AdminService {
 
     // Store report
     const reportResult = await pool.query(
-      `INSERT INTO compliance_reports (report_type, generated_by, school_id, start_date, end_date, summary)
+      `INSERT INTO compliance_reports (report_type, generated_by_user_id, school_id, report_period_start, report_period_end, report_content)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id`,
       ['CCPA', adminId, schoolId, startDate, endDate, JSON.stringify(report.summary)]
