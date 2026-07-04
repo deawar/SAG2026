@@ -76,6 +76,28 @@ describe('Admin report CSV export', () => {
     expect(sql).not.toMatch(/a\.end_date\b/);
   });
 
+  test('compliance export uses real compliance_reports columns', async () => {
+    mockPool.query
+      .mockResolvedValueOnce({ rows: [SITE_ADMIN_ROW], rowCount: 1 }) // verifyAdminAccess
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 });               // compliance query
+
+    const res = await request(app)
+      .get('/api/admin/reports/compliance/export')
+      .set('Authorization', `Bearer ${siteAdminToken()}`);
+
+    expect(res.status).toBe(200);
+
+    const sql = allSql();
+    // Correct columns that exist in the schema
+    expect(sql).toMatch(/report_period_start/);
+    expect(sql).toMatch(/report_period_end/);
+    expect(sql).toMatch(/generated_by_user_id/);
+    // Wrong columns that would 500 against a real Postgres
+    expect(sql).not.toMatch(/cr\.start_date\b/);
+    expect(sql).not.toMatch(/cr\.end_date\b/);
+    expect(sql).not.toMatch(/cr\.generated_by\b/);
+  });
+
   test('all four export endpoints return 200 (routing + handler wired)', async () => {
     for (const type of ['revenue', 'activity', 'performance', 'compliance']) {
       mockPool.query.mockReset();
