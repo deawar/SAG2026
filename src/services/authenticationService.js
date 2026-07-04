@@ -42,6 +42,10 @@ class JWTService {
       email: userData.email,
       role: userData.role,
       iat: Math.floor(Date.now() / 1000),
+      // Include schoolId so auth middleware can populate req.user.schoolId for
+      // non-SCHOOL_ADMIN roles (same-school authz). Omitted for special-purpose
+      // tokens (e.g. 2FA setup) that do not supply it. May be null for bidders.
+      ...(userData.schoolId !== undefined && { schoolId: userData.schoolId }),
       ...(userData.purpose && { purpose: userData.purpose }),
       ...(userData.twoFaEnabled !== undefined && { twoFaEnabled: userData.twoFaEnabled })
     };
