@@ -321,3 +321,56 @@ describe('Consent/verification link logging gated to development (Task 7)', () =
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Test suite E: access token carries schoolId (fix/schoolid-in-jwt)
+//
+// The access token issued at login must include the user's schoolId so the
+// auth middleware can populate req.user.schoolId for non-SCHOOL_ADMIN roles.
+// Without it, same-school authorization checks (e.g. GET /api/auctions/:id/bids)
+// wrongly 403 legitimate STUDENT/TEACHER/BIDDER callers in production.
+// ---------------------------------------------------------------------------
+
+describe('Access token carries schoolId (fix/schoolid-in-jwt)', () => {
+  let app;
+
+  beforeEach(() => {
+    app = createTestApp();
+  });
+
+  test('STUDENT login issues an access token whose decoded payload includes schoolId', async () => {
+    const bcrypt = require('bcrypt');
+    const jwt = require('jsonwebtoken');
+    const password = 'StudentPass123!';
+    const hash = await bcrypt.hash(password, 1);
+
+    mockDb.query.mockResolvedValueOnce({
+      rows: [{
+        id: 'student-jwt-1',
+        email: 'student-jwt@example.com',
+        password_hash: hash,
+        first_name: 'Sam',
+        last_name: 'Student',
+        role: 'STUDENT',
+        account_status: 'ACTIVE',
+        email_verified_at: new Date('2026-01-01'),
+        two_fa_enabled: false,
+        requires_parental_consent: false,
+        parental_consent_status: 'not_required',
+        school_id: 'school-42',
+        created_at: new Date()
+      }],
+      rowCount: 1
+    });
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'student-jwt@example.com', password });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.accessToken).toBeDefined();
+
+    const decoded = jwt.verify(res.body.data.accessToken, process.env.JWT_ACCESS_SECRET, { algorithms: ['HS256'] });
+    expect(decoded.schoolId).toBe('school-42');
+  });
+});

@@ -84,6 +84,33 @@ describe('JWTService', () => {
     expect(decoded.role).toBe('TEACHER');
   });
 
+  test('Should include schoolId in the access token payload when provided', () => {
+    const userId = uuidv4();
+    const schoolId = uuidv4();
+
+    const { token } = jwtService.generateAccessToken(userId, {
+      email: 'student@example.com',
+      role: 'STUDENT',
+      schoolId
+    });
+    const decoded = jwtService.verifyAccessToken(token);
+
+    expect(decoded.schoolId).toBe(schoolId);
+  });
+
+  test('Should omit schoolId claim for special-purpose tokens that do not supply it', () => {
+    const userId = uuidv4();
+
+    const { token } = jwtService.generateAccessToken(userId, {
+      email: 'admin@example.com',
+      role: 'SITE_ADMIN',
+      purpose: '2fa_force_setup'
+    });
+    const decoded = jwtService.verifyAccessToken(token);
+
+    expect(decoded).not.toHaveProperty('schoolId');
+  });
+
   test('Should verify refresh token correctly', () => {
     const userId = uuidv4();
     const { token } = jwtService.generateRefreshToken(userId);
