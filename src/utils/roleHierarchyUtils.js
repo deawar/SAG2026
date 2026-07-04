@@ -290,7 +290,9 @@ function sanitizeResponseByRole(data, userRole) {
       'approval_reason',
       'rejected_reason',
       'created_by',
-      'created_by_email'
+      'created_by_email',
+      'artist_name',          // raw full name — public view uses publicArtistName instead (Task 5)
+      'created_by_user_id'    // internal user id must never reach STUDENT/BIDDER (Task 5)
     ];
 
     fieldsToHide.forEach(field => {

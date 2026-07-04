@@ -194,12 +194,18 @@ describe('COPPA — Login Guard', () => {
     app = createTestApp();
   });
 
+  // Task 6: password check runs BEFORE account-state guards, so the hash in the
+  // user row must match the supplied password — otherwise the request short-circuits
+  // at 401 before reaching the parental_consent_required 403.
+  // Hash below matches 'SecurePass123!' (bcrypt, 10 rounds).
+  const COPPA_PWD_HASH = '$2b$10$96.cndLOZV3/hyrJCv5uV.AspNnqbAfSxFG68YaRuRUrYcGVanKYu';
+
   test('Under-13 account with pending consent cannot log in → 403', async () => {
     mockDb.query.mockResolvedValueOnce({
       rows: [{
         id: 'uid-under13',
         email: 'child@test.com',
-        password_hash: '$2b$12$notreal',
+        password_hash: COPPA_PWD_HASH,
         first_name: 'Kid',
         last_name: null,
         role: 'STUDENT',
@@ -226,7 +232,7 @@ describe('COPPA — Login Guard', () => {
       rows: [{
         id: 'uid-denied',
         email: 'denied@test.com',
-        password_hash: '$2b$12$notreal',
+        password_hash: COPPA_PWD_HASH,
         first_name: 'Kid',
         last_name: null,
         role: 'STUDENT',

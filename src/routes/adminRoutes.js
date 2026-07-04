@@ -140,6 +140,19 @@ router.delete(
 );
 
 /**
+ * POST /api/admin/users/:userId/approve-teacher
+ * Activate a PENDING_APPROVAL teacher account.
+ * RBAC: SITE_ADMIN (any school), SCHOOL_ADMIN (own school only)
+ */
+router.post(
+  '/users/:userId/approve-teacher',
+  verifyToken,
+  requireAdmin2fa,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  adminController.approveTeacher
+);
+
+/**
  * DELETE /api/admin/users/:userId
  * Deactivate user (soft delete)
  * Body: { reason: 'string' }

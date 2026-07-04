@@ -318,25 +318,36 @@ describe('BiddingService', () => {
   });
 
   describe('getAuctionWinner', () => {
-    it('should retrieve auction winner', async () => {
-      const auctionId = 'auction-123';
+    const mockRow = {
+      placed_by_user_id: 'user-456',
+      bid_amount: 50000,
+      artwork_id: 'art-123',
+      first_name: 'John',
+      last_name: 'Doe',
+      email: 'john@example.com',
+      artwork_title: 'Beautiful Painting'
+    };
 
-      pool.query = jest.fn().mockResolvedValue({
-        rows: [{
-          placed_by_user_id: 'user-456',
-          bid_amount: 50000,
-          artwork_id: 'art-123',
-          first_name: 'John',
-          last_name: 'Doe',
-          email: 'john@example.com',
-          artwork_title: 'Beautiful Painting'
-        }]
-      });
+    it('should retrieve auction winner with reduced name and no id by default (non-admin)', async () => {
+      const auctionId = 'auction-123';
+      pool.query = jest.fn().mockResolvedValue({ rows: [mockRow] });
 
       const result = await biddingService.getAuctionWinner(auctionId);
 
       expect(result.hasWinner).toBe(true);
+      expect(result.winner.name).toBe('John D.');
+      expect(result.winner).not.toHaveProperty('id');
+    });
+
+    it('should return full name and id when includeFullIdentity is true (admin)', async () => {
+      const auctionId = 'auction-123';
+      pool.query = jest.fn().mockResolvedValue({ rows: [mockRow] });
+
+      const result = await biddingService.getAuctionWinner(auctionId, { includeFullIdentity: true });
+
+      expect(result.hasWinner).toBe(true);
       expect(result.winner.name).toBe('John Doe');
+      expect(result.winner.id).toBe('user-456');
     });
 
     it('should return no winner if auction has no bids', async () => {

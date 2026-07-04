@@ -7,6 +7,7 @@
 const auctionService = require('../services/auctionService');
 const { pool } = require('../models/index');
 const roleHierarchyUtils = require('../utils/roleHierarchyUtils');
+const { publicArtistName } = require('../utils/piiUtils');
 
 class AuctionController {
   /**
@@ -178,7 +179,7 @@ class AuctionController {
   async getCarouselArtwork(req, res) {
     try {
       const result = await pool.query(
-        `SELECT aw.id, aw.title, aw.artist_name, aw.medium, aw.image_url, aw.auction_id, aw.artist_grade
+        `SELECT aw.id, aw.title, aw.artist_name, aw.medium, aw.image_url, aw.auction_id
          FROM   artwork aw
          WHERE  aw.artwork_status = 'APPROVED'
            AND  aw.image_url IS NOT NULL
@@ -192,9 +193,8 @@ class AuctionController {
         artwork: result.rows.map(aw => ({
           id: aw.id,
           title: aw.title,
-          artistName: aw.artist_name,
+          artistName: publicArtistName(aw.artist_name),
           medium: aw.medium || null,
-          artistGrade: aw.artist_grade || null,
           imageUrl: aw.image_url,
           auctionId: aw.auction_id
         }))
@@ -476,8 +476,8 @@ class AuctionController {
   async getAuctionWinner(req, res) {
     try {
       const { auctionId } = req.params;
-
-      const result = await auctionService.getAuctionWinner(auctionId);
+      const isAdmin = req.user && ['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(req.user.role);
+      const result = await auctionService.getAuctionWinner(auctionId, { includeEmail: isAdmin });
 
       return res.status(200).json(result);
     } catch (error) {
@@ -516,7 +516,7 @@ class AuctionController {
       const bidsResult = await pool.query(
         `SELECT b.id, b.artwork_id, aw.title AS artwork_title,
                 b.bid_amount, b.placed_at,
-                u.first_name, u.last_name
+                u.id AS id_of_bidder, u.first_name, u.last_name
          FROM bids b
          JOIN artwork aw ON aw.id = b.artwork_id
          JOIN users u ON u.id = b.placed_by_user_id
@@ -526,16 +526,30 @@ class AuctionController {
         [auctionId]
       );
 
+      const isAdmin = ['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(req.user.role);
+      const anon = new Map();
+      let counter = 0;
+
       return res.status(200).json({
         success: true,
-        bids: bidsResult.rows.map(row => ({
-          id: row.id,
-          artworkId: row.artwork_id,
-          artworkTitle: row.artwork_title,
-          bidderName: `${row.first_name} ${row.last_name}`,
-          amount: row.bid_amount,
-          createdAt: row.placed_at
-        }))
+        bids: bidsResult.rows.map(row => {
+          let bidderName;
+          if (isAdmin) {
+            bidderName = `${row.first_name} ${row.last_name}`;
+          } else {
+            const key = row.id_of_bidder || `${row.first_name}|${row.last_name}`;
+            if (!anon.has(key)) { anon.set(key, ++counter); }
+            bidderName = `Bidder #${anon.get(key)}`;
+          }
+          return {
+            id: row.id,
+            artworkId: row.artwork_id,
+            artworkTitle: row.artwork_title,
+            bidderName,
+            amount: row.bid_amount,
+            createdAt: row.placed_at
+          };
+        })
       });
     } catch (error) {
       console.error('Error retrieving bids for auction:', error);
@@ -580,31 +594,31 @@ class AuctionController {
         result.rows
       );
 
-      // ===== CRITICAL: Sanitize sensitive fields for STUDENT/BIDDER =====
-      const sanitizedArtwork = roleHierarchyUtils.sanitizeArrayByRole(
-        filteredArtwork,
-        req.user.role
-      );
+      // ===== CRITICAL (child-safety, Task 5): the explicit whitelist map below is the ONLY
+      // sanitization step here. sanitizeArrayByRole is intentionally NOT called — it would delete
+      // artist_name before publicArtistName could reduce it. The map cherry-picks only safe fields:
+      // createdByUserId is omitted and artistName is reduced to "First L." via publicArtistName. =====
+      const mappedArtwork = filteredArtwork.map(piece => ({
+        id: piece.id,         // used by submitBid (this.currentPiece?.id)
+        artworkId: piece.id,  // kept for any callers using the old key
+        title: piece.title,
+        description: piece.description,
+        imageUrl: piece.image_url,
+        medium: piece.medium || null,
+        dimensions: (piece.dimensions_width_cm && piece.dimensions_height_cm)
+          ? `${piece.dimensions_width_cm} × ${piece.dimensions_height_cm} cm`
+          : null,
+        startingPrice: piece.starting_bid_amount,
+        currentBid: piece.current_bid,
+        bidCount: parseInt(piece.bid_count),
+        artistName: publicArtistName(piece.artist_name)
+        // createdByUserId removed from public response (child-safety: Task 5)
+      }));
 
       return res.status(200).json({
         success: true,
-        count: sanitizedArtwork.length,
-        artwork: sanitizedArtwork.map(piece => ({
-          id: piece.id,         // used by submitBid (this.currentPiece?.id)
-          artworkId: piece.id,  // kept for any callers using the old key
-          title: piece.title,
-          description: piece.description,
-          imageUrl: piece.image_url,
-          medium: piece.medium || null,
-          dimensions: (piece.dimensions_width_cm && piece.dimensions_height_cm)
-            ? `${piece.dimensions_width_cm} × ${piece.dimensions_height_cm} cm`
-            : null,
-          startingPrice: piece.starting_bid_amount,
-          currentBid: piece.current_bid,
-          bidCount: parseInt(piece.bid_count),
-          artistName: piece.artist_name,
-          createdByUserId: piece.created_by_user_id
-        }))
+        count: mappedArtwork.length,
+        artwork: mappedArtwork
       });
     } catch (error) {
       console.error('Error retrieving auction artwork:', error);

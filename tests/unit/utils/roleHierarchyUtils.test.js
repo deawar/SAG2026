@@ -257,6 +257,31 @@ describe('Role Hierarchy Utilities', () => {
       expect(sanitized.artist_email).toBeUndefined();
       expect(sanitized.internal_comments).toBeUndefined();
     });
+
+    test('BIDDER: artist_name and created_by_user_id are stripped (Task 5 defense-in-depth)', () => {
+      const artworkData = {
+        id: 'art-1',
+        title: 'Test Art',
+        artist_name: 'Joyce Chen',
+        created_by_user_id: 'user-student-42'
+      };
+      const sanitized = roleHierarchyUtils.sanitizeResponseByRole(artworkData, 'BIDDER');
+      expect(sanitized.artist_name).toBeUndefined();
+      expect(sanitized.created_by_user_id).toBeUndefined();
+      expect(sanitized.title).toBe('Test Art'); // public fields kept
+    });
+
+    test('SITE_ADMIN: artist_name and created_by_user_id are NOT stripped', () => {
+      const artworkData = {
+        id: 'art-1',
+        title: 'Test Art',
+        artist_name: 'Joyce Chen',
+        created_by_user_id: 'user-student-42'
+      };
+      const sanitized = roleHierarchyUtils.sanitizeResponseByRole(artworkData, 'SITE_ADMIN');
+      expect(sanitized.artist_name).toBe('Joyce Chen');
+      expect(sanitized.created_by_user_id).toBe('user-student-42');
+    });
   });
 
   // ============ getRoleIndex Tests ============

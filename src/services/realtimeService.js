@@ -5,6 +5,7 @@
 
 const WebSocket = require('ws');
 const jwt = require('jsonwebtoken');
+const { tokenBlacklist } = require('./authenticationService');
 
 class RealtimeService {
   constructor() {
@@ -57,7 +58,15 @@ class RealtimeService {
 
       switch (data.type) {
         case 'authenticate':
-          this._handleAuthenticate(ws, data);
+          this._handleAuthenticate(ws, data).catch((err) => {
+            console.error('[realtimeService] authenticate error:', err.message);
+            try {
+              ws.send(JSON.stringify({ type: 'error', message: 'Authentication failed' }));
+            } catch (_sendErr) {
+              // Socket already closed before error response could be sent — ignore
+              console.debug('[realtimeService] could not send auth-error frame:', _sendErr.message);
+            }
+          });
           break;
         case 'subscribe':
           this._handleSubscribe(ws, data);
@@ -88,7 +97,7 @@ class RealtimeService {
    * Accepts { type: 'authenticate', payload: { token } } from websocket-client.js
    * @private
    */
-  _handleAuthenticate(ws, data) {
+  async _handleAuthenticate(ws, data) {
     const token = data.payload?.token || data.token;
 
     if (!token) {
@@ -99,11 +108,15 @@ class RealtimeService {
       return;
     }
 
-    let userId;
+    let userId, userRole, userSchoolId, jti;
     try {
       const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET, { algorithms: ['HS256'] });
       userId = decoded.sub;
+      userRole = decoded.role;
+      userSchoolId = decoded.schoolId ?? decoded.school_id ?? null;
+      jti = decoded.jti;
     } catch (err) {
+      console.warn('[realtimeService] JWT verification failed:', err.message);
       ws.send(JSON.stringify({
         type: 'error',
         message: 'Invalid or expired authentication token'
@@ -119,14 +132,31 @@ class RealtimeService {
       return;
     }
 
+    // Check token revocation blacklist (guard for test env where pool may be null)
+    try {
+      const revoked = await tokenBlacklist.isRevoked(jti);
+      if (revoked) {
+        ws.send(JSON.stringify({
+          type: 'error',
+          message: 'Token has been revoked'
+        }));
+        return;
+      }
+    } catch (blacklistErr) {
+      // DB unavailable — fail open; cache in tokenBlacklist covers known-revoked tokens
+      console.warn('[realtimeService] blacklist check failed, failing open:', blacklistErr.message);
+    }
+
     // Associate WebSocket connection with user
     if (!this.clients.has(userId)) {
       this.clients.set(userId, new Set());
     }
     this.clients.get(userId).add(ws);
 
-    // Store user ID on WebSocket object
+    // Store user identity on WebSocket object
     ws.userId = userId;
+    ws.userRole = userRole;
+    ws.userSchoolId = userSchoolId;
     ws.authenticatedAt = new Date();
 
     // Initialize subscription set if needed
@@ -170,6 +200,21 @@ class RealtimeService {
       return;
     }
 
+    // School-scoped authorization check.
+    // The subscribe message may carry an explicit schoolId (e.g. from a school-aware client).
+    // Without a DB lookup the channel schoolId is unknown, so callers that omit it receive
+    // price-only (no-school-context) access which canSubscribe allows for all roles.
+    // Full resource→school enforcement via DB lookup is deferred (see task-8-report.md).
+    const channelSchoolId = data.schoolId ?? data.payload?.schoolId ?? null;
+    const user = { role: ws.userRole, schoolId: ws.userSchoolId };
+    if (!this.canSubscribe(user, { schoolId: channelSchoolId })) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: 'Not authorized to subscribe to this resource'
+      }));
+      return;
+    }
+
     const subscriptions = this.subscriptions.get(ws.userId);
     subscriptions.add(resourceId);
 
@@ -185,6 +230,22 @@ class RealtimeService {
     }));
 
     console.log(`User ${ws.userId} subscribed to ${resourceId}`);
+  }
+
+  /**
+   * Determine whether a user may subscribe to a channel.
+   * Pure function — no I/O, safe to unit-test in isolation.
+   *
+   * @param {{ role: string, schoolId: string|null }|null} user
+   * @param {{ schoolId: string|null }|null} channel
+   * @returns {boolean}
+   */
+  canSubscribe(user, channel) {
+    if (!user?.role) { return false; }
+    if (user.role === 'SITE_ADMIN') { return true; }
+    // No school context on the channel → price-only updates, allow all authenticated roles
+    if (!channel?.schoolId) { return true; }
+    return user.schoolId === channel.schoolId;
   }
 
   /**

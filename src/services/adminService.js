@@ -1755,6 +1755,37 @@ class AdminService {
   }
 
   /**
+   * Activate a PENDING_APPROVAL teacher account.
+   * SCHOOL_ADMIN limited to own school; SITE_ADMIN unrestricted.
+   * POST /api/admin/users/:userId/approve-teacher
+   */
+  async approveTeacher(userId, adminId) {
+    const admin = await this.verifyAdminAccess(adminId);
+    const target = await pool.query(
+      'SELECT id, role, school_id, account_status FROM users WHERE id = $1 AND deleted_at IS NULL',
+      [userId]
+    );
+    if (target.rows.length === 0) { throw new Error('USER_NOT_FOUND'); }
+    const t = target.rows[0];
+    if (t.role !== 'TEACHER' || t.account_status !== 'PENDING_APPROVAL') {
+      throw new Error('INVALID_STATE_TRANSITION');
+    }
+    if (admin.role === 'SCHOOL_ADMIN' && t.school_id !== admin.school_id) {
+      throw new Error('CROSS_SCHOOL_ACCESS_DENIED');
+    }
+    const upd = await pool.query(
+      'UPDATE users SET account_status = \'ACTIVE\' WHERE id = $1 RETURNING id, account_status',
+      [userId]
+    );
+    await this.logAdminAction(
+      adminId, 'TEACHER_APPROVED', 'USER', userId,
+      { account_status: 'PENDING_APPROVAL' }, { account_status: 'ACTIVE' },
+      'Admin approved teacher account'
+    );
+    return upd.rows[0];
+  }
+
+  /**
    * Log administrative action to admin_audit_logs
    * CRITICAL: All admin methods must call this
    */

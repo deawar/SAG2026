@@ -36,12 +36,18 @@ const NEW_USER_ROW = {
   created_at: new Date()
 };
 
+// Hash matching VALID_USER.password ('SecurePass123!', bcrypt 10 rounds).
+// Required because Task 6 moves the password check BEFORE account-state guards —
+// the unverified-login test must supply a correct hash so the request reaches the
+// email_not_verified 403 rather than short-circuiting at the 401 invalid-credentials gate.
+const VALID_PASSWORD_HASH = '$2b$10$96.cndLOZV3/hyrJCv5uV.AspNnqbAfSxFG68YaRuRUrYcGVanKYu';
+
 // A verified user row (returned by getByEmail after verification)
 const VERIFIED_USER_ROW = {
   ...NEW_USER_ROW,
   account_status: 'ACTIVE',
   email_verified_at: new Date(),
-  password_hash: '$2b$12$placeholder', // not actually checked — we mock checkPassword
+  password_hash: VALID_PASSWORD_HASH,
   two_fa_enabled: false
 };
 
@@ -49,7 +55,7 @@ const VERIFIED_USER_ROW = {
 const UNVERIFIED_USER_ROW = {
   ...NEW_USER_ROW,
   email_verified_at: null,
-  password_hash: '$2b$12$placeholder',
+  password_hash: VALID_PASSWORD_HASH,
   two_fa_enabled: false
 };
 

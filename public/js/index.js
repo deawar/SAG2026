@@ -524,7 +524,7 @@ function _openHomeLightbox(slide) {
   titleEl.textContent = slide.title || 'Untitled';
   const parts = [];
   if (slide.artistName)  { parts.push(`Artist: ${slide.artistName}`); }
-  if (slide.artistGrade) { parts.push(`Grade ${slide.artistGrade}`); }
+  // grade intentionally not shown on the public homepage (child-safety)
   if (slide.medium)      { parts.push(slide.medium); }
   metaEl.textContent = parts.join('  ·  ');
   document.body.style.overflow = 'hidden';

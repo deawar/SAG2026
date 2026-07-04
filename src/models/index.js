@@ -123,6 +123,7 @@ class UserModel {
       dateOfBirth,
       role,
       schoolId,
+      accountStatus,
       requiresParentalConsent = false,
       parentalConsentStatus = 'not_required',
       parentEmail = null,
@@ -147,7 +148,9 @@ class UserModel {
     // Generate user ID
     const userId = uuidv4();
 
-    // Insert user — account_status starts as PENDING until email is verified
+    // Insert user — account_status starts as PENDING until email is verified,
+    // unless an explicit accountStatus is provided (e.g. PENDING_APPROVAL for teachers).
+    const initialStatus = accountStatus || 'PENDING';
     const result = await this.db.query(
       `INSERT INTO users (
          id, email, password_hash, first_name, last_name, phone_number,
@@ -155,13 +158,13 @@ class UserModel {
          requires_parental_consent, parental_consent_status,
          parent_email, parent_consent_token, parent_consent_expires_at
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING',
-               $10, $11, $12, $13, $14)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+               $11, $12, $13, $14, $15)
        RETURNING id, email, first_name, last_name, phone_number, role, school_id,
                  created_at, account_status, requires_parental_consent, parental_consent_status`,
       [
         userId, email.toLowerCase(), passwordHash, firstName, lastName, phoneNumber,
-        dateOfBirth, role, schoolId,
+        dateOfBirth, role, schoolId, initialStatus,
         requiresParentalConsent, parentalConsentStatus,
         parentEmail, parentConsentToken, parentConsentExpiresAt
       ]
@@ -190,7 +193,8 @@ class UserModel {
           SET email_verified_at              = NOW(),
               email_verification_token       = NULL,
               email_verification_expires_at  = NULL,
-              account_status                 = 'ACTIVE'
+              account_status = CASE WHEN account_status = 'PENDING_APPROVAL'
+                                    THEN 'PENDING_APPROVAL' ELSE 'ACTIVE' END
         WHERE id                            = $1
           AND email_verification_token       = $2
           AND email_verification_expires_at  > NOW()
