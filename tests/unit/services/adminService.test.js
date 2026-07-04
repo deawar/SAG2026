@@ -273,6 +273,36 @@ describe('AdminService', () => {
       expect(report.summary.dataExportRequests).toBe(3);
     });
 
+    test('generateGDPRReport - INSERT uses real compliance_reports columns', async () => {
+      const adminId = 'admin-123';
+
+      mockPool.query
+        .mockResolvedValueOnce({ rows: [{ role: 'SITE_ADMIN', school_id: null }] }) // verifyAdminAccess
+        .mockResolvedValueOnce({ rows: [{ count: '1' }] }) // deletions
+        .mockResolvedValueOnce({ rows: [{ count: '1' }] }) // exports
+        .mockResolvedValueOnce({ rows: [{ count: '1' }] }) // consents
+        .mockResolvedValueOnce({ rows: [{ id: 'report-1' }] }) // INSERT report
+        .mockResolvedValueOnce(undefined); // logAdminAction
+
+      await adminService.generateGDPRReport(new Date('2026-01-01'), new Date('2026-01-31'), null, adminId);
+
+      const insertSql = mockPool.query.mock.calls
+        .map(c => c[0])
+        .find(sql => /INSERT INTO compliance_reports/.test(sql));
+
+      expect(insertSql).toBeDefined();
+      // Real schema columns
+      expect(insertSql).toMatch(/generated_by_user_id/);
+      expect(insertSql).toMatch(/report_period_start/);
+      expect(insertSql).toMatch(/report_period_end/);
+      expect(insertSql).toMatch(/report_content/);
+      // Wrong columns that would 500 against a real Postgres
+      expect(insertSql).not.toMatch(/generated_by,/);
+      expect(insertSql).not.toMatch(/\bstart_date\b/);
+      expect(insertSql).not.toMatch(/\bend_date\b/);
+      expect(insertSql).not.toMatch(/\bsummary\b/);
+    });
+
     test('generateCOPPAReport - should track minor users and consent breakdown', async () => {
       const adminId = 'admin-123';
 
