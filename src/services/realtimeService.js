@@ -58,7 +58,15 @@ class RealtimeService {
 
       switch (data.type) {
         case 'authenticate':
-          this._handleAuthenticate(ws, data);
+          this._handleAuthenticate(ws, data).catch((err) => {
+            console.error('[realtimeService] authenticate error:', err.message);
+            try {
+              ws.send(JSON.stringify({ type: 'error', message: 'Authentication failed' }));
+            } catch (_sendErr) {
+              // Socket already closed before error response could be sent — ignore
+              console.debug('[realtimeService] could not send auth-error frame:', _sendErr.message);
+            }
+          });
           break;
         case 'subscribe':
           this._handleSubscribe(ws, data);
