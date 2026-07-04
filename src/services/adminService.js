@@ -1160,12 +1160,12 @@ class AdminService {
         a.id            AS auction_id,
         a.title,
         a.auction_status AS status,
-        a.start_date,
-        a.end_date,
+        a.starts_at     AS start_date,
+        a.ends_at       AS end_date,
         s.name          AS school_name,
         COUNT(b.id)     AS bid_count,
-        COALESCE(MAX(b.amount), 0) AS highest_bid,
-        COALESCE(SUM(b.amount), 0) AS total_bids
+        COALESCE(MAX(b.bid_amount), 0) AS highest_bid,
+        COALESCE(SUM(b.bid_amount), 0) AS total_bids
       FROM auctions a
       LEFT JOIN schools s ON s.id = a.school_id
       LEFT JOIN bids    b ON b.auction_id = a.id
@@ -1177,7 +1177,7 @@ class AdminService {
       params.push(admin.school_id);
     }
 
-    query += ' GROUP BY a.id, a.title, a.auction_status, a.start_date, a.end_date, s.name ORDER BY a.end_date DESC LIMIT 1000';
+    query += ' GROUP BY a.id, a.title, a.auction_status, a.starts_at, a.ends_at, s.name ORDER BY a.ends_at DESC LIMIT 1000';
 
     const result = await pool.query(query, params);
 
