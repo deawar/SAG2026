@@ -63,6 +63,7 @@ class AdminController {
     this.getAuditLogs = this.getAuditLogs.bind(this);
     this.getDashboardStats = this.getDashboardStats.bind(this);
     this.getSystemHealth = this.getSystemHealth.bind(this);
+    this.approveTeacher = this.approveTeacher.bind(this);
   }
 
   /**
@@ -992,6 +993,20 @@ class AdminController {
         success: true,
         health
       });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * POST /api/admin/users/:userId/approve-teacher
+   * Activate a PENDING_APPROVAL teacher. SCHOOL_ADMIN limited to own school.
+   */
+  async approveTeacher(req, res) {
+    try {
+      const { userId } = req.params;
+      const result = await adminService.approveTeacher(userId, req.user.id);
+      return res.status(200).json({ success: true, result });
     } catch (error) {
       return this.handleError(error, res);
     }

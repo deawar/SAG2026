@@ -332,7 +332,7 @@ module.exports = (db) => {
  * POST /api/auth/2fa/disable
  * Disable 2FA for the authenticated user
  * Auth: Required
- * Note: blocked for SITE_ADMIN and SCHOOL_ADMIN — admins must always have 2FA.
+ * Note: blocked for SITE_ADMIN, SCHOOL_ADMIN, and TEACHER — staff accounts must always have 2FA.
  *
  * Body: none (auth token is sufficient proof of account control)
  * Response: 200 { ok: true }
@@ -341,13 +341,13 @@ module.exports = (db) => {
     try {
       const userId = req.user.id;
 
-      // G5/G17: admins cannot disable 2FA — it is mandatory for their role
-      const adminRoles = ['SITE_ADMIN', 'SCHOOL_ADMIN'];
+      // G5/G17: admins and teachers cannot disable 2FA — it is mandatory for staff roles
+      const adminRoles = ['SITE_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'];
       if (adminRoles.includes(req.user.role)) {
         return res.status(403).json({
           success: false,
           error: 'admin_2fa_mandatory',
-          message: 'Admin accounts cannot disable 2FA. Two-factor authentication is mandatory for admin roles.'
+          message: 'Staff accounts (admins and teachers) cannot disable two-factor authentication.'
         });
       }
 

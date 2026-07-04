@@ -171,6 +171,7 @@ class UserController {
       const sanitizedPhone = phone ? ValidationUtils.sanitizeString(phone, 20) : null;
 
       // 7. Create user in database
+      const isTeacher = finalRole === 'TEACHER';
       const user = await this.userModel.create({
         email: sanitizedEmail,
         password,
@@ -179,7 +180,8 @@ class UserController {
         phoneNumber: sanitizedPhone,
         dateOfBirth,
         schoolId,
-        role: finalRole
+        role: finalRole,
+        accountStatus: isTeacher ? 'PENDING_APPROVAL' : undefined
       });
 
       // 8. Generate and store email verification token (24h expiry)
@@ -195,24 +197,20 @@ class UserController {
       return res.status(201).json({
         ok: true,
         requiresVerification: true,
-        message: 'Registration successful. Please check your email to verify your account.'
+        requiresApproval: isTeacher,
+        message: isTeacher
+          ? 'Registration successful. Verify your email, then a school administrator must approve your teacher account before you can sign in.'
+          : 'Registration successful. Please check your email to verify your account.'
       });
     } catch (error) {
       // Map model/validation error codes to user-facing 400/409 responses
-      // Bidder duplicate: student already has an account and can bid without re-registering
-      if (
-        (error.message === 'EMAIL_ALREADY_EXISTS' || error.code === '23505') &&
-        req.body.accountType === 'bidder'
-      ) {
-        return res.status(409).json({
-          success: false,
-          code: 'already_registered_can_bid',
-          message: 'You already have an account. Students can bid directly — just log in with your existing credentials.'
-        });
+      // Generic duplicate-email response — avoids confirming whether an address exists
+      const NEUTRAL_DUP = 'If this email is available, your account has been created. Check your inbox to verify.';
+      if (error.message === 'EMAIL_ALREADY_EXISTS' || error.code === '23505') {
+        return res.status(409).json({ success: false, message: NEUTRAL_DUP });
       }
 
       const validationErrors = {
-        'EMAIL_ALREADY_EXISTS': { status: 409, message: 'Email already registered' },
         'INVALID_EMAIL': { status: 400, message: 'Invalid email format' },
         'PASSWORD_TOO_SHORT': { status: 400, message: 'Password must be at least 12 characters' },
         'PASSWORD_MISSING_UPPERCASE': { status: 400, message: 'Password must contain an uppercase letter' },
@@ -230,10 +228,6 @@ class UserController {
       const mapped = validationErrors[error.message];
       if (mapped) {
         return res.status(mapped.status).json({ success: false, message: mapped.message });
-      }
-      // PostgreSQL unique constraint violation (e.g. email already exists at DB level)
-      if (error.code === '23505') {
-        return res.status(409).json({ success: false, message: 'Email already registered' });
       }
       return next(error);
     }
@@ -282,33 +276,7 @@ class UserController {
         });
       }
 
-      // 4. COPPA guard: block login if parental consent is still pending or denied
-      if (user.requires_parental_consent && user.parental_consent_status !== 'granted') {
-        return res.status(403).json({
-          success: false,
-          error: 'parental_consent_required',
-          message: 'This account requires parental consent before you can log in.'
-        });
-      }
-
-      // 4b. Check email verification before account status
-      if (!user.email_verified_at) {
-        return res.status(403).json({
-          success: false,
-          error: 'email_not_verified',
-          message: 'Please verify your email address before logging in.'
-        });
-      }
-
-      // 4c. Check if account is active
-      if (user.account_status !== 'ACTIVE') {
-        return res.status(403).json({
-          success: false,
-          message: 'Account is inactive'
-        });
-      }
-
-      // 5. Verify password
+      // 4. Verify password FIRST — no account-state information before identity is proven
       const passwordValid = await this.userModel.checkPassword(password, user.password_hash);
 
       if (!passwordValid) {
@@ -318,8 +286,45 @@ class UserController {
         });
       }
 
-      // 6a. Admin 2FA enforcement: admins without 2FA must set it up before accessing the app
-      const adminRoles = ['SITE_ADMIN', 'SCHOOL_ADMIN'];
+      // 5. Identity proven — now surface actionable account-state messages
+
+      // 5a. COPPA guard: block login if parental consent is still pending or denied
+      if (user.requires_parental_consent && user.parental_consent_status !== 'granted') {
+        return res.status(403).json({
+          success: false,
+          error: 'parental_consent_required',
+          message: 'This account requires parental consent before you can log in.'
+        });
+      }
+
+      // 5b. Check email verification before account status
+      if (!user.email_verified_at) {
+        return res.status(403).json({
+          success: false,
+          error: 'email_not_verified',
+          message: 'Please verify your email address before logging in.'
+        });
+      }
+
+      // 5c. Teacher approval gate: verified but not yet approved by a school admin
+      if (user.role === 'TEACHER' && user.account_status === 'PENDING_APPROVAL') {
+        return res.status(403).json({
+          success: false,
+          error: 'pending_teacher_approval',
+          message: 'Your teacher account is awaiting school administrator approval.'
+        });
+      }
+
+      // 5d. Check if account is active
+      if (user.account_status !== 'ACTIVE') {
+        return res.status(403).json({
+          success: false,
+          message: 'Account is inactive'
+        });
+      }
+
+      // 6a. Staff 2FA enforcement: admins and teachers without 2FA must set it up before accessing the app
+      const adminRoles = ['SITE_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'];
       if (adminRoles.includes(user.role) && !user.two_fa_enabled) {
         const setupToken = this.authService.jwtService.generateAccessToken(user.id, {
           email: user.email,
@@ -331,7 +336,7 @@ class UserController {
 
         return res.status(200).json({
           success: true,
-          message: '2FA setup required for admin accounts',
+          message: '2FA setup required for staff accounts',
           data: {
             requiresTwoFactorSetup: true,
             setupToken: setupToken.token,
@@ -729,7 +734,7 @@ class UserController {
   }
 
   /**
-   * Send an email verification link. Suppressed in test mode.
+   * Send an email verification link. Raw link logged only in development mode (NODE_ENV=development).
    * Uses the same SMTP pattern as authenticationService._sendResetCodeEmail.
    */
   async _sendVerificationEmail(email, firstName, userId, rawToken) {
@@ -759,13 +764,13 @@ class UserController {
       }
     }
 
-    if (process.env.NODE_ENV !== 'test') {
+    if (process.env.NODE_ENV === 'development') {
       console.log(`[DEV] Email verification link for ${email}: ${verifyUrl}`);
     }
   }
 
   /**
-   * Send parental consent request email. Suppressed in test mode.
+   * Send parental consent request email. Raw link logged only in development mode (NODE_ENV=development).
    */
   async _sendParentConsentEmail(parentEmail, childFirstName, userId, rawToken) {
     const appUrl = process.env.APP_URL || 'https://sag.live';
@@ -821,7 +826,7 @@ class UserController {
       }
     }
 
-    if (process.env.NODE_ENV !== 'test') {
+    if (process.env.NODE_ENV === 'development') {
       console.log(`[DEV] Parental consent link for ${parentEmail} (child: ${childFirstName}): ${consentUrl}`);
     }
   }

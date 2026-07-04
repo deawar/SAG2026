@@ -110,26 +110,25 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Login — non-admin without 2FA (unaffected)
+  // Login — TEACHER without 2FA (Task 9: now mandatory for teachers too)
   // ---------------------------------------------------------------------------
-  describe('POST /api/auth/login — non-admin without 2FA', () => {
-    test('TEACHER without 2FA gets a normal access token', async () => {
+  describe('POST /api/auth/login — TEACHER without 2FA', () => {
+    test('TEACHER without 2FA is routed to mandatory 2FA setup (not a normal access token)', async () => {
       const bcrypt = require('bcrypt');
       const hash = await bcrypt.hash('Password123!', 1);
       const user = makeUserRow({ role: 'TEACHER', two_fa_enabled: false, password_hash: hash });
 
-      // getByEmail + updateLastLogin
-      mockDb.query
-        .mockResolvedValueOnce({ rows: [user] })
-        .mockResolvedValueOnce({ rows: [], rowCount: 1 });
+      // getByEmail only — no updateLastLogin because the response is requiresTwoFactorSetup
+      mockDb.query.mockResolvedValueOnce({ rows: [user] });
 
       const res = await request(app)
         .post('/api/auth/login')
         .send({ email: 'admin@example.com', password: 'Password123!' });
 
       expect(res.status).toBe(200);
-      expect(res.body.data.accessToken).toBeDefined();
-      expect(res.body.data.requiresTwoFactorSetup).toBeUndefined();
+      expect(res.body.data.requiresTwoFactorSetup).toBe(true);
+      expect(res.body.data.setupToken).toBeDefined();
+      expect(res.body.data.accessToken).toBeUndefined();
     });
   });
 
@@ -313,19 +312,15 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
       expect(res.body.error).toBe('admin_2fa_mandatory');
     });
 
-    test('allows TEACHER to disable 2FA', async () => {
+    test('returns 403 for TEACHER (Task 9: 2FA is now mandatory for teachers)', async () => {
       const token = makeToken({ sub: 'teacher-1', role: 'TEACHER', schoolId: 'school-1' });
-
-      mockDb.query
-        .mockResolvedValueOnce({ rows: [], rowCount: 1 })  // UPDATE users
-        .mockResolvedValueOnce({ rows: [], rowCount: 1 }); // audit_logs INSERT
 
       const res = await request(app)
         .post('/api/auth/2fa/disable')
         .set('Authorization', `Bearer ${token}`);
 
-      expect(res.status).toBe(200);
-      expect(res.body.ok).toBe(true);
+      expect(res.status).toBe(403);
+      expect(res.body.error).toBe('admin_2fa_mandatory');
     });
 
     test('allows BIDDER to disable 2FA', async () => {
