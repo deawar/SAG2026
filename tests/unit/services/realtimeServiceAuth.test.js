@@ -92,9 +92,7 @@ describe('realtimeService.broadcastBidUpdate payload shape', () => {
 // Blacklist check at authenticate — revoked token is rejected
 // ──────────────────────────────────────────────────────────────────────────────
 describe('realtimeService._handleAuthenticate blacklist check', () => {
-  beforeEach(() => {
-    // No shared setup needed — each test patches and restores inline
-  });
+  afterEach(() => jest.restoreAllMocks());
 
   test('revoked token (isRevoked returns true) is rejected without authenticating', async () => {
     const jwt = require('jsonwebtoken');
@@ -109,10 +107,9 @@ describe('realtimeService._handleAuthenticate blacklist check', () => {
       { algorithm: 'HS256', expiresIn: '15m' }
     );
 
-    // Mock the blacklist so isRevoked returns true for this jti
+    // Spy on the blacklist so isRevoked returns true for this jti
     const authService = require('../../../src/services/authenticationService');
-    const originalIsRevoked = authService.tokenBlacklist.isRevoked.bind(authService.tokenBlacklist);
-    authService.tokenBlacklist.isRevoked = jest.fn().mockResolvedValue(true);
+    jest.spyOn(authService.tokenBlacklist, 'isRevoked').mockResolvedValue(true);
 
     const sent = [];
     const fakeWs = {
@@ -122,9 +119,6 @@ describe('realtimeService._handleAuthenticate blacklist check', () => {
 
     // Call the private method via the singleton
     await realtimeService._handleAuthenticate(fakeWs, { token });
-
-    // Restore
-    authService.tokenBlacklist.isRevoked = originalIsRevoked;
 
     expect(fakeWs.userId).toBeUndefined();
     expect(sent.length).toBeGreaterThan(0);
@@ -145,8 +139,7 @@ describe('realtimeService._handleAuthenticate blacklist check', () => {
     );
 
     const authService = require('../../../src/services/authenticationService');
-    const originalIsRevoked = authService.tokenBlacklist.isRevoked.bind(authService.tokenBlacklist);
-    authService.tokenBlacklist.isRevoked = jest.fn().mockResolvedValue(false);
+    jest.spyOn(authService.tokenBlacklist, 'isRevoked').mockResolvedValue(false);
 
     const sent = [];
     const fakeWs = {
@@ -155,9 +148,6 @@ describe('realtimeService._handleAuthenticate blacklist check', () => {
     };
 
     await realtimeService._handleAuthenticate(fakeWs, { token });
-
-    // Restore
-    authService.tokenBlacklist.isRevoked = originalIsRevoked;
 
     // Clean up singleton state
     realtimeService.clients.delete('user-valid');
