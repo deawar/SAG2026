@@ -9,12 +9,16 @@ const rateLimit = require('express-rate-limit');
 
 /**
  * Login Rate Limiter
- * - 5 attempts per 15 minutes per IP
- * - Prevents password brute force
+ * - 10 FAILED attempts per 15 minutes per IP
+ * - Successful logins are not counted (skipSuccessfulRequests), so legitimate
+ *   users behind a shared IP (auction venues, schools, household NAT) and users
+ *   re-authenticating often (short-lived tokens, 2FA steps) are never throttled.
+ * - Still prevents password brute force, which is a stream of failed attempts.
  */
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per windowMs
+  max: 10, // Limit each IP to 10 FAILED login attempts per windowMs
+  skipSuccessfulRequests: true, // only count responses with status >= 400
   message: 'Too many login attempts from this IP, please try again later.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
