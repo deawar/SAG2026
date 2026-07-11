@@ -710,6 +710,104 @@ class TeacherController {
   }
 
   /**
+     * List portfolio students visible to the viewer.
+     * TEACHER: students invited via registration_tokens.
+     * SCHOOL_ADMIN: all students in the same school.
+     */
+  static async listPortfolios(req, res) {
+    try {
+      const viewer = req.user;
+      let rows;
+      if (viewer.role === 'SCHOOL_ADMIN') {
+        rows = (await pool.query(
+          `SELECT u.id AS student_id, u.first_name, u.last_name,
+                  COUNT(*) FILTER (WHERE pi.portfolio_status='IN_PROGRESS' AND pi.deleted_at IS NULL) AS in_progress,
+                  COUNT(*) FILTER (WHERE pi.portfolio_status='COMPLETED'  AND pi.deleted_at IS NULL) AS completed,
+                  COUNT(*) FILTER (WHERE pi.submission_state='IN_AUCTION'  AND pi.deleted_at IS NULL) AS in_auction
+             FROM users u
+             LEFT JOIN portfolio_items pi ON pi.student_user_id = u.id
+            WHERE u.role='STUDENT' AND u.school_id=$1 AND u.deleted_at IS NULL
+            GROUP BY u.id, u.first_name, u.last_name
+            ORDER BY u.first_name`,
+          [viewer.schoolId]
+        )).rows;
+      } else {
+        rows = (await pool.query(
+          `SELECT u.id AS student_id, u.first_name, u.last_name,
+                  COUNT(*) FILTER (WHERE pi.portfolio_status='IN_PROGRESS' AND pi.deleted_at IS NULL) AS in_progress,
+                  COUNT(*) FILTER (WHERE pi.portfolio_status='COMPLETED'  AND pi.deleted_at IS NULL) AS completed,
+                  COUNT(*) FILTER (WHERE pi.submission_state='IN_AUCTION'  AND pi.deleted_at IS NULL) AS in_auction
+             FROM registration_tokens rt
+             JOIN users u ON LOWER(u.email)=LOWER(rt.student_email) AND u.role='STUDENT' AND u.deleted_at IS NULL
+             LEFT JOIN portfolio_items pi ON pi.student_user_id = u.id
+            WHERE rt.teacher_id=$1
+            GROUP BY u.id, u.first_name, u.last_name
+            ORDER BY u.first_name`,
+          [viewer.id]
+        )).rows;
+      }
+      const students = rows.map(r => ({
+        studentId: r.student_id,
+        studentName: `${r.first_name} ${r.last_name || ''}`.trim(),
+        inProgress: parseInt(r.in_progress, 10) || 0,
+        completed: parseInt(r.completed, 10) || 0,
+        inAuction: parseInt(r.in_auction, 10) || 0
+      }));
+      return res.json({ success: true, students });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: 'Failed to list portfolios' });
+    }
+  }
+
+  /**
+     * Get a specific student's portfolio items, enforcing scope.
+     * TEACHER: only if they invited the student via registration_tokens.
+     * SCHOOL_ADMIN: only if the student belongs to the same school.
+     */
+  static async getStudentPortfolio(req, res) {
+    try {
+      const viewer = req.user;
+      const { studentId } = req.params;
+
+      if (viewer.role === 'SCHOOL_ADMIN') {
+        const s = await pool.query('SELECT school_id FROM users WHERE id=$1 AND role=\'STUDENT\' AND deleted_at IS NULL', [studentId]);
+        if (s.rowCount === 0 || s.rows[0].school_id !== viewer.schoolId) {
+          return res.status(403).json({ success: false, message: 'Not permitted' });
+        }
+      } else if (viewer.role === 'TEACHER') {
+        const scope = await pool.query(
+          `SELECT 1 FROM registration_tokens rt
+             JOIN users u ON LOWER(u.email)=LOWER(rt.student_email)
+            WHERE rt.teacher_id=$1 AND u.id=$2 LIMIT 1`,
+          [viewer.id, studentId]
+        );
+        if (scope.rowCount === 0) { return res.status(403).json({ success: false, message: 'Not permitted' }); }
+      } else {
+        return res.status(403).json({ success: false, message: 'Not permitted' });
+      }
+
+      const items = await pool.query(
+        `SELECT id, title, description, medium, artist_grade, image_url,
+                portfolio_status, submission_state, created_at
+           FROM portfolio_items
+          WHERE student_user_id=$1 AND deleted_at IS NULL
+          ORDER BY created_at DESC`,
+        [studentId]
+      );
+      return res.json({
+        success: true,
+        items: items.rows.map(r => ({
+          id: r.id, title: r.title, description: r.description, medium: r.medium,
+          artistGrade: r.artist_grade, imageUrl: r.image_url,
+          portfolioStatus: r.portfolio_status, submissionState: r.submission_state, createdAt: r.created_at
+        }))
+      });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: 'Failed to load portfolio' });
+    }
+  }
+
+  /**
      * Soft-delete a registered student.
      * Teachers may only delete students belonging to their own school.
      */

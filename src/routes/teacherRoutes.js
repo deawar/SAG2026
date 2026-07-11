@@ -157,6 +157,30 @@ router.post('/send-invites', async (req, res, next) => {
 });
 
 /**
+ * GET /api/teacher/portfolios
+ * List portfolio students visible to the viewer (TEACHER: invited; SCHOOL_ADMIN: same school).
+ */
+router.get('/portfolios', async (req, res, next) => {
+  try {
+    return await TeacherController.listPortfolios(req, res);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/**
+ * GET /api/teacher/portfolios/:studentId
+ * Get a specific student's portfolio items, enforcing scope.
+ */
+router.get('/portfolios/:studentId', async (req, res, next) => {
+  try {
+    return await TeacherController.getStudentPortfolio(req, res);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/**
  * PUT /api/teacher/submissions/:id/approve
  * Approve a student artwork submission (school-scoped)
  */
