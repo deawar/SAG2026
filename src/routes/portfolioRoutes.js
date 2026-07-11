@@ -63,7 +63,7 @@ module.exports = (db) => {
            FROM portfolio_items
           WHERE student_user_id = $1 AND moderation_status = 'REMOVED' AND deleted_at IS NULL
           ORDER BY moderated_at DESC`,
-        [req.user?.id]
+        [req.user.id]
       );
       return res.json({
         success: true,
