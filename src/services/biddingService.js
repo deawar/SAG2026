@@ -431,6 +431,19 @@ class BiddingService {
       // Backward-compatible: expose the top winner for callers that expect a single `winner`
       const winner = winners.length > 0 ? winners[0] : null;
 
+      // Propagate auction outcome to linked portfolio items
+      await client.query(
+        `UPDATE portfolio_items pi
+            SET submission_state = CASE
+                  WHEN EXISTS (SELECT 1 FROM bids b WHERE b.artwork_id = aw.id AND b.bid_status = 'ACCEPTED')
+                       THEN 'SOLD' ELSE 'UNSOLD' END,
+                updated_at = NOW()
+           FROM artwork aw
+          WHERE aw.auction_id = $1 AND aw.portfolio_item_id = pi.id
+            AND pi.submission_state = 'IN_AUCTION' AND aw.deleted_at IS NULL`,
+        [auctionId]
+      );
+
       // Log auction closure
       await client.query(
         `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details)

@@ -197,6 +197,23 @@ class TeacherController {
     try {
       const { id } = req.params;
       const teacherId = req.user.id;
+
+      // Optional pricing — validate BEFORE any DB access so bad input costs no round-trip
+      const { startingBid, reserve } = req.body || {};
+
+      if (startingBid !== undefined && startingBid !== null) {
+        if (typeof startingBid !== 'number' || !Number.isFinite(startingBid) || startingBid < 0) {
+          return res.status(400).json({ success: false, message: 'startingBid must be a non-negative number' });
+        }
+      }
+
+      if (reserve !== undefined && reserve !== null) {
+        const minForReserve = (startingBid !== undefined && startingBid !== null) ? startingBid : 0;
+        if (typeof reserve !== 'number' || !Number.isFinite(reserve) || reserve < minForReserve) {
+          return res.status(400).json({ success: false, message: 'reserve must be >= startingBid' });
+        }
+      }
+
       const schoolId  = await TeacherController._resolveSchoolId(req.user.id);
 
       const result = await pool.query(
@@ -204,7 +221,9 @@ class TeacherController {
                  SET artwork_status      = 'APPROVED',
                      approved_at         = NOW(),
                      approved_by_user_id = $1,
-                     updated_at          = NOW()
+                     updated_at          = NOW(),
+                     starting_bid_amount = COALESCE($4, starting_bid_amount),
+                     reserve_bid_amount  = COALESCE($5, reserve_bid_amount)
                  FROM auctions a
                  WHERE aw.auction_id = a.id
                    AND aw.id = $2
@@ -212,12 +231,23 @@ class TeacherController {
                    AND aw.deleted_at IS NULL
                    AND aw.artwork_status IN ('SUBMITTED','PENDING_APPROVAL')
                  RETURNING aw.id`,
-        [teacherId, id, schoolId]
+        [teacherId, id, schoolId, startingBid ?? null, reserve ?? null]
       );
 
       if (result.rowCount === 0) {
         return res.status(404).json({ success: false, message: 'Submission not found or already reviewed' });
       }
+
+      // Propagate to linked portfolio item
+      await pool.query(
+        `UPDATE portfolio_items pi
+         SET submission_state = 'IN_AUCTION',
+             updated_at       = NOW()
+         FROM artwork aw
+         WHERE aw.id = $1
+           AND aw.portfolio_item_id = pi.id`,
+        [id]
+      );
 
       // Notify the student artist non-blocking
       setImmediate(async () => {
@@ -277,6 +307,18 @@ class TeacherController {
       if (result.rowCount === 0) {
         return res.status(404).json({ success: false, message: 'Submission not found or already reviewed' });
       }
+
+      // Propagate to linked portfolio item
+      await pool.query(
+        `UPDATE portfolio_items pi
+         SET submission_state = 'REJECTED',
+             rejection_reason = $2,
+             updated_at       = NOW()
+         FROM artwork aw
+         WHERE aw.id = $1
+           AND aw.portfolio_item_id = pi.id`,
+        [id, reason]
+      );
 
       // Notify the student artist non-blocking
       setImmediate(async () => {
@@ -664,6 +706,104 @@ class TeacherController {
     } catch (error) {
       logger.error('Update student error', { error: error.message, userId: req.user?.id });
       return res.status(500).json({ success: false, message: 'Error updating student' });
+    }
+  }
+
+  /**
+     * List portfolio students visible to the viewer.
+     * TEACHER: students invited via registration_tokens.
+     * SCHOOL_ADMIN: all students in the same school.
+     */
+  static async listPortfolios(req, res) {
+    try {
+      const viewer = req.user;
+      let rows;
+      if (viewer.role === 'SCHOOL_ADMIN') {
+        rows = (await pool.query(
+          `SELECT u.id AS student_id, u.first_name, u.last_name,
+                  COUNT(*) FILTER (WHERE pi.portfolio_status='IN_PROGRESS' AND pi.deleted_at IS NULL) AS in_progress,
+                  COUNT(*) FILTER (WHERE pi.portfolio_status='COMPLETED'  AND pi.deleted_at IS NULL) AS completed,
+                  COUNT(*) FILTER (WHERE pi.submission_state='IN_AUCTION'  AND pi.deleted_at IS NULL) AS in_auction
+             FROM users u
+             LEFT JOIN portfolio_items pi ON pi.student_user_id = u.id
+            WHERE u.role='STUDENT' AND u.school_id=$1 AND u.deleted_at IS NULL
+            GROUP BY u.id, u.first_name, u.last_name
+            ORDER BY u.first_name`,
+          [viewer.schoolId]
+        )).rows;
+      } else {
+        rows = (await pool.query(
+          `SELECT u.id AS student_id, u.first_name, u.last_name,
+                  COUNT(*) FILTER (WHERE pi.portfolio_status='IN_PROGRESS' AND pi.deleted_at IS NULL) AS in_progress,
+                  COUNT(*) FILTER (WHERE pi.portfolio_status='COMPLETED'  AND pi.deleted_at IS NULL) AS completed,
+                  COUNT(*) FILTER (WHERE pi.submission_state='IN_AUCTION'  AND pi.deleted_at IS NULL) AS in_auction
+             FROM registration_tokens rt
+             JOIN users u ON LOWER(u.email)=LOWER(rt.student_email) AND u.role='STUDENT' AND u.deleted_at IS NULL
+             LEFT JOIN portfolio_items pi ON pi.student_user_id = u.id
+            WHERE rt.teacher_id=$1
+            GROUP BY u.id, u.first_name, u.last_name
+            ORDER BY u.first_name`,
+          [viewer.id]
+        )).rows;
+      }
+      const students = rows.map(r => ({
+        studentId: r.student_id,
+        studentName: `${r.first_name} ${r.last_name || ''}`.trim(),
+        inProgress: parseInt(r.in_progress, 10) || 0,
+        completed: parseInt(r.completed, 10) || 0,
+        inAuction: parseInt(r.in_auction, 10) || 0
+      }));
+      return res.json({ success: true, students });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: 'Failed to list portfolios' });
+    }
+  }
+
+  /**
+     * Get a specific student's portfolio items, enforcing scope.
+     * TEACHER: only if they invited the student via registration_tokens.
+     * SCHOOL_ADMIN: only if the student belongs to the same school.
+     */
+  static async getStudentPortfolio(req, res) {
+    try {
+      const viewer = req.user;
+      const { studentId } = req.params;
+
+      if (viewer.role === 'SCHOOL_ADMIN') {
+        const s = await pool.query('SELECT school_id FROM users WHERE id=$1 AND role=\'STUDENT\' AND deleted_at IS NULL', [studentId]);
+        if (s.rowCount === 0 || s.rows[0].school_id !== viewer.schoolId) {
+          return res.status(403).json({ success: false, message: 'Not permitted' });
+        }
+      } else if (viewer.role === 'TEACHER') {
+        const scope = await pool.query(
+          `SELECT 1 FROM registration_tokens rt
+             JOIN users u ON LOWER(u.email)=LOWER(rt.student_email)
+            WHERE rt.teacher_id=$1 AND u.id=$2 AND u.role = 'STUDENT' AND u.deleted_at IS NULL LIMIT 1`,
+          [viewer.id, studentId]
+        );
+        if (scope.rowCount === 0) { return res.status(403).json({ success: false, message: 'Not permitted' }); }
+      } else {
+        return res.status(403).json({ success: false, message: 'Not permitted' });
+      }
+
+      const items = await pool.query(
+        `SELECT id, title, description, medium, artist_grade, image_url,
+                portfolio_status, submission_state, created_at
+           FROM portfolio_items
+          WHERE student_user_id=$1 AND deleted_at IS NULL
+          ORDER BY created_at DESC`,
+        [studentId]
+      );
+      return res.json({
+        success: true,
+        items: items.rows.map(r => ({
+          id: r.id, title: r.title, description: r.description, medium: r.medium,
+          artistGrade: r.artist_grade, imageUrl: r.image_url,
+          portfolioStatus: r.portfolio_status, submissionState: r.submission_state, createdAt: r.created_at
+        }))
+      });
+    } catch (err) {
+      return res.status(500).json({ success: false, message: 'Failed to load portfolio' });
     }
   }
 
