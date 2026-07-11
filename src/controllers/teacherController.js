@@ -778,7 +778,7 @@ class TeacherController {
         const scope = await pool.query(
           `SELECT 1 FROM registration_tokens rt
              JOIN users u ON LOWER(u.email)=LOWER(rt.student_email)
-            WHERE rt.teacher_id=$1 AND u.id=$2 LIMIT 1`,
+            WHERE rt.teacher_id=$1 AND u.id=$2 AND u.role = 'STUDENT' AND u.deleted_at IS NULL LIMIT 1`,
           [viewer.id, studentId]
         );
         if (scope.rowCount === 0) { return res.status(403).json({ success: false, message: 'Not permitted' }); }

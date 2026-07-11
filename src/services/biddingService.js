@@ -440,7 +440,7 @@ class BiddingService {
                 updated_at = NOW()
            FROM artwork aw
           WHERE aw.auction_id = $1 AND aw.portfolio_item_id = pi.id
-            AND pi.submission_state = 'IN_AUCTION'`,
+            AND pi.submission_state = 'IN_AUCTION' AND aw.deleted_at IS NULL`,
         [auctionId]
       );
 
