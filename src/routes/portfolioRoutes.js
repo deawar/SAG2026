@@ -181,7 +181,7 @@ module.exports = (db) => {
       const auctionRes = await db.query(
         `SELECT id FROM auctions
          WHERE id = $1 AND school_id = $2 AND deleted_at IS NULL
-           AND auction_status IN ('DRAFT','APPROVED','LIVE')`,
+           AND auction_status IN ('APPROVED','LIVE')`,
         [auctionId, schoolId]
       );
       if (auctionRes.rowCount === 0) {
