@@ -74,3 +74,48 @@ describe('Portfolio comments — list + create', () => {
     expect(res.body.canModerate).toBe(true);
   });
 });
+
+describe('Portfolio comments — delete', () => {
+  let app;
+  beforeEach(() => { app = createTestApp(); mockDb.query.mockReset(); mockDb.query.mockResolvedValue({ rows: [], rowCount: 0 }); });
+
+  test('author deletes own comment (200) — soft delete + audit', async () => {
+    mockDb.query
+      .mockResolvedValueOnce({ rows: [{ id: 'c-1', portfolio_item_id: 'pi-1', author_user_id: 'stu-1' }], rowCount: 1 }) // load comment
+      .mockResolvedValueOnce({ rows: [PIECE], rowCount: 1 })   // resolveAccess: load piece (owner)
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 })        // UPDATE soft-delete
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 });       // INSERT audit_logs
+    const res = await request(app).delete('/api/portfolio-comments/c-1').set('Authorization', `Bearer ${studentToken()}`);
+    expect(res.status).toBe(200);
+    const upd = mockDb.query.mock.calls.find(c => /UPDATE portfolio_comments[\s\S]*deleted_at/i.test(c[0]));
+    expect(upd).toBeTruthy();
+    const audit = mockDb.query.mock.calls.find(c => /INSERT INTO audit_logs/i.test(c[0]));
+    expect(audit).toBeTruthy();
+  });
+
+  test('inviting teacher moderates (deletes) another user\'s comment (200)', async () => {
+    mockDb.query
+      .mockResolvedValueOnce({ rows: [{ id: 'c-2', portfolio_item_id: 'pi-1', author_user_id: 'stu-1' }], rowCount: 1 }) // load comment
+      .mockResolvedValueOnce({ rows: [PIECE], rowCount: 1 })   // resolveAccess: piece
+      .mockResolvedValueOnce({ rows: [{ ok: 1 }], rowCount: 1 }) // inviter check -> canModerate
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 })        // UPDATE
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 });       // audit
+    const res = await request(app).delete('/api/portfolio-comments/c-2').set('Authorization', `Bearer ${teacherToken()}`);
+    expect(res.status).toBe(200);
+  });
+
+  test('a non-author non-moderator cannot delete (403)', async () => {
+    mockDb.query
+      .mockResolvedValueOnce({ rows: [{ id: 'c-3', portfolio_item_id: 'pi-1', author_user_id: 'tea-1' }], rowCount: 1 }) // comment by teacher
+      .mockResolvedValueOnce({ rows: [{ id: 'pi-1', student_user_id: 'stu-9', school_id: 'school-1' }], rowCount: 1 })   // piece owned by someone else
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 });       // inviter check fails
+    const res = await request(app).delete('/api/portfolio-comments/c-3').set('Authorization', `Bearer ${otherTeacherToken()}`);
+    expect(res.status).toBe(403);
+  });
+
+  test('missing comment is 404', async () => {
+    mockDb.query.mockResolvedValueOnce({ rows: [], rowCount: 0 });
+    const res = await request(app).delete('/api/portfolio-comments/c-x').set('Authorization', `Bearer ${studentToken()}`);
+    expect(res.status).toBe(404);
+  });
+});

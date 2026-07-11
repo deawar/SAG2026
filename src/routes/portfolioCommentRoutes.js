@@ -107,5 +107,38 @@ module.exports = (db) => {
     } catch (err) { return next(err); }
   });
 
+  // DELETE /api/portfolio-comments/:commentId — author or moderator
+  router.delete('/:commentId', async (req, res, next) => {
+    try {
+      const viewer = req.user;
+      const cRes = await db.query(
+        `SELECT id, portfolio_item_id, author_user_id FROM portfolio_comments
+          WHERE id = $1 AND deleted_at IS NULL`,
+        [req.params.commentId]
+      );
+      const comment = cRes.rows[0];
+      if (!comment) { return res.status(404).json({ success: false, message: 'Not found' }); }
+
+      const access = await resolveAccess(db, viewer, comment.portfolio_item_id);
+      if (access.status !== 200) { return res.status(access.status).json({ success: false, message: 'Not permitted' }); }
+
+      const isAuthor = comment.author_user_id === viewer.id;
+      if (!isAuthor && !access.canModerate) { return res.status(403).json({ success: false, message: 'Not permitted' }); }
+
+      await db.query(
+        `UPDATE portfolio_comments SET deleted_at = NOW(), deleted_by_user_id = $2, updated_at = NOW()
+          WHERE id = $1`,
+        [comment.id, viewer.id]
+      );
+      await db.query(
+        `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details)
+         VALUES ($1,$2,$3,$4,$5)`,
+        ['PORTFOLIO', 'comment_deleted', 'portfolio_comment', comment.id,
+          JSON.stringify({ deletedBy: viewer.id, moderated: !isAuthor })]
+      );
+      return res.json({ success: true });
+    } catch (err) { return next(err); }
+  });
+
   return router;
 };
