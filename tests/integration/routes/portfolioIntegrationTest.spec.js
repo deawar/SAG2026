@@ -125,3 +125,56 @@ describe('Portfolio edit / status / delete', () => {
     expect(res.status).toBe(409);
   });
 });
+
+describe('Portfolio submit / withdraw', () => {
+  let app;
+  beforeEach(() => { app = createTestApp(); mockDb.query.mockReset(); mockDb.query.mockResolvedValue({ rows: [], rowCount: 0 }); });
+
+  test('submit a COMPLETED piece creates an artwork snapshot and sets PENDING_REVIEW', async () => {
+    mockDb.query
+      // full item load (own, COMPLETED, NOT_SUBMITTED)
+      .mockResolvedValueOnce({ rows: [{ id: 'pi-1', student_user_id: 'stu-1', portfolio_status: 'COMPLETED', submission_state: 'NOT_SUBMITTED', title: 'Sunset', description: 'sky', medium: 'Oil', artist_grade: '9', dimensions_width_cm: null, dimensions_height_cm: null, image_url: 'data:image/png;base64,iVBOR==' }], rowCount: 1 })
+      // auction eligibility (same school, open)
+      .mockResolvedValueOnce({ rows: [{ id: 'auc-1' }], rowCount: 1 })
+      // student name lookup
+      .mockResolvedValueOnce({ rows: [{ first_name: 'Ava', last_name: 'Reed' }], rowCount: 1 })
+      // INSERT artwork snapshot
+      .mockResolvedValueOnce({ rows: [{ id: 'art-1' }], rowCount: 1 })
+      // UPDATE portfolio item -> PENDING_REVIEW
+      .mockResolvedValueOnce({ rows: [{ id: 'pi-1' }], rowCount: 1 });
+
+    const res = await request(app).post('/api/portfolio/pi-1/submit')
+      .set('Authorization', `Bearer ${studentToken()}`).send({ auctionId: 'auc-1' });
+    expect(res.status).toBe(200);
+    expect(res.body.submissionState).toBe('PENDING_REVIEW');
+    const insertArt = mockDb.query.mock.calls.find(c => /INSERT INTO artwork/.test(c[0]));
+    expect(insertArt[0]).toMatch(/portfolio_item_id/);
+    expect(insertArt[1]).toEqual(expect.arrayContaining(['auc-1', 'pi-1', 'stu-1']));
+  });
+
+  test('cannot submit an IN_PROGRESS piece (409)', async () => {
+    mockDb.query.mockResolvedValueOnce({ rows: [{ id: 'pi-1', student_user_id: 'stu-1', portfolio_status: 'IN_PROGRESS', submission_state: 'NOT_SUBMITTED' }], rowCount: 1 });
+    const res = await request(app).post('/api/portfolio/pi-1/submit')
+      .set('Authorization', `Bearer ${studentToken()}`).send({ auctionId: 'auc-1' });
+    expect(res.status).toBe(409);
+  });
+
+  test('submit to an auction outside the student\'s school returns 403', async () => {
+    mockDb.query
+      .mockResolvedValueOnce({ rows: [{ id: 'pi-1', student_user_id: 'stu-1', portfolio_status: 'COMPLETED', submission_state: 'NOT_SUBMITTED', title: 'X', image_url: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // auction eligibility fails
+    const res = await request(app).post('/api/portfolio/pi-1/submit')
+      .set('Authorization', `Bearer ${studentToken()}`).send({ auctionId: 'auc-x' });
+    expect(res.status).toBe(403);
+  });
+
+  test('withdraw a pending submission returns WITHDRAWN', async () => {
+    mockDb.query
+      .mockResolvedValueOnce({ rows: [{ id: 'pi-1', student_user_id: 'stu-1', submission_state: 'PENDING_REVIEW' }], rowCount: 1 }) // loadOwnItem
+      .mockResolvedValueOnce({ rows: [{ id: 'art-1' }], rowCount: 1 }) // soft-delete linked SUBMITTED artwork
+      .mockResolvedValueOnce({ rows: [{ id: 'pi-1' }], rowCount: 1 }); // update item -> WITHDRAWN
+    const res = await request(app).post('/api/portfolio/pi-1/withdraw').set('Authorization', `Bearer ${studentToken()}`);
+    expect(res.status).toBe(200);
+    expect(res.body.submissionState).toBe('WITHDRAWN');
+  });
+});
