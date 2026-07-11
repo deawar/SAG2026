@@ -1078,3 +1078,34 @@
         gap: var(--spacing-md);
     }
 }
+
+/* ===== Portfolio — Comment thread + removed notice responsive ===== */
+
+/* Phones (≤640px): thread list shorter, meta stacks */
+@media (max-width: 640px) {
+    .comment-thread__list {
+        max-height: 30vh;
+    }
+
+    .comment-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+
+    .comment-meta__date {
+        margin-left: 0;
+    }
+
+    .removed-notice {
+        padding: var(--spacing-sm) var(--spacing-md);
+        padding-right: 2.5rem; /* room for dismiss button */
+    }
+}
+
+/* Tablet and up (641px+): thread modal wider */
+@media (min-width: 641px) {
+    .comment-thread__list {
+        max-height: 45vh;
+    }
+}

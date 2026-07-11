@@ -1,6 +1,7 @@
 /**
  * Portfolio Page — Student-facing artwork portfolio with CRUD, submit/withdraw,
- * and full-screen image lightbox.
+ * full-screen image lightbox, per-piece comment threads, unread badges, and
+ * a "Removed pieces" dismissible notice.
  *
  * Conventions:
  *  - All API calls go through window.apiClient (auto-adds Bearer token).
@@ -17,6 +18,9 @@ let _editingId = null;
 
 /** ID of the portfolio item targeted by the Submit modal. */
 let _submittingId = null;
+
+/** ID of the portfolio item whose comment thread is open (null when closed). */
+let _commentItemId = null;
 
 /** The element that had focus before a modal or the lightbox was opened. */
 let _preFocusElement = null;
@@ -69,6 +73,351 @@ function isSubmittable(item) {
       item.submissionState === 'WITHDRAWN' ||
       item.submissionState === 'UNSOLD')
   );
+}
+
+/* =========================================================================
+   Removed Pieces Notice
+   ========================================================================= */
+
+/**
+ * Fetches GET /api/portfolio/removed; if there are any removed items renders
+ * a dismissible warning banner above the grids.
+ */
+async function loadRemovedNotice() {
+  // Remove any existing banner first
+  const existing = document.getElementById('removed-notice-banner');
+  if (existing) { existing.remove(); }
+
+  let removed = [];
+  try {
+    const data = await window.apiClient.get('/api/portfolio/removed');
+    removed = (data && data.removed) ? data.removed : [];
+  } catch (_err) {
+    // Non-fatal: silently skip if endpoint unavailable
+    return;
+  }
+
+  if (removed.length === 0) { return; }
+
+  const banner = document.createElement('div');
+  banner.id = 'removed-notice-banner';
+  banner.className = 'removed-notice';
+  banner.setAttribute('role', 'region');
+  banner.setAttribute('aria-label', 'Removed pieces notice');
+
+  // Dismiss button
+  const dismissBtn = document.createElement('button');
+  dismissBtn.type = 'button';
+  dismissBtn.className = 'removed-notice__dismiss';
+  dismissBtn.setAttribute('aria-label', 'Dismiss removed pieces notice');
+  dismissBtn.textContent = '×'; // ×
+  dismissBtn.addEventListener('click', () => banner.remove());
+  banner.appendChild(dismissBtn);
+
+  // Heading
+  const heading = document.createElement('p');
+  heading.className = 'removed-notice__heading';
+  heading.textContent = removed.length === 1
+    ? '1 piece was removed from an auction'
+    : removed.length + ' pieces were removed from an auction';
+  banner.appendChild(heading);
+
+  // List
+  const list = document.createElement('ul');
+  list.className = 'removed-notice__list';
+
+  removed.forEach(function(piece) {
+    const li = document.createElement('li');
+
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'removed-notice__item-title';
+    titleSpan.textContent = piece.title || '(Untitled)';
+    li.appendChild(titleSpan);
+
+    if (piece.moderationReason) {
+      const reasonSpan = document.createElement('span');
+      reasonSpan.className = 'removed-notice__item-reason';
+      reasonSpan.textContent = '— ' + piece.moderationReason; // —
+      li.appendChild(reasonSpan);
+    }
+
+    if (piece.moderatedAt) {
+      const dateSpan = document.createElement('span');
+      dateSpan.className = 'removed-notice__item-date';
+      const d = new Date(piece.moderatedAt);
+      dateSpan.textContent = ' (' + (isNaN(d.getTime()) ? piece.moderatedAt : d.toLocaleDateString()) + ')';
+      li.appendChild(dateSpan);
+    }
+
+    list.appendChild(li);
+  });
+
+  banner.appendChild(list);
+
+  // Insert before the first section inside .container
+  const container = document.querySelector('.main-content .container');
+  const firstSection = container && container.querySelector('section');
+  if (firstSection) {
+    container.insertBefore(banner, firstSection);
+  }
+}
+
+/* =========================================================================
+   Comment Thread Modal
+   ========================================================================= */
+
+/**
+ * Opens the comment thread modal for the given portfolio item, loads comments,
+ * and clears the unread indicator on the triggering card.
+ * @param {number|string} itemId
+ * @param {HTMLElement} triggerBtn  The button that was clicked (for focus restore).
+ */
+async function openCommentThread(itemId, triggerBtn) {
+  _commentItemId = itemId;
+  _preFocusElement = triggerBtn || document.activeElement;
+
+  // Clear unread dot immediately (GET marks thread read server-side)
+  _clearUnreadDot(itemId);
+
+  const modal = document.getElementById('comment-modal');
+  if (!modal) { return; }
+
+  // Reset title
+  const titleEl = document.getElementById('comment-modal-title');
+  if (titleEl) { titleEl.textContent = 'Comments'; }
+
+  // Show modal
+  modal.hidden = false;
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
+  UIComponents.trapFocus(modal);
+  document.addEventListener('keydown', _commentModalEscapeHandler);
+
+  // Clear compose box
+  const textarea = document.getElementById('comment-body-input');
+  if (textarea) {
+    textarea.value = '';
+    _updateCharCount(textarea);
+  }
+
+  // Load thread
+  await _loadCommentThread(itemId);
+
+  // Focus close button
+  const closeBtn = document.getElementById('comment-modal-close');
+  if (closeBtn) { closeBtn.focus(); }
+}
+
+/** Closes the comment thread modal and restores focus. */
+function closeCommentModal() {
+  const modal = document.getElementById('comment-modal');
+  if (modal) {
+    modal.hidden = true;
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+  }
+  UIComponents.releaseFocus();
+  if (_preFocusElement && typeof _preFocusElement.focus === 'function') {
+    _preFocusElement.focus();
+  }
+  _preFocusElement = null;
+  _commentItemId = null;
+
+  document.removeEventListener('keydown', _commentModalEscapeHandler);
+}
+
+/** Keyboard handler — Escape closes the comment modal. */
+function _commentModalEscapeHandler(e) {
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closeCommentModal();
+  }
+}
+
+/**
+ * Fetches and renders the comment list for the given item.
+ * @param {number|string} itemId
+ */
+async function _loadCommentThread(itemId) {
+  const list = document.getElementById('comment-thread-list');
+  const emptyEl = document.getElementById('comment-thread-empty');
+  if (!list) { return; }
+
+  // Loading state
+  list.replaceChildren();
+  const loadingLi = document.createElement('li');
+  loadingLi.className = 'comment-thread__empty';
+  loadingLi.textContent = 'Loading comments…';
+  list.appendChild(loadingLi);
+
+  let comments = [];
+  try {
+    const data = await window.apiClient.get('/api/portfolio-comments/item/' + itemId);
+    comments = (data && data.comments) ? data.comments : [];
+  } catch (err) {
+    list.replaceChildren();
+    const errLi = document.createElement('li');
+    errLi.className = 'comment-thread__empty';
+    errLi.textContent = (err && err.message) || 'Could not load comments.';
+    list.appendChild(errLi);
+    return;
+  }
+
+  list.replaceChildren();
+
+  if (comments.length === 0) {
+    const noLi = document.createElement('li');
+    noLi.className = 'comment-thread__empty';
+    noLi.id = 'comment-thread-empty';
+    noLi.textContent = 'No comments yet. Be the first to comment!';
+    list.appendChild(noLi);
+    return;
+  }
+
+  comments.forEach(function(comment) {
+    list.appendChild(_buildCommentEl(comment));
+  });
+
+  // Scroll to bottom so newest is visible
+  list.scrollTop = list.scrollHeight;
+}
+
+/**
+ * Builds a single comment <li> element from a comment object.
+ * All user text set via textContent — never innerHTML.
+ * @param {object} comment
+ * @returns {HTMLLIElement}
+ */
+function _buildCommentEl(comment) {
+  const li = document.createElement('li');
+  li.className = 'comment' + (comment.isOwnByViewer ? ' comment--own' : '');
+  li.dataset.commentId = comment.id;
+
+  // Meta row
+  const meta = document.createElement('div');
+  meta.className = 'comment-meta';
+
+  const authorSpan = document.createElement('span');
+  authorSpan.className = 'comment-meta__author';
+  authorSpan.textContent = comment.authorName || 'Unknown';
+  meta.appendChild(authorSpan);
+
+  if (comment.authorRole) {
+    const roleSpan = document.createElement('span');
+    roleSpan.className = 'comment-meta__role';
+    roleSpan.textContent = comment.authorRole;
+    meta.appendChild(roleSpan);
+  }
+
+  const dateSpan = document.createElement('span');
+  dateSpan.className = 'comment-meta__date';
+  const d = new Date(comment.createdAt);
+  dateSpan.textContent = isNaN(d.getTime()) ? '' : d.toLocaleString();
+  meta.appendChild(dateSpan);
+
+  li.appendChild(meta);
+
+  // Body
+  const bodyEl = document.createElement('p');
+  bodyEl.className = 'comment-body';
+  bodyEl.textContent = comment.body || '';
+  li.appendChild(bodyEl);
+
+  // Delete button for own comments
+  if (comment.isOwnByViewer) {
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'comment__delete-btn';
+    delBtn.setAttribute('aria-label', 'Delete this comment');
+    delBtn.textContent = '🗑'; // 🗑
+    delBtn.addEventListener('click', function() {
+      _deleteComment(comment.id);
+    });
+    li.appendChild(delBtn);
+  }
+
+  return li;
+}
+
+/**
+ * Deletes a comment then reloads the thread.
+ * @param {number|string} commentId
+ */
+async function _deleteComment(commentId) {
+  try {
+    await window.apiClient.delete('/api/portfolio-comments/' + commentId);
+    if (_commentItemId) {
+      await _loadCommentThread(_commentItemId);
+    }
+  } catch (err) {
+    const msg = (err && err.message) || 'Could not delete comment.';
+    UIComponents.createToast({ message: msg, type: 'error' });
+  }
+}
+
+/**
+ * Posts a new comment for the current thread item.
+ */
+async function _submitComment() {
+  if (!_commentItemId) { return; }
+
+  const textarea = document.getElementById('comment-body-input');
+  const submitBtn = document.getElementById('comment-submit-btn');
+  if (!textarea) { return; }
+
+  const body = textarea.value.trim();
+  if (!body) {
+    UIComponents.createToast({ message: 'Comment cannot be empty.', type: 'error' });
+    textarea.focus();
+    return;
+  }
+  if (body.length > 2000) {
+    UIComponents.createToast({ message: 'Comment must be 2000 characters or fewer.', type: 'error' });
+    textarea.focus();
+    return;
+  }
+
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Posting…'; }
+
+  try {
+    await window.apiClient.post('/api/portfolio-comments/item/' + _commentItemId, { body: body });
+    textarea.value = '';
+    _updateCharCount(textarea);
+    await _loadCommentThread(_commentItemId);
+  } catch (err) {
+    const msg = (err && err.message) || 'Could not post comment.';
+    UIComponents.createToast({ message: msg, type: 'error' });
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Post Comment'; }
+  }
+}
+
+/**
+ * Updates the character counter display for the comment textarea.
+ * @param {HTMLTextAreaElement} textarea
+ */
+function _updateCharCount(textarea) {
+  const counter = document.getElementById('comment-char-count');
+  if (!counter) { return; }
+  const len = textarea.value.length;
+  counter.textContent = len + ' / 2000';
+  counter.className = 'comment-thread__char-count';
+  if (len > 2000) {
+    counter.classList.add('comment-thread__char-count--over');
+  } else if (len > 1800) {
+    counter.classList.add('comment-thread__char-count--warn');
+  }
+}
+
+/**
+ * Clears the unread dot on the card for the given item ID.
+ * @param {number|string} itemId
+ */
+function _clearUnreadDot(itemId) {
+  const card = document.querySelector('.portfolio-card[data-id="' + itemId + '"]');
+  if (!card) { return; }
+  const dot = card.querySelector('.comment-unread-dot');
+  if (dot) { dot.remove(); }
 }
 
 /* =========================================================================
@@ -287,6 +636,30 @@ function renderCard(item) {
     withdrawBtn.addEventListener('click', () => withdrawItem(item.id));
     actions.appendChild(withdrawBtn);
   }
+
+  // Comments affordance — always available so students can read teacher
+  // guidance and ask questions even on submitted / in-auction pieces.
+  const commentCount = Number.parseInt(item.commentCount, 10) || 0;
+  const unreadCount = Number.parseInt(item.unreadCount, 10) || 0;
+  const commentBtn = document.createElement('button');
+  commentBtn.type = 'button';
+  commentBtn.className = 'portfolio-comment-btn';
+  commentBtn.setAttribute(
+    'aria-label',
+    'Comments (' + commentCount + ')' + (unreadCount > 0 ? ', ' + unreadCount + ' unread' : '') +
+      ' for ' + (item.title || 'artwork')
+  );
+  const commentLabel = document.createElement('span');
+  commentLabel.textContent = 'Comments (' + commentCount + ')';
+  commentBtn.appendChild(commentLabel);
+  if (unreadCount > 0) {
+    const dot = document.createElement('span');
+    dot.className = 'comment-unread-dot';
+    dot.setAttribute('aria-hidden', 'true');
+    commentBtn.appendChild(dot);
+  }
+  commentBtn.addEventListener('click', () => openCommentThread(item.id, commentBtn));
+  actions.appendChild(commentBtn);
 
   card.appendChild(actions);
   return card;
@@ -751,6 +1124,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load portfolio data
   loadPortfolio();
 
+  // Load the "Removed pieces" notice (student's removal notification)
+  loadRemovedNotice();
+
   // ---- Add Artwork button ----
   const addBtn = document.getElementById('add-piece-btn');
   if (addBtn) {
@@ -844,6 +1220,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     submitModal.addEventListener('click', (e) => {
       if (e.target === submitModal) { closeSubmitModal(); }
+    });
+  }
+
+  // ---- Comment modal: close button ----
+  const commentClose = document.getElementById('comment-modal-close');
+  if (commentClose) {
+    commentClose.addEventListener('click', closeCommentModal);
+  }
+
+  // ---- Comment modal: post button ----
+  const commentSubmit = document.getElementById('comment-submit-btn');
+  if (commentSubmit) {
+    commentSubmit.addEventListener('click', _submitComment);
+  }
+
+  // ---- Comment modal: live character counter ----
+  const commentInput = document.getElementById('comment-body-input');
+  if (commentInput) {
+    commentInput.addEventListener('input', () => _updateCharCount(commentInput));
+  }
+
+  // ---- Comment modal: backdrop click ----
+  const commentModal = document.getElementById('comment-modal');
+  if (commentModal) {
+    commentModal.addEventListener('click', (e) => {
+      if (e.target === commentModal) { closeCommentModal(); }
     });
   }
 
