@@ -1024,3 +1024,57 @@
         gap: var(--spacing-md);
     }
 }
+
+/* ===== Portfolio page responsive rules ===== */
+
+/* Tablet (641px+): two columns */
+@media (min-width: 641px) {
+    .portfolio-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Desktop (1025px+): three columns */
+@media (min-width: 1025px) {
+    .portfolio-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Extra-large (1281px+): four columns */
+@media (min-width: 1281px) {
+    .portfolio-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Phones (≤640px): single column; lightbox fills viewport */
+@media (max-width: 640px) {
+    .portfolio-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+
+    .lightbox {
+        padding: 0;
+    }
+
+    .lightbox-img-full {
+        max-width: 100vw;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .lightbox-close-btn {
+        top: 0.5rem;
+        right: 0.75rem;
+    }
+}
+
+/* Very small phones (≤400px): single column */
+@media (max-width: 400px) {
+    .portfolio-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+}
