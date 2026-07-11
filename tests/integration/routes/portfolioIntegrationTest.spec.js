@@ -57,3 +57,62 @@ describe('Portfolio create + list', () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe('Portfolio edit / status / delete', () => {
+  let app;
+  beforeEach(() => { app = createTestApp(); mockDb.query.mockReset(); mockDb.query.mockResolvedValue({ rows: [], rowCount: 0 }); });
+
+  test('PUT edits an own, unlocked piece', async () => {
+    mockDb.query
+      .mockResolvedValueOnce({ rows: [{ id: 'pi-1', student_user_id: 'stu-1', submission_state: 'NOT_SUBMITTED' }], rowCount: 1 }) // ownership+state lookup
+      .mockResolvedValueOnce({ rows: [{ id: 'pi-1', title: 'New', description: null, medium: null, artist_grade: null, image_url: null, portfolio_status: 'IN_PROGRESS', submission_state: 'NOT_SUBMITTED', created_at: new Date() }], rowCount: 1 }); // update
+    const res = await request(app).put('/api/portfolio/pi-1')
+      .set('Authorization', `Bearer ${studentToken()}`).send({ title: 'New' });
+    expect(res.status).toBe(200);
+    expect(res.body.item.title).toBe('New');
+  });
+
+  test('PUT on another student\'s piece returns 404', async () => {
+    mockDb.query.mockResolvedValueOnce({ rows: [], rowCount: 0 }); // ownership lookup finds nothing for this student
+    const res = await request(app).put('/api/portfolio/pi-x')
+      .set('Authorization', `Bearer ${studentToken()}`).send({ title: 'Hack' });
+    expect(res.status).toBe(404);
+  });
+
+  test('PUT is blocked (409) while PENDING_REVIEW', async () => {
+    mockDb.query.mockResolvedValueOnce({ rows: [{ id: 'pi-1', student_user_id: 'stu-1', submission_state: 'PENDING_REVIEW' }], rowCount: 1 });
+    const res = await request(app).put('/api/portfolio/pi-1')
+      .set('Authorization', `Bearer ${studentToken()}`).send({ title: 'Nope' });
+    expect(res.status).toBe(409);
+  });
+
+  test('PATCH status toggles IN_PROGRESS -> COMPLETED', async () => {
+    mockDb.query
+      .mockResolvedValueOnce({ rows: [{ id: 'pi-1', student_user_id: 'stu-1', submission_state: 'NOT_SUBMITTED' }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ id: 'pi-1', title: 'X', description: null, medium: null, artist_grade: null, image_url: null, portfolio_status: 'COMPLETED', submission_state: 'NOT_SUBMITTED', created_at: new Date() }], rowCount: 1 });
+    const res = await request(app).patch('/api/portfolio/pi-1/status')
+      .set('Authorization', `Bearer ${studentToken()}`).send({ portfolioStatus: 'COMPLETED' });
+    expect(res.status).toBe(200);
+    expect(res.body.item.portfolioStatus).toBe('COMPLETED');
+  });
+
+  test('PATCH rejects an invalid status with 400', async () => {
+    const res = await request(app).patch('/api/portfolio/pi-1/status')
+      .set('Authorization', `Bearer ${studentToken()}`).send({ portfolioStatus: 'BOGUS' });
+    expect(res.status).toBe(400);
+  });
+
+  test('DELETE soft-deletes an own, unlocked piece', async () => {
+    mockDb.query
+      .mockResolvedValueOnce({ rows: [{ id: 'pi-1', student_user_id: 'stu-1', submission_state: 'NOT_SUBMITTED' }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ id: 'pi-1' }], rowCount: 1 });
+    const res = await request(app).delete('/api/portfolio/pi-1').set('Authorization', `Bearer ${studentToken()}`);
+    expect(res.status).toBe(200);
+  });
+
+  test('DELETE is blocked (409) while IN_AUCTION', async () => {
+    mockDb.query.mockResolvedValueOnce({ rows: [{ id: 'pi-1', student_user_id: 'stu-1', submission_state: 'IN_AUCTION' }], rowCount: 1 });
+    const res = await request(app).delete('/api/portfolio/pi-1').set('Authorization', `Bearer ${studentToken()}`);
+    expect(res.status).toBe(409);
+  });
+});
