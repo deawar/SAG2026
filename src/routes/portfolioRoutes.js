@@ -158,5 +158,83 @@ module.exports = (db) => {
     } catch (err) { return next(err); }
   });
 
+  // POST /api/portfolio/:id/submit — snapshot a COMPLETED piece into an auction
+  router.post('/:id/submit', async (req, res, next) => {
+    try {
+      const studentId = req.user?.id;
+      const schoolId = req.user?.schoolId || null;
+      const { auctionId } = req.body;
+      if (!auctionId) { return res.status(400).json({ success: false, message: 'auctionId is required' }); }
+
+      const itemRes = await db.query(
+        `SELECT id, student_user_id, portfolio_status, submission_state, title, description,
+                medium, artist_grade, dimensions_width_cm, dimensions_height_cm, image_url
+         FROM portfolio_items WHERE id = $1 AND student_user_id = $2 AND deleted_at IS NULL`,
+        [req.params.id, studentId]
+      );
+      const item = itemRes.rows[0];
+      if (!item) { return res.status(404).json({ success: false, message: 'Not found' }); }
+      if (item.portfolio_status !== 'COMPLETED' || !['NOT_SUBMITTED', 'REJECTED', 'UNSOLD', 'WITHDRAWN'].includes(item.submission_state)) {
+        return res.status(409).json({ success: false, message: 'Only a completed, un-submitted piece can be submitted' });
+      }
+
+      const auctionRes = await db.query(
+        `SELECT id FROM auctions
+         WHERE id = $1 AND school_id = $2 AND deleted_at IS NULL
+           AND auction_status IN ('DRAFT','APPROVED','LIVE')`,
+        [auctionId, schoolId]
+      );
+      if (auctionRes.rowCount === 0) {
+        return res.status(403).json({ success: false, message: 'Auction not found or not open for submissions' });
+      }
+
+      const nameRes = await db.query('SELECT first_name, last_name FROM users WHERE id = $1', [studentId]);
+      const artistName = nameRes.rows[0]
+        ? `${nameRes.rows[0].first_name} ${nameRes.rows[0].last_name || ''}`.trim()
+        : 'Student Artist';
+
+      await db.query(
+        `INSERT INTO artwork
+           (auction_id, created_by_user_id, portfolio_item_id, title, artist_name, medium,
+            artist_grade, dimensions_width_cm, dimensions_height_cm, starting_bid_amount,
+            description, image_url, artwork_status)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,0,$10,$11,'SUBMITTED')
+         RETURNING id`,
+        [
+          auctionId, studentId, req.params.id, item.title, artistName, item.medium,
+          item.artist_grade, item.dimensions_width_cm, item.dimensions_height_cm,
+          item.description, item.image_url
+        ]
+      );
+
+      await db.query(
+        'UPDATE portfolio_items SET submission_state = \'PENDING_REVIEW\', rejection_reason = NULL, updated_at = NOW() WHERE id = $1',
+        [req.params.id]
+      );
+      return res.json({ success: true, submissionState: 'PENDING_REVIEW' });
+    } catch (err) { return next(err); }
+  });
+
+  // POST /api/portfolio/:id/withdraw — pull back a pending submission
+  router.post('/:id/withdraw', async (req, res, next) => {
+    try {
+      const item = await loadOwnItem(db, req.params.id, req.user?.id);
+      if (!item) { return res.status(404).json({ success: false, message: 'Not found' }); }
+      if (item.submission_state !== 'PENDING_REVIEW') {
+        return res.status(409).json({ success: false, message: 'Only a pending submission can be withdrawn' });
+      }
+      await db.query(
+        `UPDATE artwork SET deleted_at = NOW()
+         WHERE portfolio_item_id = $1 AND artwork_status = 'SUBMITTED' AND deleted_at IS NULL`,
+        [req.params.id]
+      );
+      await db.query(
+        'UPDATE portfolio_items SET submission_state = \'WITHDRAWN\', updated_at = NOW() WHERE id = $1',
+        [req.params.id]
+      );
+      return res.json({ success: true, submissionState: 'WITHDRAWN' });
+    } catch (err) { return next(err); }
+  });
+
   return router;
 };
