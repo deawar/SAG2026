@@ -88,11 +88,11 @@ module.exports = (db) => {
     try {
       const viewer = req.user;
       const body = (req.body.body || '').trim();
-      const access = await resolveAccess(db, viewer, req.params.itemId);
-      if (access.status !== 200) { return res.status(access.status).json({ success: false, message: access.status === 404 ? 'Not found' : 'Not permitted' }); }
       if (body.length < 1 || body.length > MAX_BODY) {
         return res.status(400).json({ success: false, message: `Comment must be 1–${MAX_BODY} characters` });
       }
+      const access = await resolveAccess(db, viewer, req.params.itemId);
+      if (access.status !== 200) { return res.status(access.status).json({ success: false, message: access.status === 404 ? 'Not found' : 'Not permitted' }); }
       const ins = await db.query(
         `INSERT INTO portfolio_comments (portfolio_item_id, school_id, author_user_id, author_role, body)
          VALUES ($1, $2, $3, $4, $5)
