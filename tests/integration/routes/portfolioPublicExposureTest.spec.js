@@ -51,4 +51,24 @@ describe('Portfolio is never publicly exposed', () => {
     expect((await request(app).get('/api/teacher/portfolios')).status).toBe(401);
     expect((await request(app).get('/api/teacher/portfolios/some-student')).status).toBe(401);
   });
+
+  test('no public route reads portfolio_comments', async () => {
+    await request(app).get('/api/auctions/carousel');
+    await request(app).get('/api/auctions');
+    await request(app).get('/api/auctions/00000000-0000-0000-0000-000000000001/public');
+    const sql = [
+      ...mockPool.query.mock.calls,
+      ...(mockDb.query && mockDb.query.mock ? mockDb.query.mock.calls : [])
+    ].map(c => c[0]).join('\n');
+    expect(sql).not.toMatch(/portfolio_comments/i);
+  });
+
+  test('comment + moderation routes require auth (401 unauthenticated)', async () => {
+    expect((await request(app).get('/api/portfolio-comments/item/pi-1')).status).toBe(401);
+    expect((await request(app).post('/api/portfolio-comments/item/pi-1').send({ body: 'x' })).status).toBe(401);
+    expect((await request(app).delete('/api/portfolio-comments/c-1')).status).toBe(401);
+    expect((await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/remove').send({ reason: 'x' })).status).toBe(401);
+    expect((await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/restore')).status).toBe(401);
+    expect((await request(app).get('/api/portfolio/removed')).status).toBe(401);
+  });
 });
