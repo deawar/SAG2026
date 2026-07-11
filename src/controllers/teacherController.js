@@ -197,9 +197,8 @@ class TeacherController {
     try {
       const { id } = req.params;
       const teacherId = req.user.id;
-      const schoolId  = await TeacherController._resolveSchoolId(req.user.id);
 
-      // Optional pricing — validate only when provided
+      // Optional pricing — validate BEFORE any DB access so bad input costs no round-trip
       const { startingBid, reserve } = req.body || {};
 
       if (startingBid !== undefined && startingBid !== null) {
@@ -214,6 +213,8 @@ class TeacherController {
           return res.status(400).json({ success: false, message: 'reserve must be >= startingBid' });
         }
       }
+
+      const schoolId  = await TeacherController._resolveSchoolId(req.user.id);
 
       const result = await pool.query(
         `UPDATE artwork aw
