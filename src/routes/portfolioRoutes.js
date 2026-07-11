@@ -208,8 +208,8 @@ module.exports = (db) => {
       );
 
       await db.query(
-        'UPDATE portfolio_items SET submission_state = \'PENDING_REVIEW\', rejection_reason = NULL, updated_at = NOW() WHERE id = $1',
-        [req.params.id]
+        'UPDATE portfolio_items SET submission_state = \'PENDING_REVIEW\', rejection_reason = NULL, updated_at = NOW() WHERE id = $1 AND student_user_id = $2',
+        [req.params.id, studentId]
       );
       return res.json({ success: true, submissionState: 'PENDING_REVIEW' });
     } catch (err) { return next(err); }
@@ -229,8 +229,8 @@ module.exports = (db) => {
         [req.params.id]
       );
       await db.query(
-        'UPDATE portfolio_items SET submission_state = \'WITHDRAWN\', updated_at = NOW() WHERE id = $1',
-        [req.params.id]
+        'UPDATE portfolio_items SET submission_state = \'WITHDRAWN\', updated_at = NOW() WHERE id = $1 AND student_user_id = $2',
+        [req.params.id, req.user?.id]
       );
       return res.json({ success: true, submissionState: 'WITHDRAWN' });
     } catch (err) { return next(err); }

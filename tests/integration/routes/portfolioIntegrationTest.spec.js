@@ -159,6 +159,12 @@ describe('Portfolio submit / withdraw', () => {
     expect(res.status).toBe(409);
   });
 
+  test('submit with no auctionId returns 400', async () => {
+    const res = await request(app).post('/api/portfolio/pi-1/submit')
+      .set('Authorization', `Bearer ${studentToken()}`).send({});
+    expect(res.status).toBe(400);
+  });
+
   test('submit to an auction outside the student\'s school returns 403', async () => {
     mockDb.query
       .mockResolvedValueOnce({ rows: [{ id: 'pi-1', student_user_id: 'stu-1', portfolio_status: 'COMPLETED', submission_state: 'NOT_SUBMITTED', title: 'X', image_url: null }], rowCount: 1 })
