@@ -873,7 +873,7 @@ class TeacherController {
         `UPDATE portfolio_items
             SET moderation_status = 'VISIBLE', moderated_by_user_id = NULL,
                 moderated_at = NULL, moderation_reason = NULL, updated_at = NOW()
-          WHERE id = $1 AND student_user_id = $2
+          WHERE id = $1 AND student_user_id = $2 AND deleted_at IS NULL
           RETURNING id`,
         [itemId, studentId]
       );

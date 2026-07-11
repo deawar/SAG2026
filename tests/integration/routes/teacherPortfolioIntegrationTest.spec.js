@@ -93,10 +93,26 @@ describe('Portfolio moderation — remove / restore', () => {
   });
 
   test('remove requires a reason (400)', async () => {
-    mockPool.query.mockResolvedValueOnce({ rows: [{ ok: 1 }], rowCount: 1 }); // scope ok
+    mockPool.query.mockResolvedValueOnce({ rows: [{ ok: 1 }], rowCount: 1 }); // unused — 400 returns before any query
     const res = await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/remove')
       .set('Authorization', `Bearer ${teacherToken()}`).send({ reason: '  ' });
     expect(res.status).toBe(400);
+  });
+
+  test('a non-inviting teacher cannot remove a piece (403)', async () => {
+    mockPool.query.mockResolvedValueOnce({ rows: [], rowCount: 0 }); // inviter check: no match
+    const res = await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/remove')
+      .set('Authorization', `Bearer ${teacherToken()}`).send({ reason: 'test' });
+    expect(res.status).toBe(403);
+  });
+
+  test('a SCHOOL_ADMIN from another school cannot remove (403)', async () => {
+    mockPool.query
+      .mockResolvedValueOnce({ rows: [{ school_id: 'school-1' }], rowCount: 1 }) // (auth) admin's own school hydration
+      .mockResolvedValueOnce({ rows: [{ school_id: 'school-2' }], rowCount: 1 }); // student's school (mismatch -> false)
+    const res = await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/remove')
+      .set('Authorization', `Bearer ${adminToken()}`).send({ reason: 'test' });
+    expect(res.status).toBe(403);
   });
 
   test('a teacher cannot restore — 403 (admin only)', async () => {
