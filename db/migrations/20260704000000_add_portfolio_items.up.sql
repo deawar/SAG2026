@@ -27,5 +27,11 @@ CREATE TABLE IF NOT EXISTS portfolio_items (
 CREATE INDEX IF NOT EXISTS idx_portfolio_items_student ON portfolio_items(student_user_id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_portfolio_items_school  ON portfolio_items(school_id)        WHERE deleted_at IS NULL;
 
+-- Keep updated_at current on write (matches every other table's trigger; the
+-- function update_updated_at_column() already exists in the baseline schema).
+DROP TRIGGER IF EXISTS portfolio_items_updated_at ON portfolio_items;
+CREATE TRIGGER portfolio_items_updated_at BEFORE UPDATE ON portfolio_items
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 ALTER TABLE artwork ADD COLUMN IF NOT EXISTS portfolio_item_id UUID NULL REFERENCES portfolio_items(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_artwork_portfolio_item ON artwork(portfolio_item_id);
