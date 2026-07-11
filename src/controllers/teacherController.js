@@ -786,9 +786,14 @@ class TeacherController {
         return res.status(403).json({ success: false, message: 'Not permitted' });
       }
 
+      // SCHOOL_ADMIN sees all pieces (VISIBLE + REMOVED); TEACHER sees only VISIBLE.
+      const includeRemoved = viewer.role === 'SCHOOL_ADMIN';
+      const moderationFilter = includeRemoved ? '' : "AND moderation_status = 'VISIBLE'";
+
       const items = await pool.query(
         `SELECT id, title, description, medium, artist_grade, image_url,
-                portfolio_status, submission_state, created_at
+                portfolio_status, submission_state, created_at,
+                moderation_status, moderation_reason, moderated_at
                ,(SELECT COUNT(*) FROM portfolio_comments c
                   WHERE c.portfolio_item_id = portfolio_items.id AND c.deleted_at IS NULL) AS comment_count
                ,(SELECT COUNT(*) FROM portfolio_comments c
@@ -797,7 +802,7 @@ class TeacherController {
                     AND c.author_user_id <> $2
                     AND (r.last_read_at IS NULL OR c.created_at > r.last_read_at)) AS unread_count
            FROM portfolio_items
-          WHERE student_user_id=$1 AND deleted_at IS NULL
+          WHERE student_user_id=$1 AND deleted_at IS NULL ${moderationFilter}
           ORDER BY created_at DESC`,
         [studentId, viewer.id]
       );
@@ -807,6 +812,9 @@ class TeacherController {
           id: r.id, title: r.title, description: r.description, medium: r.medium,
           artistGrade: r.artist_grade, imageUrl: r.image_url,
           portfolioStatus: r.portfolio_status, submissionState: r.submission_state, createdAt: r.created_at,
+          moderationStatus: r.moderation_status,
+          moderationReason: r.moderation_reason,
+          moderatedAt: r.moderated_at,
           commentCount: Number.parseInt(r.comment_count, 10) || 0,
           unreadCount: Number.parseInt(r.unread_count, 10) || 0
         }))

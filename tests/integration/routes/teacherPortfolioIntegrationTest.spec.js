@@ -75,11 +75,45 @@ describe('Teacher portfolio viewing', () => {
       .mockResolvedValueOnce({ rows: [{
         id: 'pi-1', title: 'Sunset', description: null, medium: null, artist_grade: null, image_url: null,
         portfolio_status: 'COMPLETED', submission_state: 'IN_AUCTION', created_at: new Date(),
+        moderation_status: 'VISIBLE', moderation_reason: null, moderated_at: null,
         comment_count: '3', unread_count: '2'
       }], rowCount: 1 });
     const res = await request(app).get('/api/teacher/portfolios/stu-1').set('Authorization', `Bearer ${teacherToken()}`);
     expect(res.status).toBe(200);
     expect(res.body.items[0]).toMatchObject({ commentCount: 3, unreadCount: 2 });
+  });
+
+  test('SCHOOL_ADMIN sees a REMOVED item with moderationStatus and reason exposed', async () => {
+    // SCHOOL_ADMIN path: (1) auth hydration, (2) controller school check, (3) items query
+    mockPool.query
+      .mockResolvedValueOnce({ rows: [{ school_id: 'school-1' }], rowCount: 1 }) // (1) auth hydration
+      .mockResolvedValueOnce({ rows: [{ school_id: 'school-1' }], rowCount: 1 }) // (2) controller school check
+      .mockResolvedValueOnce({ rows: [{
+        id: 'pi-2', title: 'Removed Art', description: null, medium: null, artist_grade: null, image_url: null,
+        portfolio_status: 'COMPLETED', submission_state: 'NOT_SUBMITTED', created_at: new Date(),
+        moderation_status: 'REMOVED', moderation_reason: 'Contains personal info', moderated_at: new Date(),
+        comment_count: '0', unread_count: '0'
+      }], rowCount: 1 }); // (3) items query — REMOVED piece returned to admin
+    const res = await request(app).get('/api/teacher/portfolios/stu-1').set('Authorization', `Bearer ${schoolAdminToken()}`);
+    expect(res.status).toBe(200);
+    expect(res.body.items).toHaveLength(1);
+    expect(res.body.items[0]).toMatchObject({
+      moderationStatus: 'REMOVED',
+      moderationReason: 'Contains personal info'
+    });
+  });
+
+  test('TEACHER does not receive REMOVED items (filter applied)', async () => {
+    // TEACHER path: (1) registration_tokens scope check, (2) items query — only VISIBLE
+    mockPool.query
+      .mockResolvedValueOnce({ rows: [{ ok: 1 }], rowCount: 1 }) // (1) scope check
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 });           // (2) items query returns empty (REMOVED filtered out)
+    const res = await request(app).get('/api/teacher/portfolios/stu-1').set('Authorization', `Bearer ${teacherToken()}`);
+    expect(res.status).toBe(200);
+    expect(res.body.items).toHaveLength(0);
+    // Verify the SQL used the VISIBLE filter
+    const itemsCall = mockPool.query.mock.calls[1];
+    expect(itemsCall[0]).toMatch(/moderation_status\s*=\s*'VISIBLE'/);
   });
 });
 
