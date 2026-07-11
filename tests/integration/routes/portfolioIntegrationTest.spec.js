@@ -203,3 +203,18 @@ describe('Portfolio moderation notices', () => {
     expect(listCall[0]).toMatch(/moderation_status = 'VISIBLE'/);
   });
 });
+
+describe('Portfolio list comment counts', () => {
+  let app;
+  beforeEach(() => { app = createTestApp(); mockDb.query.mockReset(); mockDb.query.mockResolvedValue({ rows: [], rowCount: 0 }); });
+
+  test('list items include commentCount and unreadCount', async () => {
+    mockDb.query.mockResolvedValueOnce({ rows: [{
+      id: 'pi-1', title: 'A', description: null, medium: null, artist_grade: null, image_url: null,
+      portfolio_status: 'IN_PROGRESS', submission_state: 'NOT_SUBMITTED', rejection_reason: null, created_at: new Date(),
+      comment_count: '2', unread_count: '1'
+    }], rowCount: 1 });
+    const res = await request(app).get('/api/portfolio').set('Authorization', `Bearer ${studentToken()}`);
+    expect(res.body.items[0]).toMatchObject({ commentCount: 2, unreadCount: 1 });
+  });
+});

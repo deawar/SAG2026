@@ -68,6 +68,19 @@ describe('Teacher portfolio viewing', () => {
     const res = await request(app).get('/api/teacher/portfolios/stu-1').set('Authorization', `Bearer ${otherSchoolAdminToken()}`);
     expect(res.status).toBe(403);
   });
+
+  test('items include commentCount and unreadCount', async () => {
+    mockPool.query
+      .mockResolvedValueOnce({ rows: [{ ok: 1 }], rowCount: 1 }) // scope check: registration_tokens match
+      .mockResolvedValueOnce({ rows: [{
+        id: 'pi-1', title: 'Sunset', description: null, medium: null, artist_grade: null, image_url: null,
+        portfolio_status: 'COMPLETED', submission_state: 'IN_AUCTION', created_at: new Date(),
+        comment_count: '3', unread_count: '2'
+      }], rowCount: 1 });
+    const res = await request(app).get('/api/teacher/portfolios/stu-1').set('Authorization', `Bearer ${teacherToken()}`);
+    expect(res.status).toBe(200);
+    expect(res.body.items[0]).toMatchObject({ commentCount: 3, unreadCount: 2 });
+  });
 });
 
 function otherSchoolAdminToken() {
