@@ -17,7 +17,9 @@ function mapItem(row) {
     portfolioStatus: row.portfolio_status,
     submissionState: row.submission_state,
     rejectionReason: row.rejection_reason ?? null,
-    createdAt: row.created_at
+    createdAt: row.created_at,
+    commentCount: Number.parseInt(row.comment_count, 10) || 0,
+    unreadCount: Number.parseInt(row.unread_count, 10) || 0
   };
 }
 
@@ -79,6 +81,13 @@ module.exports = (db) => {
       const result = await db.query(
         `SELECT id, title, description, medium, artist_grade, image_url,
                 portfolio_status, submission_state, rejection_reason, created_at
+               ,(SELECT COUNT(*) FROM portfolio_comments c
+                  WHERE c.portfolio_item_id = portfolio_items.id AND c.deleted_at IS NULL) AS comment_count
+               ,(SELECT COUNT(*) FROM portfolio_comments c
+                  LEFT JOIN portfolio_comment_reads r ON r.portfolio_item_id = c.portfolio_item_id AND r.user_id = $1
+                  WHERE c.portfolio_item_id = portfolio_items.id AND c.deleted_at IS NULL
+                    AND c.author_user_id <> $1
+                    AND (r.last_read_at IS NULL OR c.created_at > r.last_read_at)) AS unread_count
          FROM portfolio_items
          WHERE student_user_id = $1 AND deleted_at IS NULL AND moderation_status = 'VISIBLE'
          ORDER BY created_at DESC`,

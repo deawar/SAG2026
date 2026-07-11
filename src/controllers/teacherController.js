@@ -789,17 +789,26 @@ class TeacherController {
       const items = await pool.query(
         `SELECT id, title, description, medium, artist_grade, image_url,
                 portfolio_status, submission_state, created_at
+               ,(SELECT COUNT(*) FROM portfolio_comments c
+                  WHERE c.portfolio_item_id = portfolio_items.id AND c.deleted_at IS NULL) AS comment_count
+               ,(SELECT COUNT(*) FROM portfolio_comments c
+                  LEFT JOIN portfolio_comment_reads r ON r.portfolio_item_id = c.portfolio_item_id AND r.user_id = $2
+                  WHERE c.portfolio_item_id = portfolio_items.id AND c.deleted_at IS NULL
+                    AND c.author_user_id <> $2
+                    AND (r.last_read_at IS NULL OR c.created_at > r.last_read_at)) AS unread_count
            FROM portfolio_items
           WHERE student_user_id=$1 AND deleted_at IS NULL
           ORDER BY created_at DESC`,
-        [studentId]
+        [studentId, viewer.id]
       );
       return res.json({
         success: true,
         items: items.rows.map(r => ({
           id: r.id, title: r.title, description: r.description, medium: r.medium,
           artistGrade: r.artist_grade, imageUrl: r.image_url,
-          portfolioStatus: r.portfolio_status, submissionState: r.submission_state, createdAt: r.created_at
+          portfolioStatus: r.portfolio_status, submissionState: r.submission_state, createdAt: r.created_at,
+          commentCount: Number.parseInt(r.comment_count, 10) || 0,
+          unreadCount: Number.parseInt(r.unread_count, 10) || 0
         }))
       });
     } catch (err) {
