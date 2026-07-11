@@ -106,7 +106,7 @@ module.exports = (db) => {
             dimensions_height_cm = COALESCE($7, dimensions_height_cm),
             image_url   = COALESCE($8, image_url),
             updated_at  = NOW()
-         WHERE id = $1
+         WHERE id = $1 AND student_user_id = $9
          RETURNING id, title, description, medium, artist_grade, image_url,
                    portfolio_status, submission_state, rejection_reason, created_at`,
         [
@@ -117,7 +117,8 @@ module.exports = (db) => {
           artistGrade !== undefined ? artistGrade : null,
           width !== undefined ? Number.parseFloat(width) : null,
           height !== undefined ? Number.parseFloat(height) : null,
-          imageUrl !== undefined ? imageUrl : null
+          imageUrl !== undefined ? imageUrl : null,
+          req.user?.id
         ]
       );
       return res.json({ success: true, item: mapItem(result.rows[0]) });
@@ -135,10 +136,10 @@ module.exports = (db) => {
       if (!item) { return res.status(404).json({ success: false, message: 'Not found' }); }
       const result = await db.query(
         `UPDATE portfolio_items SET portfolio_status = $2, updated_at = NOW()
-         WHERE id = $1
+         WHERE id = $1 AND student_user_id = $3
          RETURNING id, title, description, medium, artist_grade, image_url,
                    portfolio_status, submission_state, rejection_reason, created_at`,
-        [req.params.id, portfolioStatus]
+        [req.params.id, portfolioStatus, req.user?.id]
       );
       return res.json({ success: true, item: mapItem(result.rows[0]) });
     } catch (err) { return next(err); }
@@ -152,7 +153,7 @@ module.exports = (db) => {
       if (LOCKED.has(item.submission_state)) {
         return res.status(409).json({ success: false, message: 'Piece is locked while under review or in an auction' });
       }
-      await db.query('UPDATE portfolio_items SET deleted_at = NOW() WHERE id = $1', [req.params.id]);
+      await db.query('UPDATE portfolio_items SET deleted_at = NOW() WHERE id = $1 AND student_user_id = $2', [req.params.id, req.user?.id]);
       return res.json({ success: true });
     } catch (err) { return next(err); }
   });
