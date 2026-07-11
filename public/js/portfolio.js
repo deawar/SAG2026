@@ -240,7 +240,6 @@ function _commentModalEscapeHandler(e) {
  */
 async function _loadCommentThread(itemId) {
   const list = document.getElementById('comment-thread-list');
-  const emptyEl = document.getElementById('comment-thread-empty');
   if (!list) { return; }
 
   // Loading state
@@ -264,6 +263,10 @@ async function _loadCommentThread(itemId) {
   }
 
   list.replaceChildren();
+
+  // Keep the card's "Comments (n)" badge in sync with the true thread length
+  // (covers posts, deletes, and initial open).
+  _updateCardCommentCount(itemId, comments.length);
 
   if (comments.length === 0) {
     const noLi = document.createElement('li');
@@ -418,6 +421,19 @@ function _clearUnreadDot(itemId) {
   if (!card) { return; }
   const dot = card.querySelector('.comment-unread-dot');
   if (dot) { dot.remove(); }
+}
+
+/**
+ * Updates the "Comments (n)" label on the card for the given item ID so the
+ * badge reflects the true thread length after a post or delete.
+ * @param {number|string} itemId
+ * @param {number} count
+ */
+function _updateCardCommentCount(itemId, count) {
+  const card = document.querySelector('.portfolio-card[data-id="' + itemId + '"]');
+  if (!card) { return; }
+  const label = card.querySelector('.portfolio-comment-btn > span:first-child');
+  if (label) { label.textContent = 'Comments (' + count + ')'; }
 }
 
 /* =========================================================================
