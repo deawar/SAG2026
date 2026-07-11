@@ -55,6 +55,23 @@ module.exports = (db) => {
     } catch (err) { return next(err); }
   });
 
+  // GET /api/portfolio/removed — the student's own removed pieces (in-app notice)
+  router.get('/removed', async (req, res, next) => {
+    try {
+      const result = await db.query(
+        `SELECT id, title, moderation_reason, moderated_at
+           FROM portfolio_items
+          WHERE student_user_id = $1 AND moderation_status = 'REMOVED' AND deleted_at IS NULL
+          ORDER BY moderated_at DESC`,
+        [req.user?.id]
+      );
+      return res.json({
+        success: true,
+        removed: result.rows.map(r => ({ id: r.id, title: r.title, moderationReason: r.moderation_reason, moderatedAt: r.moderated_at }))
+      });
+    } catch (err) { return next(err); }
+  });
+
   // GET /api/portfolio — list the current student's pieces (both buckets)
   router.get('/', async (req, res, next) => {
     try {
@@ -63,7 +80,7 @@ module.exports = (db) => {
         `SELECT id, title, description, medium, artist_grade, image_url,
                 portfolio_status, submission_state, rejection_reason, created_at
          FROM portfolio_items
-         WHERE student_user_id = $1 AND deleted_at IS NULL
+         WHERE student_user_id = $1 AND deleted_at IS NULL AND moderation_status = 'VISIBLE'
          ORDER BY created_at DESC`,
         [studentId]
       );

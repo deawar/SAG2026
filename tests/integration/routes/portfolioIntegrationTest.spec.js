@@ -184,3 +184,22 @@ describe('Portfolio submit / withdraw', () => {
     expect(res.body.submissionState).toBe('WITHDRAWN');
   });
 });
+
+describe('Portfolio moderation notices', () => {
+  let app;
+  beforeEach(() => { app = createTestApp(); mockDb.query.mockReset(); mockDb.query.mockResolvedValue({ rows: [], rowCount: 0 }); });
+
+  test('GET /removed lists the student\'s removed pieces', async () => {
+    mockDb.query.mockResolvedValueOnce({ rows: [{ id: 'pi-9', title: 'Old', moderation_reason: 'PII', moderated_at: new Date() }], rowCount: 1 });
+    const res = await request(app).get('/api/portfolio/removed').set('Authorization', `Bearer ${studentToken()}`);
+    expect(res.status).toBe(200);
+    expect(res.body.removed[0]).toMatchObject({ id: 'pi-9', moderationReason: 'PII' });
+  });
+
+  test('list query filters to VISIBLE', async () => {
+    mockDb.query.mockResolvedValueOnce({ rows: [], rowCount: 0 });
+    await request(app).get('/api/portfolio').set('Authorization', `Bearer ${studentToken()}`);
+    const listCall = mockDb.query.mock.calls.find(c => /FROM portfolio_items[\s\S]*ORDER BY created_at/i.test(c[0]));
+    expect(listCall[0]).toMatch(/moderation_status = 'VISIBLE'/);
+  });
+});

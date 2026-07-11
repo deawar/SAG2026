@@ -808,6 +808,110 @@ class TeacherController {
   }
 
   /**
+   * Remove a portfolio item (set moderation_status = 'REMOVED').
+   * TEACHER: must be the inviting teacher. SCHOOL_ADMIN: must be same school.
+   */
+  static async removePortfolioItem(req, res) {
+    try {
+      const viewer = req.user;
+      const { studentId, itemId } = req.params;
+      const reason = (req.body.reason || '').trim();
+      if (!reason) { return res.status(400).json({ success: false, message: 'A reason is required' }); }
+
+      const ok = await TeacherController._canModerateStudent(viewer, studentId);
+      if (!ok) { return res.status(403).json({ success: false, message: 'Not permitted' }); }
+
+      const upd = await pool.query(
+        `UPDATE portfolio_items
+            SET moderation_status = 'REMOVED', moderated_by_user_id = $1,
+                moderated_at = NOW(), moderation_reason = $2, updated_at = NOW()
+          WHERE id = $3 AND student_user_id = $4 AND deleted_at IS NULL
+          RETURNING id, submission_state`,
+        [viewer.id, reason, itemId, studentId]
+      );
+      if (upd.rowCount === 0) { return res.status(404).json({ success: false, message: 'Item not found' }); }
+
+      // If live in an auction, withdraw the linked artwork.
+      if (upd.rows[0].submission_state === 'IN_AUCTION') {
+        await pool.query(
+          `UPDATE artwork SET deleted_at = NOW(), updated_at = NOW()
+            WHERE portfolio_item_id = $1 AND artwork_status IN ('SUBMITTED','APPROVED') AND deleted_at IS NULL`,
+          [itemId]
+        );
+        await pool.query(
+          'UPDATE portfolio_items SET submission_state = \'WITHDRAWN\', updated_at = NOW() WHERE id = $1',
+          [itemId]
+        );
+      }
+      await pool.query(
+        `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details)
+         VALUES ($1,$2,$3,$4,$5)`,
+        ['PORTFOLIO', 'item_removed', 'portfolio_item', itemId,
+          JSON.stringify({ removedBy: viewer.id, studentId, reason })]
+      );
+      return res.json({ success: true, message: 'Item removed' });
+    } catch (error) {
+      logger.error('Remove portfolio item error', { error: error.message, userId: req.user?.id });
+      return res.status(500).json({ success: false, message: 'Error removing item' });
+    }
+  }
+
+  /**
+   * Restore a removed portfolio item (SCHOOL_ADMIN only).
+   */
+  static async restorePortfolioItem(req, res) {
+    try {
+      const viewer = req.user;
+      if (viewer.role !== 'SCHOOL_ADMIN') { return res.status(403).json({ success: false, message: 'Only a school admin can restore' }); }
+      const { studentId, itemId } = req.params;
+
+      const s = await pool.query('SELECT school_id FROM users WHERE id = $1 AND role = \'STUDENT\' AND deleted_at IS NULL', [studentId]);
+      if (s.rowCount === 0 || s.rows[0].school_id !== viewer.schoolId) {
+        return res.status(403).json({ success: false, message: 'Not permitted' });
+      }
+      const upd = await pool.query(
+        `UPDATE portfolio_items
+            SET moderation_status = 'VISIBLE', moderated_by_user_id = NULL,
+                moderated_at = NULL, moderation_reason = NULL, updated_at = NOW()
+          WHERE id = $1 AND student_user_id = $2
+          RETURNING id`,
+        [itemId, studentId]
+      );
+      if (upd.rowCount === 0) { return res.status(404).json({ success: false, message: 'Item not found' }); }
+      await pool.query(
+        `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details)
+         VALUES ($1,$2,$3,$4,$5)`,
+        ['PORTFOLIO', 'item_restored', 'portfolio_item', itemId, JSON.stringify({ restoredBy: viewer.id, studentId })]
+      );
+      return res.json({ success: true, message: 'Item restored' });
+    } catch (error) {
+      logger.error('Restore portfolio item error', { error: error.message, userId: req.user?.id });
+      return res.status(500).json({ success: false, message: 'Error restoring item' });
+    }
+  }
+
+  /**
+   * Shared moderation scope: inviting teacher OR same-school admin.
+   */
+  static async _canModerateStudent(viewer, studentId) {
+    if (viewer.role === 'SCHOOL_ADMIN') {
+      const s = await pool.query('SELECT school_id FROM users WHERE id = $1 AND role = \'STUDENT\' AND deleted_at IS NULL', [studentId]);
+      return s.rowCount > 0 && s.rows[0].school_id === viewer.schoolId;
+    }
+    if (viewer.role === 'TEACHER') {
+      const scope = await pool.query(
+        `SELECT 1 FROM registration_tokens rt
+           JOIN users u ON LOWER(u.email) = LOWER(rt.student_email)
+          WHERE rt.teacher_id = $1 AND u.id = $2 AND u.role = 'STUDENT' AND u.deleted_at IS NULL
+          LIMIT 1`,
+        [viewer.id, studentId]
+      );
+      return scope.rowCount > 0;
+    }
+    return false;
+  }
+
+  /**
      * Soft-delete a registered student.
      * Teachers may only delete students belonging to their own school.
      */

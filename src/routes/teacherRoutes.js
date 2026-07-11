@@ -181,6 +181,22 @@ router.get('/portfolios/:studentId', async (req, res, next) => {
 });
 
 /**
+ * POST /api/teacher/portfolios/:studentId/items/:itemId/remove
+ * Remove a portfolio item (set moderation_status = 'REMOVED').
+ */
+router.post('/portfolios/:studentId/items/:itemId/remove', async (req, res, next) => {
+  try { return await TeacherController.removePortfolioItem(req, res); } catch (e) { return next(e); }
+});
+
+/**
+ * POST /api/teacher/portfolios/:studentId/items/:itemId/restore
+ * Restore a removed portfolio item (SCHOOL_ADMIN only).
+ */
+router.post('/portfolios/:studentId/items/:itemId/restore', async (req, res, next) => {
+  try { return await TeacherController.restorePortfolioItem(req, res); } catch (e) { return next(e); }
+});
+
+/**
  * PUT /api/teacher/submissions/:id/approve
  * Approve a student artwork submission (school-scoped)
  */

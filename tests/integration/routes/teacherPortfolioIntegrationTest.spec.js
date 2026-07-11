@@ -73,3 +73,46 @@ describe('Teacher portfolio viewing', () => {
 function otherSchoolAdminToken() {
   return jwt.sign({ userId: 'sa-2', role: 'SCHOOL_ADMIN', schoolId: 'school-2', twoFaEnabled: true }, SECRET, { algorithm: 'HS256' });
 }
+function adminToken() { return jwt.sign({ userId: 'sa-1', role: 'SCHOOL_ADMIN', schoolId: 'school-1', twoFaEnabled: true }, SECRET, { algorithm: 'HS256' }); }
+
+describe('Portfolio moderation — remove / restore', () => {
+  let app;
+  beforeAll(() => { mockDb.reset(); app = createApp(mockDb); });
+  beforeEach(() => { mockPool.query.mockReset(); mockPool.query.mockResolvedValue({ rows: [], rowCount: 0 }); });
+
+  test('inviting teacher removes a VISIBLE piece with a reason (200) + audit', async () => {
+    mockPool.query
+      .mockResolvedValueOnce({ rows: [{ ok: 1 }], rowCount: 1 })   // teacher inviter scope check
+      .mockResolvedValueOnce({ rows: [{ id: 'pi-1', submission_state: 'COMPLETED' }], rowCount: 1 }) // UPDATE portfolio_items -> REMOVED RETURNING
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 });           // audit
+    const res = await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/remove')
+      .set('Authorization', `Bearer ${teacherToken()}`).send({ reason: 'Contains personal info' });
+    expect(res.status).toBe(200);
+    const upd = mockPool.query.mock.calls.find(c => /UPDATE portfolio_items[\s\S]*REMOVED/i.test(c[0]));
+    expect(upd[1]).toEqual(expect.arrayContaining(['Contains personal info']));
+  });
+
+  test('remove requires a reason (400)', async () => {
+    mockPool.query.mockResolvedValueOnce({ rows: [{ ok: 1 }], rowCount: 1 }); // scope ok
+    const res = await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/remove')
+      .set('Authorization', `Bearer ${teacherToken()}`).send({ reason: '  ' });
+    expect(res.status).toBe(400);
+  });
+
+  test('a teacher cannot restore — 403 (admin only)', async () => {
+    const res = await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/restore')
+      .set('Authorization', `Bearer ${teacherToken()}`).send();
+    expect(res.status).toBe(403);
+  });
+
+  test('same-school admin restores (200)', async () => {
+    mockPool.query
+      .mockResolvedValueOnce({ rows: [{ school_id: 'school-1' }], rowCount: 1 }) // (auth) admin school hydration
+      .mockResolvedValueOnce({ rows: [{ school_id: 'school-1' }], rowCount: 1 }) // student school lookup (scope)
+      .mockResolvedValueOnce({ rows: [{ id: 'pi-1' }], rowCount: 1 })            // UPDATE -> VISIBLE
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 });                         // audit
+    const res = await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/restore')
+      .set('Authorization', `Bearer ${adminToken()}`).send();
+    expect(res.status).toBe(200);
+  });
+});
