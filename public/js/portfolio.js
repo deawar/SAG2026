@@ -471,16 +471,18 @@ async function handlePieceFormSubmit(e) {
   const artistGrade = (gradeEl && gradeEl.value) ? gradeEl.value.trim() : undefined;
   const imageFile   = (imageEl && imageEl.files && imageEl.files[0]) ? imageEl.files[0] : null;
 
+  // Validate image size before disabling button
+  if (imageFile && imageFile.size > 8 * 1024 * 1024) {
+    UIComponents.showAlert('Image must be under 8 MB.', 'error');
+    return;
+  }
+
   const saveBtn = document.getElementById('piece-save-btn');
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
 
   try {
     let imageData;
     if (imageFile) {
-      if (imageFile.size > 8 * 1024 * 1024) {
-        UIComponents.showAlert('Image must be under 8 MB.', 'error');
-        return;
-      }
       imageData = await readFileAsDataURL(imageFile);
     }
 
@@ -600,7 +602,10 @@ async function openSubmitModal(itemId) {
     if (!select) { return; }
     select.replaceChildren();
 
-    if (auctions.length === 0) {
+    // Filter to only APPROVED or LIVE auctions
+    const eligibleAuctions = auctions.filter(a => a.auction_status === 'APPROVED' || a.auction_status === 'LIVE');
+
+    if (eligibleAuctions.length === 0) {
       const none = document.createElement('option');
       none.value = '';
       none.textContent = 'No eligible auctions available for your school';
@@ -611,7 +616,7 @@ async function openSubmitModal(itemId) {
       placeholder.textContent = '— Select an auction —';
       select.appendChild(placeholder);
 
-      auctions.forEach(a => {
+      eligibleAuctions.forEach(a => {
         const opt = document.createElement('option');
         opt.value = String(a.id);
         opt.textContent = a.title || ('Auction #' + a.id);
