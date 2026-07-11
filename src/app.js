@@ -164,6 +164,12 @@ function createApp(db) {
     app.use('/api/portfolio', authMiddleware.verifyRole('STUDENT'));
     app.use('/api/portfolio', portfolioRoutes);
 
+    // Portfolio comment routes — reachable by students AND teachers/admins
+    // (relationship enforced in-controller), so NOT under the STUDENT gate.
+    const portfolioCommentRoutes = require('./routes/portfolioCommentRoutes')(db);
+    app.use('/api/portfolio-comments', authMiddleware.verifyToken);
+    app.use('/api/portfolio-comments', portfolioCommentRoutes);
+
     // School lookup (public)
     const schoolRoutes = require('./routes/schoolRoutes')(db);
     app.use('/api/schools', schoolRoutes);
