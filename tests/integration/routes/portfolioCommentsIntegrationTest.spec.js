@@ -63,4 +63,14 @@ describe('Portfolio comments — list + create', () => {
       .set('Authorization', `Bearer ${studentToken()}`).send({ body: '   ' });
     expect(res.status).toBe(400);
   });
+
+  test('same-school SCHOOL_ADMIN can read comments (200, canModerate true)', async () => {
+    mockDb.query
+      .mockResolvedValueOnce({ rows: [PIECE], rowCount: 1 })     // load piece
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 })          // comments (empty ok)
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 });         // upsert read
+    const res = await request(app).get('/api/portfolio-comments/item/pi-1').set('Authorization', `Bearer ${adminToken()}`);
+    expect(res.status).toBe(200);
+    expect(res.body.canModerate).toBe(true);
+  });
 });
