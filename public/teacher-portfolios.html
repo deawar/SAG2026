@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Student Portfolios - browse and view student artwork portfolios">
+    <title>Student Portfolios - Silent Auction Gallery</title>
+
+    <!-- Google Fonts: Fraunces (display) + Bricolage Grotesque (body) + JetBrains Mono (mono) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,800;1,9..144,200;1,9..144,800&family=Bricolage+Grotesque:opsz,wght@12..96,200;12..96,400;12..96,800&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+</head>
+<body>
+    <!-- Skip link -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <!-- Navigation Header -->
+    <header class="navbar" role="banner">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="logo" aria-label="Silent Auction Gallery Home">
+                    <img src="/images/logo/SAGLive.png" alt="Silent Auction Gallery Logo" class="logo-img">
+                    <span class="logo-text">SAG<span class="logo-dot" aria-hidden="true">·</span>LIVE</span>
+                </a>
+            </div>
+            <nav class="navbar-nav" role="navigation" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="/auctions.html" class="nav-link">Auctions</a></li>
+                    <li><a href="/" class="nav-link">Home</a></li>
+                    <li><a href="/bidder-welcome.html" class="nav-link">For Bidders</a></li>
+                    <li><a href="/teacher-portfolios.html" class="nav-link" aria-current="page">Student Portfolios</a></li>
+                </ul>
+            </nav>
+            <div class="navbar-auth">
+                <button class="btn btn-profile" id="user-menu-btn" aria-label="User account menu" aria-expanded="false">
+                    <span id="user-name"></span>
+                    <span class="menu-icon" aria-hidden="true">▼</span>
+                </button>
+                <div class="user-dropdown" id="user-dropdown" style="display:none;" role="menu">
+                    <a href="/teacher-dashboard.html" class="dropdown-item" role="menuitem">Dashboard</a>
+                    <a href="/teacher-portfolios.html" class="dropdown-item" role="menuitem" aria-current="page">Student Portfolios</a>
+                    <a href="/user-dashboard.html#account" class="dropdown-item" role="menuitem">Account Settings</a>
+                    <button class="dropdown-item" id="logout-btn" role="menuitem">Logout</button>
+                </div>
+            </div>
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content">
+        <div class="container">
+
+            <!-- Page Header -->
+            <div class="page-header" role="region" aria-label="Page Header">
+                <h1>Student Portfolios</h1>
+                <p class="section-help">Browse your students' portfolio items. This is a read-only view.</p>
+            </div>
+
+            <!-- Two-column layout: students list + portfolio panel -->
+            <div style="display:flex;gap:2rem;align-items:flex-start;flex-wrap:wrap;">
+
+                <!-- Students List -->
+                <section aria-labelledby="students-list-heading"
+                         style="flex:0 0 280px;min-width:220px;">
+                    <h2 id="students-list-heading" style="font-size:1.1rem;margin-bottom:1rem;">Your Students</h2>
+                    <div id="students-list" aria-live="polite" aria-label="Students list">
+                        <p class="section-help">Loading students&hellip;</p>
+                    </div>
+                </section>
+
+                <!-- Per-student Portfolio Panel (hidden until a student is chosen) -->
+                <section id="student-portfolio" hidden
+                         aria-labelledby="student-portfolio-heading"
+                         style="flex:1;min-width:280px;">
+                    <h2 id="student-portfolio-heading" style="font-size:1.1rem;margin-bottom:0.5rem;">
+                        <!-- Populated by JS -->
+                    </h2>
+                    <p id="student-portfolio-help" class="section-help" style="margin-bottom:1rem;"></p>
+                    <div class="portfolio-grid" id="student-portfolio-grid" aria-label="Student portfolio items"></div>
+                </section>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- ===== Full-Screen Lightbox ===== -->
+    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Full-screen image view" hidden>
+        <button class="lightbox-close-btn" id="lightbox-close" aria-label="Close image view">&times;</button>
+        <img id="lightbox-img" src="" alt="" class="lightbox-img-full">
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/theme-manager.js"></script>
+    <script src="/js/accessibility.js"></script>
+    <script src="/js/api-client.js"></script>
+    <script src="/js/auth-manager.js"></script>
+    <script src="/js/ui-components.js"></script>
+    <script src="/js/teacher-portfolios.js"></script>
+</body>
+</html>
