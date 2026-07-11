@@ -60,4 +60,16 @@ describe('Teacher portfolio viewing', () => {
     const res = await request(app).get('/api/teacher/portfolios/stu-1').set('Authorization', `Bearer ${schoolAdminToken()}`);
     expect(res.status).toBe(200);
   });
+
+  test('a SCHOOL_ADMIN from another school is denied (403)', async () => {
+    mockPool.query
+      .mockResolvedValueOnce({ rows: [{ school_id: 'school-2' }], rowCount: 1 }) // (1) authMiddleware hydrates the ADMIN's OWN school -> req.user.schoolId='school-2'
+      .mockResolvedValueOnce({ rows: [{ school_id: 'school-1' }], rowCount: 1 }); // (2) controller: viewed student's school = school-1 (mismatch -> 403, no items query)
+    const res = await request(app).get('/api/teacher/portfolios/stu-1').set('Authorization', `Bearer ${otherSchoolAdminToken()}`);
+    expect(res.status).toBe(403);
+  });
 });
+
+function otherSchoolAdminToken() {
+  return jwt.sign({ userId: 'sa-2', role: 'SCHOOL_ADMIN', schoolId: 'school-2', twoFaEnabled: true }, SECRET, { algorithm: 'HS256' });
+}
