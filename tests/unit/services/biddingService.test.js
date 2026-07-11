@@ -282,13 +282,14 @@ describe('BiddingService', () => {
 
       // Service queries: BEGIN, SELECT auction, UPDATE auction status,
       //   SELECT winner (bids JOIN artwork JOIN users), UPDATE bid ACCEPTED,
-      //   INSERT audit_log, COMMIT
+      //   UPDATE portfolio_items SOLD/UNSOLD, INSERT audit_log, COMMIT
       mockClient.query
         .mockResolvedValueOnce({})  // BEGIN
         .mockResolvedValueOnce({ rows: [{ id: 'auction-123', school_id: 'school-1', auction_status: 'LIVE' }] })
         .mockResolvedValueOnce({})  // UPDATE auction status = ENDED
         .mockResolvedValueOnce({ rows: [{ placed_by_user_id: 'user-456', bid_amount: 50000, artwork_id: 'art-123', first_name: 'John', last_name: 'Doe', email: 'john@example.com' }] })
         .mockResolvedValueOnce({})  // UPDATE bid status = ACCEPTED
+        .mockResolvedValueOnce({})  // UPDATE portfolio_items SOLD/UNSOLD
         .mockResolvedValueOnce({})  // INSERT audit_log
         .mockResolvedValueOnce({});  // COMMIT
 
@@ -307,6 +308,7 @@ describe('BiddingService', () => {
         .mockResolvedValueOnce({ rows: [{ id: 'auction-123', school_id: 'school-1', auction_status: 'LIVE' }] })
         .mockResolvedValueOnce({})  // UPDATE auction status = ENDED
         .mockResolvedValueOnce({ rows: [] })  // SELECT winner — no bids
+        .mockResolvedValueOnce({})  // UPDATE portfolio_items SOLD/UNSOLD
         .mockResolvedValueOnce({})  // INSERT audit_log
         .mockResolvedValueOnce({});  // COMMIT
 

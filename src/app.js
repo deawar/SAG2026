@@ -158,6 +158,12 @@ function createApp(db) {
     app.use('/api/user', authMiddleware.verifyToken);
     app.use('/api/user', userRoutes);
 
+    // Student portfolio routes (all require JWT)
+    const portfolioRoutes = require('./routes/portfolioRoutes')(db);
+    app.use('/api/portfolio', authMiddleware.verifyToken);
+    app.use('/api/portfolio', authMiddleware.verifyRole('STUDENT'));
+    app.use('/api/portfolio', portfolioRoutes);
+
     // School lookup (public)
     const schoolRoutes = require('./routes/schoolRoutes')(db);
     app.use('/api/schools', schoolRoutes);

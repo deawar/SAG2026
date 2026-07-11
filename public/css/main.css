@@ -3595,3 +3595,222 @@ body:has(.hero) .navbar {
         animation: none;
     }
 }
+
+/* ===== Portfolio Page ===== */
+
+/* Two-column auto-fill grid — mirrors .auctions-grid */
+.portfolio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-lg);
+}
+
+/* Individual portfolio card */
+.portfolio-card {
+    background-color: #fff;
+    border: 1px solid var(--color-lighter-gray);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: box-shadow var(--transition-normal);
+}
+
+.portfolio-card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+/* Image area */
+.portfolio-card-img-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background: var(--color-lightest-gray);
+    overflow: hidden;
+}
+
+.portfolio-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    cursor: zoom-in;
+    transition: transform 200ms ease;
+}
+
+.portfolio-card-img:hover {
+    transform: scale(1.03);
+}
+
+.portfolio-card-img:focus {
+    outline: 3px solid var(--color-focus);
+    outline-offset: -3px;
+}
+
+.portfolio-card-img-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-light-gray);
+    font-size: var(--font-size-sm);
+    font-style: italic;
+}
+
+/* Card body */
+.portfolio-card-body {
+    padding: var(--spacing-md);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.portfolio-card-title {
+    font-family: var(--font-display, 'Cormorant Garant', serif);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--color-dark);
+    margin: 0;
+    line-height: var(--line-height-tight);
+}
+
+.portfolio-card-meta {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray);
+    margin: 0;
+}
+
+.portfolio-card-rejection {
+    font-size: var(--font-size-sm);
+    color: var(--color-error);
+    margin: 0;
+}
+
+/* Submission state badge */
+.portfolio-badge {
+    display: inline-block;
+    padding: 0.2em 0.65em;
+    border-radius: var(--radius-sm, 4px);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    margin-top: auto;
+    align-self: flex-start;
+}
+
+/* Per-state badge colours */
+.badge-state-not-submitted {
+    background: var(--color-lightest-gray);
+    color: var(--color-dark-gray);
+}
+
+.badge-state-pending {
+    background: #fff8e1;
+    color: #b35900;
+    border: 1px solid #ffe082;
+}
+
+.badge-state-in-auction {
+    background: #e3f2fd;
+    color: #01579b;
+    border: 1px solid #90caf9;
+}
+
+.badge-state-sold {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+}
+
+.badge-state-unsold {
+    background: var(--color-lightest-gray);
+    color: var(--color-gray);
+}
+
+.badge-state-rejected {
+    background: #ffebee;
+    color: var(--color-error, #c62828);
+    border: 1px solid #ef9a9a;
+}
+
+.badge-state-withdrawn {
+    background: var(--color-lightest-gray);
+    color: var(--color-gray);
+}
+
+/* Card action buttons */
+.portfolio-card-actions {
+    padding: var(--spacing-sm) var(--spacing-md) var(--spacing-md);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+    border-top: 1px solid var(--color-lighter-gray);
+}
+
+/* Full-screen lightbox overlay */
+.lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 9500;
+    background: rgba(0, 0, 0, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    cursor: pointer;
+}
+
+.lightbox[hidden] {
+    display: none !important;
+}
+
+/* The image itself should not trigger the backdrop close */
+.lightbox-img-full {
+    max-width: 95vw;
+    max-height: 92vh;
+    object-fit: contain;
+    border-radius: 4px;
+    cursor: default;
+    user-select: none;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+/* Lightbox close button */
+.lightbox-close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1.25rem;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 2.75rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    opacity: 0.8;
+    transition: opacity var(--transition-fast);
+    z-index: 9501;
+}
+
+.lightbox-close-btn:hover {
+    opacity: 1;
+}
+
+.lightbox-close-btn:focus {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .portfolio-card-img {
+        transition: none;
+    }
+    .lightbox-close-btn {
+        transition: none;
+    }
+}
