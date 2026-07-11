@@ -117,6 +117,11 @@ CREATE TABLE portfolio_items (
   submission_state     VARCHAR(20) NOT NULL DEFAULT 'NOT_SUBMITTED'
                        CHECK (submission_state IN ('NOT_SUBMITTED','PENDING_REVIEW','IN_AUCTION','SOLD','UNSOLD','REJECTED','WITHDRAWN')),
   rejection_reason     TEXT,
+  moderation_status    VARCHAR(20) NOT NULL DEFAULT 'VISIBLE'
+                       CHECK (moderation_status IN ('VISIBLE','REMOVED')),
+  moderated_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  moderated_at         TIMESTAMP WITH TIME ZONE,
+  moderation_reason    TEXT,
   created_at           TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at           TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   deleted_at           TIMESTAMP WITH TIME ZONE,
@@ -125,6 +130,37 @@ CREATE TABLE portfolio_items (
 
 CREATE INDEX idx_portfolio_items_student ON portfolio_items(student_user_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_portfolio_items_school  ON portfolio_items(school_id)        WHERE deleted_at IS NULL;
+
+-- Portfolio Comments (per-piece comment thread)
+CREATE TABLE portfolio_comments (
+  id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  portfolio_item_id  UUID NOT NULL REFERENCES portfolio_items(id) ON DELETE CASCADE,
+  school_id          UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+  author_user_id     UUID REFERENCES users(id) ON DELETE SET NULL,
+  author_role        VARCHAR(20) NOT NULL,
+  body               TEXT NOT NULL,
+  parent_comment_id  UUID REFERENCES portfolio_comments(id) ON DELETE CASCADE,
+  created_at         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  deleted_at         TIMESTAMP WITH TIME ZONE,
+  deleted_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  CONSTRAINT portfolio_comment_body_check CHECK (length(trim(body)) BETWEEN 1 AND 2000)
+);
+
+CREATE INDEX idx_portfolio_comments_item   ON portfolio_comments(portfolio_item_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_portfolio_comments_school ON portfolio_comments(school_id);
+
+DROP TRIGGER IF EXISTS portfolio_comments_updated_at ON portfolio_comments;
+CREATE TRIGGER portfolio_comments_updated_at BEFORE UPDATE ON portfolio_comments
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Portfolio Comment Reads (per-user unread tracking)
+CREATE TABLE portfolio_comment_reads (
+  user_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  portfolio_item_id UUID NOT NULL REFERENCES portfolio_items(id) ON DELETE CASCADE,
+  last_read_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, portfolio_item_id)
+);
 
 -- Payment Gateways Configuration (created before auctions)
 CREATE TABLE payment_gateways (
