@@ -108,6 +108,15 @@ describe('Portfolio edit / status / delete', () => {
       .mockResolvedValueOnce({ rows: [{ id: 'pi-1' }], rowCount: 1 });
     const res = await request(app).delete('/api/portfolio/pi-1').set('Authorization', `Bearer ${studentToken()}`);
     expect(res.status).toBe(200);
+    const deleteCall = mockDb.query.mock.calls.find(c => /deleted_at/.test(c[0]));
+    expect(deleteCall).toBeDefined();
+  });
+
+  test('PATCH /status on another student\'s piece returns 404', async () => {
+    mockDb.query.mockResolvedValueOnce({ rows: [], rowCount: 0 }); // ownership lookup finds nothing for this student
+    const res = await request(app).patch('/api/portfolio/pi-x/status')
+      .set('Authorization', `Bearer ${studentToken()}`).send({ portfolioStatus: 'COMPLETED' });
+    expect(res.status).toBe(404);
   });
 
   test('DELETE is blocked (409) while IN_AUCTION', async () => {
