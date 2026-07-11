@@ -160,7 +160,8 @@ async function viewStudent(studentId, studentName) {
     }
     const errMsg = (err && err.message) || 'Could not load portfolio.';
     UIComponents.createToast({ message: errMsg, type: 'error' });
-    if (helpText) { helpText.textContent = ''; }
+    // Signal failure in the panel rather than leaving an ambiguous empty grid.
+    if (helpText) { helpText.textContent = 'Could not load this portfolio. Please try again.'; }
     return;
   }
 
