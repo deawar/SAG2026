@@ -199,12 +199,30 @@ class TeacherController {
       const teacherId = req.user.id;
       const schoolId  = await TeacherController._resolveSchoolId(req.user.id);
 
+      // Optional pricing — validate only when provided
+      const { startingBid, reserve } = req.body || {};
+
+      if (startingBid !== undefined && startingBid !== null) {
+        if (typeof startingBid !== 'number' || !Number.isFinite(startingBid) || startingBid < 0) {
+          return res.status(400).json({ success: false, message: 'startingBid must be a non-negative number' });
+        }
+      }
+
+      if (reserve !== undefined && reserve !== null) {
+        const minForReserve = (startingBid !== undefined && startingBid !== null) ? startingBid : 0;
+        if (typeof reserve !== 'number' || !Number.isFinite(reserve) || reserve < minForReserve) {
+          return res.status(400).json({ success: false, message: 'reserve must be >= startingBid' });
+        }
+      }
+
       const result = await pool.query(
         `UPDATE artwork aw
                  SET artwork_status      = 'APPROVED',
                      approved_at         = NOW(),
                      approved_by_user_id = $1,
-                     updated_at          = NOW()
+                     updated_at          = NOW(),
+                     starting_bid_amount = COALESCE($4, starting_bid_amount),
+                     reserve_bid_amount  = COALESCE($5, reserve_bid_amount)
                  FROM auctions a
                  WHERE aw.auction_id = a.id
                    AND aw.id = $2
@@ -212,12 +230,23 @@ class TeacherController {
                    AND aw.deleted_at IS NULL
                    AND aw.artwork_status IN ('SUBMITTED','PENDING_APPROVAL')
                  RETURNING aw.id`,
-        [teacherId, id, schoolId]
+        [teacherId, id, schoolId, startingBid ?? null, reserve ?? null]
       );
 
       if (result.rowCount === 0) {
         return res.status(404).json({ success: false, message: 'Submission not found or already reviewed' });
       }
+
+      // Propagate to linked portfolio item
+      await pool.query(
+        `UPDATE portfolio_items pi
+         SET submission_state = 'IN_AUCTION',
+             updated_at       = NOW()
+         FROM artwork aw
+         WHERE aw.id = $1
+           AND aw.portfolio_item_id = pi.id`,
+        [id]
+      );
 
       // Notify the student artist non-blocking
       setImmediate(async () => {
@@ -277,6 +306,18 @@ class TeacherController {
       if (result.rowCount === 0) {
         return res.status(404).json({ success: false, message: 'Submission not found or already reviewed' });
       }
+
+      // Propagate to linked portfolio item
+      await pool.query(
+        `UPDATE portfolio_items pi
+         SET submission_state = 'REJECTED',
+             rejection_reason = $2,
+             updated_at       = NOW()
+         FROM artwork aw
+         WHERE aw.id = $1
+           AND aw.portfolio_item_id = pi.id`,
+        [id, reason]
+      );
 
       // Notify the student artist non-blocking
       setImmediate(async () => {
