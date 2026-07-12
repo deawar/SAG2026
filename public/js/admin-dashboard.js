@@ -260,30 +260,53 @@ class AdminDashboard {
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     const isSiteAdmin = currentUser.role === 'SITE_ADMIN';
     const schoolSearch = document.getElementById('gateway-school-search');
-    const schoolListbox = document.getElementById('gateway-school-listbox');
     const schoolSelect = document.getElementById('gateway-school-select');
 
     if (!schoolSearch || !schoolSelect) {return;}
 
     if (!isSiteAdmin) {
       // SCHOOL_ADMIN: hide the picker and use their school directly
-      const combobox = schoolSearch.closest('.school-combobox') || schoolSearch;
-      combobox.style.display = 'none';
+      schoolSearch.style.display = 'none';
+      schoolSelect.style.display = 'none';
       const schoolId   = currentUser.school_id   || currentUser.schoolId   || '';
       const schoolName = currentUser.school_name || currentUser.schoolName || 'Your school';
-      schoolSelect.value = schoolId;
+      if (schoolId) {
+        const opt = document.createElement('option');
+        opt.value = schoolId;
+        opt.textContent = schoolName;
+        opt.selected = true;
+        schoolSelect.appendChild(opt);
+      }
       // Show a static label instead
       const label = document.createElement('p');
       label.className = 'form-static';
       label.textContent = schoolName;
-      combobox.parentNode.insertBefore(label, combobox);
-    } else if (window.SchoolCombobox && schoolListbox) {
-      // SITE_ADMIN: single-input typeahead (matches registration)
-      window.SchoolCombobox.init({
-        inputEl: schoolSearch,
-        listboxEl: schoolListbox,
-        hiddenEl: schoolSelect,
-        noMatchText: 'No matching schools.'
+      schoolSearch.parentNode.insertBefore(label, schoolSearch);
+    } else {
+      // SITE_ADMIN: wire up live school search
+      let searchTimeout;
+      schoolSearch.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        const q = schoolSearch.value.trim();
+        if (q.length < 2) {
+          schoolSelect.innerHTML = '<option value="">— Select a school —</option>';
+          return;
+        }
+        searchTimeout = setTimeout(async () => {
+          try {
+            const res = await fetch(`/api/schools?search=${encodeURIComponent(q)}`, {
+              headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+            });
+            const data = await res.json();
+            const schools = data.data || [];
+            schoolSelect.innerHTML = `<option value="">— Select a school —</option>${
+              schools.map(s =>
+                `<option value="${this.escapeHtml(String(s.id))}">${this.escapeHtml(s.name)}</option>`
+              ).join('')}`;
+          } catch (err) {
+            console.error('School search error:', err);
+          }
+        }, 300);
       });
     }
 
@@ -1029,57 +1052,44 @@ class AdminDashboard {
   }
 
   /**
-     * Markup for a single-input school typeahead field (matches registration).
-     * Renders a combobox (#school-search-input) + suggestions listbox + a hidden
-     * #school-select that holds the chosen school id (so existing submit readers
-     * of #school-select keep working). Wire it after render with initSchoolPicker.
-     * @param {{label?:string, requiredMark?:boolean, hint?:string, currentSchoolName?:string}} [opts]
-     */
-  schoolPickerFieldHtml(opts = {}) {
-    const label = opts.label || 'School Affiliation';
-    const requiredMark = opts.requiredMark ? ' <span aria-label="required">*</span>' : '';
-    const hint = opts.hint ? `<small class="form-hint">${opts.hint}</small>` : '';
-    const value = this.escapeHtml(opts.currentSchoolName || '');
-    return `
-                    <div class="form-group">
-                        <label for="school-search-input">${label}${requiredMark}</label>
-                        <div class="school-combobox">
-                            <input type="text" id="school-search-input" class="form-control"
-                                   role="combobox" aria-autocomplete="list" aria-expanded="false"
-                                   aria-controls="school-combobox-listbox" autocomplete="off"
-                                   placeholder="Type to search schools..." value="${value}">
-                            <ul id="school-combobox-listbox" class="school-combobox__listbox" role="listbox"
-                                aria-label="School suggestions" aria-live="polite" hidden></ul>
-                        </div>
-                        <input type="hidden" id="school-select">
-                        ${hint}
-                    </div>`;
-  }
-
-  /**
-     * Wire the school typeahead combobox inside an already-rendered form.
-     * Expects the markup from schoolPickerFieldHtml (#school-search-input,
-     * #school-combobox-listbox, hidden #school-select) in the DOM.
-     * currentSchoolId / currentSchoolName pre-populate the field when provided.
+     * Initialise a school search picker inside an already-rendered form.
+     * Expects: #school-search-input, #school-select already in the DOM.
+     * currentSchoolId / currentSchoolName pre-populate the select when provided.
      */
   initSchoolPicker(currentSchoolId, currentSchoolName) {
-    const input   = document.getElementById('school-search-input');
-    const listbox = document.getElementById('school-combobox-listbox');
-    const hidden  = document.getElementById('school-select');
-    if (!input || !listbox || !hidden || !window.SchoolCombobox) { return; }
+    const input  = document.getElementById('school-search-input');
+    const select = document.getElementById('school-select');
+    if (!input || !select) {return;}
 
-    window.SchoolCombobox.init({
-      inputEl: input,
-      listboxEl: listbox,
-      hiddenEl: hidden,
-      noMatchText: 'No matching schools.'
-    });
-
-    // Pre-populate with the current school (edit flows)
+    // Pre-populate with current school
     if (currentSchoolId && currentSchoolName) {
-      input.value  = currentSchoolName;
-      hidden.value = currentSchoolId;
+      input.value = currentSchoolName;
+      const opt = document.createElement('option');
+      opt.value    = currentSchoolId;
+      opt.selected = true;
+      opt.textContent = currentSchoolName;
+      select.appendChild(opt);
     }
+
+    const doSearch = UIComponents.debounce(async () => {
+      const q = input.value.trim();
+      // Clear selection when user types something new
+      select.value = '';
+      if (q.length < 2) {return;}
+      try {
+        const res  = await fetch(`/api/schools?search=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        const schools = data.data || [];
+        select.innerHTML = `<option value="">-- No school / not affiliated --</option>${
+          schools.map(s =>
+            `<option value="${this.escapeHtml(s.id)}">${this.escapeHtml(s.name)} — ${this.escapeHtml(s.city)}, ${this.escapeHtml(s.state_province)}</option>`
+          ).join('')}`;
+      } catch (err) {
+        console.error('School search error:', err);
+      }
+    }, 400);
+
+    input.addEventListener('input', doSearch);
   }
 
   /**
@@ -1119,10 +1129,17 @@ class AdminDashboard {
         if (titleEl) {titleEl.textContent = `Edit User: ${fullName}`;}
 
         // School picker — SITE_ADMIN can reassign any school; SCHOOL_ADMIN sees read-only
-        const schoolField = isSiteAdmin ? this.schoolPickerFieldHtml({
-          currentSchoolName,
-          hint: 'Type to search, then choose from the list — or leave blank to remove affiliation.'
-        }) : `
+        const schoolField = isSiteAdmin ? `
+                    <div class="form-group">
+                        <label for="school-search-input">School Affiliation</label>
+                        <input type="text" id="school-search-input" class="form-control"
+                               placeholder="Type to search schools..." autocomplete="off"
+                               value="${this.escapeHtml(currentSchoolName)}">
+                        <select id="school-select" class="form-control" style="margin-top:0.5rem;">
+                            <option value="">-- No school / not affiliated --</option>
+                        </select>
+                        <small class="form-hint">Search then choose from the list, or leave blank to remove affiliation.</small>
+                    </div>` : `
                     <div class="form-group">
                         <label>School Affiliation</label>
                         <p class="form-static">${this.escapeHtml(currentSchoolName || 'None')}</p>
@@ -1517,7 +1534,15 @@ class AdminDashboard {
                         <label for="new-user-phone">Mobile Number</label>
                         <input type="tel" id="new-user-phone" class="form-control" placeholder="+1 555 000 0000">
                     </div>
-                    ${this.schoolPickerFieldHtml({ hint: 'Type to search, then choose from the list — or leave blank if not affiliated with a school.' })}
+                    <div class="form-group">
+                        <label for="school-search-input">School Affiliation</label>
+                        <input type="text" id="school-search-input" class="form-control"
+                               placeholder="Type to search schools..." autocomplete="off">
+                        <select id="school-select" class="form-control" style="margin-top:0.5rem;">
+                            <option value="">-- No school / not affiliated --</option>
+                        </select>
+                        <small class="form-hint">Search then choose from the list, or leave blank if not affiliated with a school.</small>
+                    </div>
                     <div class="form-group">
                         <label for="new-user-role">Role</label>
                         <select id="new-user-role" class="form-control" required>
@@ -1633,10 +1658,15 @@ class AdminDashboard {
     const userSchoolName = currentUser.school_name || currentUser.schoolName || '';
 
     // School field: SITE_ADMIN gets a search picker; SCHOOL_ADMIN sees their own school
-    const schoolField = isSiteAdmin ? this.schoolPickerFieldHtml({
-      label: 'School', requiredMark: true,
-      hint: 'Type to search, then choose the school for this auction.'
-    }) : `
+    const schoolField = isSiteAdmin ? `
+            <div class="form-group">
+                <label for="school-search-input">School <span aria-label="required">*</span></label>
+                <input type="text" id="school-search-input" class="form-control"
+                       placeholder="Type to search schools..." autocomplete="off">
+                <select id="school-select" class="form-control" style="margin-top:0.5rem;" required>
+                    <option value="">-- Select a school --</option>
+                </select>
+            </div>` : `
             <div class="form-group">
                 <label>School</label>
                 <p class="form-static">${this.escapeHtml(userSchoolName || 'Your school')}</p>
