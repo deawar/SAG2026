@@ -611,6 +611,9 @@ textarea:disabled {
     .dropdown-item:hover,
     .dropdown-item:focus {
         background-color: var(--color-lightest-gray);
+        /* Override main.css hover color (var(--color-white) → near-black in dark)
+           so dropdown labels stay legible on hover/focus. */
+        color: var(--color-dark);
     }
 
     /* ---- Surfaces ---- */
