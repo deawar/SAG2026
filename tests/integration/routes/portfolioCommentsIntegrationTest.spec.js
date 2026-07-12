@@ -42,6 +42,21 @@ describe('Portfolio comments — list + create', () => {
     expect(insert[1]).toEqual(expect.arrayContaining(['pi-1', 'school-1', 'tea-1', 'TEACHER']));
   });
 
+  test('posting a comment writes a comment_created audit row (compliance trail)', async () => {
+    mockDb.query
+      .mockResolvedValueOnce({ rows: [PIECE], rowCount: 1 })                 // load piece (owner short-circuits access)
+      .mockResolvedValueOnce({ rows: [{ id: 'c-11', body: 'Question about the medium?', author_role: 'STUDENT', created_at: new Date() }], rowCount: 1 }); // insert comment
+    const res = await request(app).post('/api/portfolio-comments/item/pi-1')
+      .set('Authorization', `Bearer ${studentToken()}`).send({ body: 'Question about the medium?' });
+    expect(res.status).toBe(201);
+    const audit = mockDb.query.mock.calls.find(c => /INSERT INTO audit_logs/i.test(c[0]));
+    expect(audit).toBeTruthy();
+    expect(audit[1]).toEqual(expect.arrayContaining(['COMPLIANCE', 'comment_created']));
+    expect(audit[1]).not.toContain('PORTFOLIO');
+    // actor + target captured
+    expect(audit[1][0]).toBe('stu-1');
+  });
+
   test('a non-inviting teacher is denied (403)', async () => {
     mockDb.query
       .mockResolvedValueOnce({ rows: [PIECE], rowCount: 1 })                 // load piece

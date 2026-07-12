@@ -870,6 +870,9 @@ class TeacherController {
         [viewer.id, 'COMPLIANCE', 'item_removed', 'portfolio_item', itemId,
           JSON.stringify({ removedBy: viewer.id, studentId, reason })]
       );
+      logger.info('Portfolio item removed (moderation)', {
+        portfolioItemId: itemId, removedBy: viewer.id, removedByRole: viewer.role, studentId
+      });
       return res.json({ success: true, message: 'Item removed' });
     } catch (error) {
       logger.error('Remove portfolio item error', { error: error.message, userId: req.user?.id });
@@ -904,6 +907,9 @@ class TeacherController {
          VALUES ($1,$2,$3,$4,$5,$6)`,
         [viewer.id, 'COMPLIANCE', 'item_restored', 'portfolio_item', itemId, JSON.stringify({ restoredBy: viewer.id, studentId })]
       );
+      logger.info('Portfolio item restored (moderation)', {
+        portfolioItemId: itemId, restoredBy: viewer.id, restoredByRole: viewer.role, studentId
+      });
       return res.json({ success: true, message: 'Item restored' });
     } catch (error) {
       logger.error('Restore portfolio item error', { error: error.message, userId: req.user?.id });

@@ -4,6 +4,7 @@
  * governed by resolveAccess: owner student, inviting teacher, or same-school admin.
  */
 const express = require('express');
+const logger = require('../utils/logger');
 
 const MAX_BODY = 2000;
 
@@ -80,7 +81,10 @@ module.exports = (db) => {
         comments: listed.rows.map(r => mapComment(r, viewer.id)),
         canModerate: access.canModerate
       });
-    } catch (err) { return next(err); }
+    } catch (err) {
+      logger.error('Portfolio comment list error', { error: err.message, userId: req.user?.id, portfolioItemId: req.params.itemId });
+      return next(err);
+    }
   });
 
   // POST /api/portfolio-comments/item/:itemId — create
@@ -100,11 +104,26 @@ module.exports = (db) => {
         [req.params.itemId, access.piece.school_id, viewer.id, viewer.role, body]
       );
       const row = ins.rows[0];
+      // Compliance trail: record who posted a comment on which student's piece.
+      await db.query(
+        `INSERT INTO audit_logs (user_id, action_category, action_type, resource_type, resource_id, action_details)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [viewer.id, 'COMPLIANCE', 'comment_created', 'portfolio_comment', row.id,
+          JSON.stringify({ authorId: viewer.id, authorRole: viewer.role, portfolioItemId: req.params.itemId,
+            studentUserId: access.piece.student_user_id, schoolId: access.piece.school_id })]
+      );
+      logger.info('Portfolio comment created', {
+        commentId: row.id, authorId: viewer.id, authorRole: viewer.role,
+        portfolioItemId: req.params.itemId, studentUserId: access.piece.student_user_id
+      });
       return res.status(201).json({
         success: true,
         comment: { id: row.id, body: row.body, authorName: 'You', authorRole: row.author_role, isOwnByViewer: true, createdAt: row.created_at }
       });
-    } catch (err) { return next(err); }
+    } catch (err) {
+      logger.error('Portfolio comment create error', { error: err.message, userId: req.user?.id, portfolioItemId: req.params.itemId });
+      return next(err);
+    }
   });
 
   // DELETE /api/portfolio-comments/:commentId — author or moderator
@@ -134,10 +153,17 @@ module.exports = (db) => {
         `INSERT INTO audit_logs (user_id, action_category, action_type, resource_type, resource_id, action_details)
          VALUES ($1,$2,$3,$4,$5,$6)`,
         [viewer.id, 'COMPLIANCE', 'comment_deleted', 'portfolio_comment', comment.id,
-          JSON.stringify({ deletedBy: viewer.id, moderated: !isAuthor })]
+          JSON.stringify({ deletedBy: viewer.id, moderated: !isAuthor, portfolioItemId: comment.portfolio_item_id })]
       );
+      logger.info('Portfolio comment deleted', {
+        commentId: comment.id, deletedBy: viewer.id, deletedByRole: viewer.role,
+        moderated: !isAuthor, portfolioItemId: comment.portfolio_item_id
+      });
       return res.json({ success: true });
-    } catch (err) { return next(err); }
+    } catch (err) {
+      logger.error('Portfolio comment delete error', { error: err.message, userId: req.user?.id, commentId: req.params.commentId });
+      return next(err);
+    }
   });
 
   return router;
