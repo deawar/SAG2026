@@ -567,20 +567,107 @@ textarea:disabled {
 
 /* ===== Low Vision Support ===== */
 @media (prefers-color-scheme: dark) {
-    /* Ensure contrast in dark mode */
-    body {
-        background-color: #1e1e1e;
-        color: #f0f0f0;
+    /* ---- Token overrides (order-independent; fix the bulk of components) ---- */
+    :root {
+        /* Neutrals inverted */
+        --color-dark: #f5f5f5;
+        --color-dark-gray: #e0e0e0;
+        --color-gray: #a0a0a0;
+        --color-light-gray: #6b6b6b;
+        --color-lighter-gray: #424242;
+        --color-lightest-gray: #303030;
+        --color-white: #1e1e1e;
+        /* Platform/surface tokens — previously NOT inverted, which is why
+           .nav-link and .btn-secondary (text/border = --color-platform-dark)
+           rendered near-black on a dark background (invisible). */
+        --color-platform-dark: #f0f0f0;
+        --color-platform-white: #1e1e1e;
+        --color-surface: #2a2a2a;
+        --color-canvas: #181818;
+        --color-disabled: #6b6b6b;
     }
-    
+
+    body {
+        background-color: var(--color-canvas);
+        color: var(--color-dark);
+    }
+
+    /* ---- Navbar + menus ---- */
+    .navbar {
+        background-color: var(--color-surface);
+        border-bottom-color: var(--color-lighter-gray);
+    }
+    .nav-link:hover,
+    .nav-link:focus {
+        color: var(--color-platform-coral);
+    }
+    .user-dropdown {
+        background-color: var(--color-surface);
+        border-color: var(--color-lighter-gray);
+    }
+    .dropdown-item {
+        color: var(--color-dark);
+    }
+    .dropdown-item:hover,
+    .dropdown-item:focus {
+        background-color: var(--color-lightest-gray);
+    }
+
+    /* ---- Surfaces ---- */
+    .card,
+    .auction-card,
+    .stat-card,
+    .modal-content,
+    table {
+        background-color: var(--color-surface);
+        border-color: var(--color-lighter-gray);
+        color: var(--color-dark);
+    }
+    .page-header {
+        background-color: var(--color-lightest-gray);
+    }
+    thead {
+        background-color: var(--color-lighter-gray);
+    }
+    .hero {
+        background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+    }
+
+    /* ---- Forms ---- */
     .form-control {
         background-color: #2a2a2a;
-        color: #f0f0f0;
+        color: var(--color-dark);
         border-color: #505050;
     }
-    
     .form-control:focus {
         border-color: var(--color-primary-light);
+    }
+
+    /* ---- Straggler components with hardcoded light palettes ---- */
+    .removed-notice {
+        background: #3a2c12;
+        border-color: #6b501e;
+        border-left-color: #f0a500;
+    }
+    .removed-notice__heading {
+        color: #ffcc80;
+    }
+    .portfolio-softcap-notice {
+        background: #14243a;
+        border-color: #24466b;
+        border-left-color: #4c9aff;
+        color: #cfe0ff;
+    }
+    .school-combobox__listbox {
+        background-color: var(--color-surface);
+        border-color: var(--color-lighter-gray);
+    }
+    .school-combobox__option.is-active,
+    .school-combobox__option:hover {
+        background-color: #3a3a3a;
+    }
+    .comment-thread__list .comment {
+        background-color: var(--color-lightest-gray);
     }
 }
 

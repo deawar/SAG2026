@@ -575,50 +575,6 @@
     }
 }
 
-/* ===== Dark Mode Support (Prefers Dark Color Scheme) ===== */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --color-dark: #f5f5f5;
-        --color-dark-gray: #e0e0e0;
-        --color-gray: #a0a0a0;
-        --color-light-gray: #505050;
-        --color-lighter-gray: #424242;
-        --color-lightest-gray: #303030;
-        --color-white: #1e1e1e;
-    }
-    
-    body {
-        background-color: var(--color-white);
-        color: var(--color-dark);
-    }
-    
-    .navbar {
-        background-color: #2a2a2a;
-        border-bottom-color: var(--color-lighter-gray);
-    }
-    
-    .card,
-    .auction-card,
-    .stat-card,
-    .modal-content,
-    table {
-        background-color: #2a2a2a;
-        border-color: var(--color-lighter-gray);
-    }
-    
-    .page-header {
-        background-color: var(--color-lightest-gray);
-    }
-    
-    thead {
-        background-color: var(--color-lighter-gray);
-    }
-    
-    .hero {
-        background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
-    }
-}
-
 /* ===== Reduced Motion ===== */
 @media (prefers-reduced-motion: reduce) {
     * {
