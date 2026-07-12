@@ -59,6 +59,21 @@ router.get(
 );
 
 /**
+ * POST /api/admin/users
+ * Create a STAFF account (TEACHER / SCHOOL_ADMIN / SITE_ADMIN) ACTIVE + email pre-verified,
+ * so the new staff member can log in once and complete mandatory 2FA setup.
+ * Body: { firstName, lastName, email, password, phone?, schoolId?, role }
+ * RBAC: SITE_ADMIN (any staff role, any school); SCHOOL_ADMIN (teachers, own school only).
+ */
+router.post(
+  '/users',
+  verifyToken,
+  requireAdmin2fa,
+  verifyRole(['SITE_ADMIN', 'SCHOOL_ADMIN']),
+  adminController.createUser
+);
+
+/**
  * PUT /api/admin/users/:userId/profile
  * Update user name and/or email
  * Body: { firstName?, lastName?, email? }

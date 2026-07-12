@@ -1592,18 +1592,49 @@ class AdminDashboard {
       return;
     }
 
-    // Register endpoint only supports 'student' and 'teacher' accountType.
-    // For other roles, register as teacher first then promote via admin API.
-    const registerAccountType = (selectedRole === 'STUDENT' || selectedRole === 'BIDDER') ? 'student' : 'teacher';
-    const needsPromotion = !['STUDENT', 'TEACHER'].includes(selectedRole);
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+    };
+
+    // Staff roles (TEACHER / SCHOOL_ADMIN / SITE_ADMIN) are created via the admin endpoint,
+    // which makes them ACTIVE + email pre-verified so they can log in once and set up 2FA.
+    // Students/bidders go through public registration, which enforces COPPA age-gating.
+    const isStaffRole = ['TEACHER', 'SCHOOL_ADMIN', 'SITE_ADMIN'].includes(selectedRole);
 
     try {
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-      };
+      if (isStaffRole) {
+        const response = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            firstName,
+            lastName,
+            email,
+            password,
+            phone,
+            schoolId: schoolId || undefined,
+            role: selectedRole
+          })
+        });
 
-      // Step 1: Register the user
+        if (!response.ok) {
+          const data = await response.json();
+          UIComponents.showAlert(data.message || 'Failed to create user', 'error');
+          return;
+        }
+
+        UIComponents.hideModal('user-detail-modal');
+        UIComponents.createToast({
+          message: `${selectedRole === 'TEACHER' ? 'Teacher' : 'Admin'} created. They can log in with the password you set and will be prompted to set up 2FA.`,
+          type: 'success'
+        });
+        this.loadUsers();
+        return;
+      }
+
+      // Student / Bidder: public registration path (COPPA-aware)
+      const registerAccountType = selectedRole === 'BIDDER' ? 'bidder' : 'student';
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers,
@@ -1624,23 +1655,8 @@ class AdminDashboard {
         return;
       }
 
-      const userData = await response.json();
-
-      // Step 2: If role is not STUDENT or TEACHER, promote via admin endpoint
-      if (needsPromotion && userData.user && userData.user.id) {
-        const roleRes = await fetch(`/api/admin/users/${userData.user.id}/role`, {
-          method: 'PUT',
-          headers,
-          body: JSON.stringify({ newRole: selectedRole })
-        });
-
-        if (!roleRes.ok) {
-          UIComponents.createToast({ message: `User created but role promotion to ${selectedRole} failed. Update role manually.`, type: 'warning' });
-        }
-      }
-
       UIComponents.hideModal('user-detail-modal');
-      UIComponents.createToast({ message: 'User created successfully', type: 'success' });
+      UIComponents.createToast({ message: 'User created. They must verify their email before signing in.', type: 'success' });
       this.loadUsers();
     } catch (error) {
       console.error('Create user error:', error);

@@ -8,6 +8,7 @@
 
 const AdminService = require('../services/adminService');
 const adminService = new AdminService();
+const ValidationUtils = require('../utils/validationUtils');
 const { EmailProvider, EmailTemplateService } = require('../services/notificationService');
 
 const _smtpPort = parseInt(process.env.SMTP_PORT) || 587;
@@ -28,6 +29,7 @@ class AdminController {
   constructor() {
     // Bind all methods so 'this' works when Express calls them as callbacks
     this.getUserById = this.getUserById.bind(this);
+    this.createUser = this.createUser.bind(this);
     this.listUsers = this.listUsers.bind(this);
     this.updateUserRole = this.updateUserRole.bind(this);
     this.deactivateUser = this.deactivateUser.bind(this);
@@ -93,6 +95,55 @@ class AdminController {
         success: true,
         user
       });
+    } catch (error) {
+      return this.handleError(error, res);
+    }
+  }
+
+  /**
+   * POST /api/admin/users
+   * Create a STAFF account (TEACHER / SCHOOL_ADMIN / SITE_ADMIN) ACTIVE + email pre-verified.
+   * The new staff member can log in once and is routed straight to mandatory 2FA setup.
+   * Body: { firstName, lastName, email, password, phone?, schoolId?, role }
+   * RBAC (enforced in service): SITE_ADMIN any staff role; SCHOOL_ADMIN teachers in own school.
+   */
+  async createUser(req, res) {
+    try {
+      const { firstName, lastName, email, password, phone, schoolId, role } = req.body;
+
+      // Required fields
+      if (!firstName || !lastName || !email || !password || !role) {
+        return res.status(400).json({
+          success: false,
+          error: 'MISSING_REQUIRED_FIELDS',
+          message: 'firstName, lastName, email, password and role are required'
+        });
+      }
+
+      // Email + password format checks (defense in depth; service/model re-validate)
+      if (!ValidationUtils.validateEmail(email)) {
+        return res.status(400).json({ success: false, error: 'INVALID_EMAIL', message: 'Invalid email format' });
+      }
+      if (!ValidationUtils.validatePassword(password)) {
+        return res.status(400).json({
+          success: false,
+          error: 'WEAK_PASSWORD',
+          message: 'Password does not meet requirements: 12+ chars, uppercase, lowercase, number, special character'
+        });
+      }
+
+      const sanitizedEmail = ValidationUtils.sanitizeString(email, 254).toLowerCase();
+      const user = await adminService.createUser({
+        firstName: ValidationUtils.sanitizeString(firstName, 100),
+        lastName: ValidationUtils.sanitizeString(lastName, 100),
+        email: sanitizedEmail,
+        password,
+        phone: phone ? ValidationUtils.sanitizeString(phone, 20) : null,
+        schoolId: schoolId || null,
+        role
+      }, req.user.id);
+
+      return res.status(201).json({ success: true, user });
     } catch (error) {
       return this.handleError(error, res);
     }
