@@ -139,12 +139,22 @@ describe('Portfolio moderation — remove / restore', () => {
     expect(res.status).toBe(200);
     const upd = mockPool.query.mock.calls.find(c => /UPDATE portfolio_items[\s\S]*REMOVED/i.test(c[0]));
     expect(upd[1]).toEqual(expect.arrayContaining(['Contains personal info']));
+    // Audit row must use an allowed action_category (audit_logs CHECK excludes 'PORTFOLIO')
+    const audit = mockPool.query.mock.calls.find(c => /INSERT INTO audit_logs/i.test(c[0]));
+    expect(audit[1]).toEqual(expect.arrayContaining(['COMPLIANCE']));
+    expect(audit[1]).not.toContain('PORTFOLIO');
   });
 
   test('remove requires a reason (400)', async () => {
     mockPool.query.mockResolvedValueOnce({ rows: [{ ok: 1 }], rowCount: 1 }); // unused — 400 returns before any query
     const res = await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/remove')
       .set('Authorization', `Bearer ${teacherToken()}`).send({ reason: '  ' });
+    expect(res.status).toBe(400);
+  });
+
+  test('remove rejects a reason longer than 500 chars (400)', async () => {
+    const res = await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/remove')
+      .set('Authorization', `Bearer ${teacherToken()}`).send({ reason: 'x'.repeat(501) });
     expect(res.status).toBe(400);
   });
 
