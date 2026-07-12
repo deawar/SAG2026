@@ -85,6 +85,15 @@ async function startServer() {
         await db.query('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_key');
         await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_active
                         ON users(email) WHERE deleted_at IS NULL`);
+        // Widen users.account_status CHECK to every state the app uses. The
+        // registration flow inserts PENDING (students, pre-verification) and
+        // PENDING_APPROVAL (teachers, pre-admin-approval); an older live DB was
+        // created before those were permitted, so the insert hit a 23514 check
+        // violation → 500. Rebuild the constraint idempotently so existing
+        // deployments converge on redeploy.
+        await db.query('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_account_status_check');
+        await db.query(`ALTER TABLE users ADD CONSTRAINT users_account_status_check
+                        CHECK (account_status IN ('ACTIVE','SUSPENDED','LOCKED','INACTIVE','PENDING','PENDING_APPROVAL','PENDING_VERIFICATION'))`);
         // Watchlist table for auction-detail page
         await db.query(`
           CREATE TABLE IF NOT EXISTS auction_watchlist (

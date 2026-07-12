@@ -75,7 +75,7 @@ CREATE TABLE users (
   parent_consent_granted_at TIMESTAMPTZ NULL,
   role VARCHAR(50) NOT NULL CHECK (role IN ('SITE_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'BIDDER')),
   school_id UUID REFERENCES schools(id) ON DELETE SET NULL,
-  account_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' CHECK (account_status IN ('ACTIVE', 'SUSPENDED', 'LOCKED', 'INACTIVE', 'PENDING_APPROVAL')),
+  account_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' CHECK (account_status IN ('ACTIVE', 'SUSPENDED', 'LOCKED', 'INACTIVE', 'PENDING', 'PENDING_APPROVAL', 'PENDING_VERIFICATION')),
   two_fa_enabled BOOLEAN DEFAULT FALSE,
   two_fa_secret VARCHAR(32),
   backup_codes TEXT[], -- JSON array of encrypted backup codes

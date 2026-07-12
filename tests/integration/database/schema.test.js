@@ -251,6 +251,22 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
       expect(result.rows[0].data_type).toBe('text');
       expect(result.rows[0].character_maximum_length).toBeNull();
     });
+
+    test('users.account_status CHECK permits the registration states (PENDING, PENDING_APPROVAL)', async () => {
+      // Registration inserts PENDING (students, pre-verification) and
+      // PENDING_APPROVAL (teachers). A stale constraint rejects them → 500 on
+      // register. Guard the full allowed set.
+      const query = `
+        SELECT pg_get_constraintdef(oid) AS def
+        FROM pg_constraint
+        WHERE conrelid = 'users'::regclass AND contype = 'c'
+          AND pg_get_constraintdef(oid) ILIKE '%account_status%'
+      `;
+      const result = await db.query(query);
+      const defs = result.rows.map(r => r.def).join(' ');
+      expect(defs).toMatch(/'PENDING'/);
+      expect(defs).toMatch(/'PENDING_APPROVAL'/);
+    });
   });
 
   /**
