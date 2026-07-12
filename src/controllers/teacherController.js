@@ -794,6 +794,8 @@ class TeacherController {
         `SELECT id, title, description, medium, artist_grade, image_url,
                 portfolio_status, submission_state, created_at,
                 moderation_status, moderation_reason, moderated_at
+               ,(SELECT mu.first_name || ' ' || COALESCE(mu.last_name, '')
+                   FROM users mu WHERE mu.id = portfolio_items.moderated_by_user_id) AS moderated_by_name
                ,(SELECT COUNT(*) FROM portfolio_comments c
                   WHERE c.portfolio_item_id = portfolio_items.id AND c.deleted_at IS NULL) AS comment_count
                ,(SELECT COUNT(*) FROM portfolio_comments c
@@ -815,6 +817,7 @@ class TeacherController {
           moderationStatus: r.moderation_status,
           moderationReason: r.moderation_reason,
           moderatedAt: r.moderated_at,
+          moderatedByName: r.moderated_by_name?.trim() || null,
           commentCount: Number.parseInt(r.comment_count, 10) || 0,
           unreadCount: Number.parseInt(r.unread_count, 10) || 0
         }))

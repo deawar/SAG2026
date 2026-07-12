@@ -424,12 +424,19 @@ function renderRemovedCard(item, studentId) {
     body.appendChild(reasonEl);
   }
 
-  // Removal date
-  if (item.moderatedAt) {
+  // Removal date + moderator ("Removed: <date> by <name>")
+  if (item.moderatedAt || item.moderatedByName) {
     const dateEl = document.createElement('p');
     dateEl.className = 'moderation-date';
-    const d = new Date(item.moderatedAt);
-    dateEl.textContent = 'Removed: ' + (isNaN(d.getTime()) ? item.moderatedAt : d.toLocaleDateString());
+    let text = 'Removed';
+    if (item.moderatedAt) {
+      const d = new Date(item.moderatedAt);
+      text += ': ' + (isNaN(d.getTime()) ? item.moderatedAt : d.toLocaleDateString());
+    }
+    if (item.moderatedByName) {
+      text += ' by ' + item.moderatedByName;
+    }
+    dateEl.textContent = text;
     body.appendChild(dateEl);
   }
 
