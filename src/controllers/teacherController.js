@@ -837,6 +837,7 @@ class TeacherController {
       const { studentId, itemId } = req.params;
       const reason = (req.body.reason || '').trim();
       if (!reason) { return res.status(400).json({ success: false, message: 'A reason is required' }); }
+      if (reason.length > 500) { return res.status(400).json({ success: false, message: 'Reason must be 500 characters or fewer' }); }
 
       const ok = await TeacherController._canModerateStudent(viewer, studentId);
       if (!ok) { return res.status(403).json({ success: false, message: 'Not permitted' }); }
@@ -864,9 +865,9 @@ class TeacherController {
         );
       }
       await pool.query(
-        `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details)
-         VALUES ($1,$2,$3,$4,$5)`,
-        ['PORTFOLIO', 'item_removed', 'portfolio_item', itemId,
+        `INSERT INTO audit_logs (user_id, action_category, action_type, resource_type, resource_id, action_details)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [viewer.id, 'COMPLIANCE', 'item_removed', 'portfolio_item', itemId,
           JSON.stringify({ removedBy: viewer.id, studentId, reason })]
       );
       return res.json({ success: true, message: 'Item removed' });
@@ -899,9 +900,9 @@ class TeacherController {
       );
       if (upd.rowCount === 0) { return res.status(404).json({ success: false, message: 'Item not found' }); }
       await pool.query(
-        `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details)
-         VALUES ($1,$2,$3,$4,$5)`,
-        ['PORTFOLIO', 'item_restored', 'portfolio_item', itemId, JSON.stringify({ restoredBy: viewer.id, studentId })]
+        `INSERT INTO audit_logs (user_id, action_category, action_type, resource_type, resource_id, action_details)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [viewer.id, 'COMPLIANCE', 'item_restored', 'portfolio_item', itemId, JSON.stringify({ restoredBy: viewer.id, studentId })]
       );
       return res.json({ success: true, message: 'Item restored' });
     } catch (error) {

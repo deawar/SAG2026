@@ -131,9 +131,9 @@ module.exports = (db) => {
         [comment.id, viewer.id]
       );
       await db.query(
-        `INSERT INTO audit_logs (action_category, action_type, resource_type, resource_id, action_details)
-         VALUES ($1,$2,$3,$4,$5)`,
-        ['PORTFOLIO', 'comment_deleted', 'portfolio_comment', comment.id,
+        `INSERT INTO audit_logs (user_id, action_category, action_type, resource_type, resource_id, action_details)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [viewer.id, 'COMPLIANCE', 'comment_deleted', 'portfolio_comment', comment.id,
           JSON.stringify({ deletedBy: viewer.id, moderated: !isAuthor })]
       );
       return res.json({ success: true });

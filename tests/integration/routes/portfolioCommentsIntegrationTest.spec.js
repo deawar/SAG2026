@@ -91,6 +91,9 @@ describe('Portfolio comments — delete', () => {
     expect(upd).toBeTruthy();
     const audit = mockDb.query.mock.calls.find(c => /INSERT INTO audit_logs/i.test(c[0]));
     expect(audit).toBeTruthy();
+    // Audit row must use an allowed action_category (audit_logs CHECK excludes 'PORTFOLIO')
+    expect(audit[1]).toEqual(expect.arrayContaining(['COMPLIANCE']));
+    expect(audit[1]).not.toContain('PORTFOLIO');
   });
 
   test('inviting teacher moderates (deletes) another user\'s comment (200)', async () => {
