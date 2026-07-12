@@ -27,13 +27,12 @@
 
   /**
    * Wire a single-input school typeahead.
-   * @param {{inputEl:HTMLInputElement, listboxEl:HTMLElement, hiddenEl:HTMLInputElement, noMatchText?:string}} opts
+   * @param {{inputEl:HTMLInputElement, listboxEl:HTMLElement, hiddenEl:HTMLInputElement}} opts
    */
   function initSchoolCombobox(opts) {
     const inputEl = opts.inputEl;
     const listboxEl = opts.listboxEl;
     const hiddenEl = opts.hiddenEl;
-    const noMatchText = opts.noMatchText || "No matches — can't find your school? Contact your school administrator.";
     if (!inputEl || !listboxEl || !hiddenEl) { return; }
 
     let debounceTimer = null;
@@ -112,7 +111,7 @@
           if (seq !== requestSeq) { return; } // a newer keystroke superseded this
           const results = (data && data.success && Array.isArray(data.data)) ? data.data : [];
           if (results.length === 0) {
-            renderMessage(noMatchText);
+            renderMessage("No matches — can't find your school? Contact your school administrator.");
           } else {
             renderOptions(results);
           }

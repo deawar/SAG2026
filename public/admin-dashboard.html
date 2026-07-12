@@ -316,15 +316,11 @@
                         <div style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap; margin-top:1rem;">
                             <div class="form-group" style="flex:1; min-width:200px; margin-bottom:0;">
                                 <label for="gateway-school-search">School</label>
-                                <div class="school-combobox">
-                                    <input type="text" id="gateway-school-search" class="form-control"
-                                           role="combobox" aria-autocomplete="list" aria-expanded="false"
-                                           aria-controls="gateway-school-listbox" autocomplete="off"
-                                           placeholder="Type to search schools...">
-                                    <ul id="gateway-school-listbox" class="school-combobox__listbox" role="listbox"
-                                        aria-label="School suggestions" aria-live="polite" hidden></ul>
-                                </div>
-                                <input type="hidden" id="gateway-school-select">
+                                <input type="text" id="gateway-school-search" class="form-control"
+                                       placeholder="Type to search schools..." autocomplete="off">
+                                <select id="gateway-school-select" class="form-control" style="margin-top:0.5rem;">
+                                    <option value="">— Select a school —</option>
+                                </select>
                             </div>
                             <div style="display:flex; gap:0.5rem; flex-shrink:0;">
                                 <button class="btn btn-secondary" id="check-gateway-btn" type="button">Check Status</button>
@@ -468,7 +464,6 @@
     <script src="/js/websocket-client.js"></script>
     <script src="/js/auth-manager.js"></script>
     <script src="/js/ui-components.js"></script>
-    <script src="/js/school-combobox.js"></script>
     <script src="/js/admin-dashboard.js"></script>
     <script>
       // -----------------------------------------------------------------------
