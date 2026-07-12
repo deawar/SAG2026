@@ -871,6 +871,58 @@ class UIComponents {
   }
 
   /**
+   * Map a user role to its Portfolio nav destination.
+   * @param {string} role
+   * @returns {{label:string, href:string}|null}
+   */
+  static portfolioNavTarget(role) {
+    if (role === 'STUDENT') {
+      return { label: 'My Portfolio', href: '/portfolio.html' };
+    }
+    if (role === 'TEACHER' || role === 'SCHOOL_ADMIN' || role === 'SITE_ADMIN') {
+      return { label: 'Student Portfolios', href: '/teacher-portfolios.html' };
+    }
+    return null;
+  }
+
+  /**
+   * Inject the role-appropriate Portfolio link into the shared navbar (top nav
+   * list + user dropdown), on every page. Idempotent: skips insertion if a link
+   * to the same href already exists (pages that hardcode it).
+   * @param {string} role
+   */
+  static injectPortfolioLink(role) {
+    const target = UIComponents.portfolioNavTarget(role);
+    if (!target) { return; }
+    const onThisPage = window.location.pathname === target.href;
+
+    // Top nav
+    const navList = document.querySelector('.nav-list');
+    if (navList && !navList.querySelector('a.nav-link[href="' + target.href + '"]')) {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.className = 'nav-link';
+      a.href = target.href;
+      a.textContent = target.label;
+      if (onThisPage) { a.setAttribute('aria-current', 'page'); }
+      li.appendChild(a);
+      navList.appendChild(li);
+    }
+
+    // User dropdown menu
+    const dropdown = document.getElementById('user-dropdown');
+    if (dropdown && !dropdown.querySelector('a.dropdown-item[href="' + target.href + '"]')) {
+      const a = document.createElement('a');
+      a.className = 'dropdown-item';
+      a.setAttribute('role', 'menuitem');
+      a.href = target.href;
+      a.textContent = target.label;
+      const logout = document.getElementById('logout-btn');
+      if (logout) { dropdown.insertBefore(a, logout); } else { dropdown.appendChild(a); }
+    }
+  }
+
+  /**
      * Initialize navbar auth UI and event listeners
      * Call this on DOMContentLoaded for all pages
      */
@@ -947,6 +999,9 @@ class UIComponents {
       if (myBidsLink) {
         myBidsLink.style.display = (isAdmin || isTeacher) ? 'none' : '';
       }
+
+      // Portfolio link — visible on every page for students/teachers/admins
+      UIComponents.injectPortfolioLink(user.role);
     } else {
       if (loginBtn) {loginBtn.style.display = 'block';}
       if (registerBtn) {registerBtn.style.display = 'block';}
