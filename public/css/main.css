@@ -4085,3 +4085,45 @@ body:has(.hero) .navbar {
 .comment-thread__submit {
     align-self: flex-end;
 }
+
+/* ===== Registration — School typeahead combobox ===== */
+.school-combobox {
+    position: relative;
+}
+
+.school-combobox__listbox {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    z-index: 20;
+    background: var(--color-white, #ffffff);
+    border: 1px solid var(--color-lighter-gray, #cccccc);
+    border-radius: var(--radius-sm);
+    max-height: 260px;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.school-combobox__option,
+.school-combobox__empty {
+    padding: 8px 12px;
+    font-size: var(--font-size-sm);
+}
+
+.school-combobox__option {
+    cursor: pointer;
+}
+
+.school-combobox__option.is-active,
+.school-combobox__option:hover {
+    background: var(--color-lightest-gray, #eef2ff);
+}
+
+.school-combobox__empty {
+    color: var(--color-gray, #666666);
+    cursor: default;
+}
