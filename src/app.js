@@ -106,8 +106,10 @@ function createApp(db) {
   // ==========================================================================
   app.use(express.static(path.join(__dirname, '..', 'public')));
   app.use(enforceJsonContentType);
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ limit: '10mb', extended: true }));
+  // 15mb so an 8 MB image (client cap) survives ~33% base64 inflation
+  // (~10.7 MB) plus JSON field overhead without a 413.
+  app.use(express.json({ limit: '15mb' }));
+  app.use(express.urlencoded({ limit: '15mb', extended: true }));
 
   // ==========================================================================
   // SECURITY MIDDLEWARE

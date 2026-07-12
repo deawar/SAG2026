@@ -6,6 +6,25 @@
  */
 
 const rateLimit = require('express-rate-limit');
+const jwt = require('jsonwebtoken');
+
+/**
+ * Rate-limit key: prefer the authenticated user id (from the access JWT) so that
+ * many users behind ONE shared public IP — school computer labs / NAT — each get
+ * their own budget instead of competing for a single per-IP allowance. Falls
+ * back to IP for unauthenticated traffic. An invalid/garbage token can't create
+ * fresh buckets: verification fails and it drops to the IP key.
+ */
+function userOrIpKey(req) {
+  const auth = req.headers.authorization;
+  if (auth?.startsWith('Bearer ')) {
+    try {
+      const decoded = jwt.verify(auth.slice(7), process.env.JWT_ACCESS_SECRET);
+      if (decoded?.userId) { return `user:${decoded.userId}`; }
+    } catch { /* invalid token — fall through to IP */ }
+  }
+  return req.ip;
+}
 
 /**
  * Login Rate Limiter
@@ -33,16 +52,18 @@ const loginLimiter = rateLimit({
 
 /**
  * API Rate Limiter
- * - 100 requests per minute per IP
- * - General API endpoint protection
+ * - 100 requests per minute per authenticated user (per IP when unauthenticated)
+ * - General API endpoint protection; user-keyed so shared-IP classrooms are not
+ *   throttled as a single client (see userOrIpKey).
  */
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 100, // Limit each IP to 100 requests per minute
-  message: 'Too many requests from this IP, please try again later.',
+  max: 100, // Limit each user (or unauthenticated IP) to 100 requests per minute
+  message: 'Too many requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => process.env.NODE_ENV === 'test',
+  keyGenerator: userOrIpKey,
   handler: (req, res) => {
     return res.status(429).json({
       success: false,
@@ -116,5 +137,6 @@ module.exports = {
   apiLimiter,
   paymentLimiter,
   authLimiter,
-  bidLimiter
+  bidLimiter,
+  userOrIpKey
 };

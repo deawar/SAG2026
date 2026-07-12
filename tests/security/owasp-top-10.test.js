@@ -471,7 +471,9 @@ describe('Security Audit - OWASP Top 10', () => {
    */
   describe('Input Validation', () => {
     test('should reject oversized payloads', async () => {
-      const largePayload = 'x'.repeat(10 * 1024 * 1024); // 10MB
+      // Body limit is 15mb (sized to accept 8MB images after ~33% base64
+      // inflation); anything beyond it must still be rejected.
+      const largePayload = 'x'.repeat(16 * 1024 * 1024); // 16MB > 15mb limit
 
       const response = await request(app)
         .post('/api/auctions')
