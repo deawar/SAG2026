@@ -231,12 +231,25 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
 
     test('created_at columns should be TIMESTAMP', async () => {
       const query = `
-        SELECT data_type 
-        FROM information_schema.columns 
+        SELECT data_type
+        FROM information_schema.columns
         WHERE table_name = 'users' AND column_name = 'created_at'
       `;
       const result = await db.query(query);
       expect(result.rows[0].data_type).toContain('timestamp');
+    });
+
+    test('portfolio_items.image_url should be TEXT (base64 data URLs exceed VARCHAR limits)', async () => {
+      const query = `
+        SELECT data_type, character_maximum_length
+        FROM information_schema.columns
+        WHERE table_name = 'portfolio_items' AND column_name = 'image_url'
+      `;
+      const result = await db.query(query);
+      expect(result.rows.length).toBeGreaterThan(0);
+      // Must be unbounded text — a bounded VARCHAR overflows on image save (500).
+      expect(result.rows[0].data_type).toBe('text');
+      expect(result.rows[0].character_maximum_length).toBeNull();
     });
   });
 

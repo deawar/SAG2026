@@ -110,7 +110,7 @@ CREATE TABLE portfolio_items (
   dimensions_height_cm DECIMAL(10, 2),
   dimensions_depth_cm  DECIMAL(10, 2),
   estimated_value      DECIMAL(10, 2),
-  image_url            VARCHAR(2083),
+  image_url            TEXT,
   image_storage_key    VARCHAR(500),
   portfolio_status     VARCHAR(20) NOT NULL DEFAULT 'IN_PROGRESS'
                        CHECK (portfolio_status IN ('IN_PROGRESS', 'COMPLETED')),

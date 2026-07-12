@@ -129,7 +129,7 @@ async function startServer() {
             dimensions_height_cm DECIMAL(10, 2),
             dimensions_depth_cm  DECIMAL(10, 2),
             estimated_value      DECIMAL(10, 2),
-            image_url            VARCHAR(2083),
+            image_url            TEXT,
             image_storage_key    VARCHAR(500),
             portfolio_status     VARCHAR(20) NOT NULL DEFAULT 'IN_PROGRESS'
                                  CHECK (portfolio_status IN ('IN_PROGRESS', 'COMPLETED')),
@@ -149,6 +149,10 @@ async function startServer() {
                         UUID NULL REFERENCES portfolio_items(id) ON DELETE SET NULL`);
         await db.query(`CREATE INDEX IF NOT EXISTS idx_artwork_portfolio_item
                         ON artwork(portfolio_item_id)`);
+        // Widen image_url to TEXT for existing tables: base64 data URLs far
+        // exceed VARCHAR(2083) and overflow (500 on save). Mirrors the artwork
+        // widening above. Idempotent — TEXT -> TEXT is a no-op.
+        await db.query('ALTER TABLE portfolio_items ALTER COLUMN image_url TYPE TEXT');
         // Non-essential convenience trigger (kept last so a failure here does
         // not block the table/column above). update_updated_at_column() ships
         // with the baseline schema.
