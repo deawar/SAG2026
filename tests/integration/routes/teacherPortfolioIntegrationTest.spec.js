@@ -92,6 +92,7 @@ describe('Teacher portfolio viewing', () => {
         id: 'pi-2', title: 'Removed Art', description: null, medium: null, artist_grade: null, image_url: null,
         portfolio_status: 'COMPLETED', submission_state: 'NOT_SUBMITTED', created_at: new Date(),
         moderation_status: 'REMOVED', moderation_reason: 'Contains personal info', moderated_at: new Date(),
+        moderated_by_name: 'Ada Admin',
         comment_count: '0', unread_count: '0'
       }], rowCount: 1 }); // (3) items query — REMOVED piece returned to admin
     const res = await request(app).get('/api/teacher/portfolios/stu-1').set('Authorization', `Bearer ${schoolAdminToken()}`);
@@ -99,7 +100,8 @@ describe('Teacher portfolio viewing', () => {
     expect(res.body.items).toHaveLength(1);
     expect(res.body.items[0]).toMatchObject({
       moderationStatus: 'REMOVED',
-      moderationReason: 'Contains personal info'
+      moderationReason: 'Contains personal info',
+      moderatedByName: 'Ada Admin'
     });
   });
 
