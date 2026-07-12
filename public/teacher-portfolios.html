@@ -102,6 +102,64 @@
         <img id="lightbox-img" src="" alt="" class="lightbox-img-full">
     </div>
 
+    <!-- ===== Comment Thread Modal ===== -->
+    <div class="modal" id="comment-modal" role="dialog" aria-modal="true" aria-labelledby="comment-modal-title" hidden style="display:none;">
+        <div class="modal-content modal-medium">
+            <button class="modal-close" id="comment-modal-close" aria-label="Close comment thread">&times;</button>
+
+            <h2 id="comment-modal-title">Comments</h2>
+
+            <div class="comment-thread" id="comment-thread">
+                <ul class="comment-thread__list" id="comment-thread-list" aria-live="polite" aria-label="Comment thread">
+                    <li class="comment-thread__empty" id="comment-thread-empty">Loading comments...</li>
+                </ul>
+
+                <div class="comment-thread__compose">
+                    <label for="comment-body-input" class="sr-only">Write a comment</label>
+                    <textarea
+                        id="comment-body-input"
+                        class="form-control"
+                        placeholder="Write a comment... (max 2000 characters)"
+                        maxlength="2000"
+                        rows="3"
+                        aria-describedby="comment-char-count"
+                    ></textarea>
+                    <p class="comment-thread__char-count" id="comment-char-count" aria-live="polite">0 / 2000</p>
+                    <button type="button" class="btn btn-primary btn-sm comment-thread__submit" id="comment-submit-btn">
+                        Post Comment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Remove Reason Modal ===== -->
+    <div class="modal" id="remove-modal" role="dialog" aria-modal="true" aria-labelledby="remove-modal-title" hidden style="display:none;">
+        <div class="modal-content modal-small">
+            <button class="modal-close" id="remove-modal-close" aria-label="Close remove dialog">&times;</button>
+            <h2 id="remove-modal-title">Remove Piece</h2>
+            <p class="section-help" style="margin-bottom:1rem;">A reason is required. The student will see this reason.</p>
+            <form id="remove-form" novalidate>
+                <label for="remove-reason-input" class="form-label">Reason <span aria-hidden="true">*</span></label>
+                <textarea
+                    id="remove-reason-input"
+                    class="form-control"
+                    placeholder="Explain why this piece is being removed…"
+                    maxlength="500"
+                    rows="3"
+                    required
+                    aria-required="true"
+                    aria-describedby="remove-reason-count"
+                ></textarea>
+                <p class="comment-thread__char-count" id="remove-reason-count" aria-live="polite">0 / 500</p>
+                <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem;">
+                    <button type="button" class="btn btn-secondary btn-sm" id="remove-cancel-btn">Cancel</button>
+                    <button type="submit" class="btn btn-danger btn-sm" id="remove-confirm-btn">Remove Piece</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Alert Container -->
     <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
 
