@@ -230,9 +230,6 @@ class AuthPages {
     const nextBtn = form.querySelector('#next-step-btn') || form.querySelector('.btn-next');
     const backBtn = form.querySelector('#prev-step-btn') || form.querySelector('.btn-back');
     const passwordInput = form.querySelector('input[name="password"]');
-    const schoolSelect = form.querySelector('select[name="school_id"]');
-    const schoolSearch = form.querySelector('#school-search');
-
     nextBtn?.addEventListener('click', () => this.nextRegisterStep(form));
     backBtn?.addEventListener('click', () => this.prevRegisterStep(form));
 
@@ -253,33 +250,12 @@ class AuthPages {
       this.nextRegisterStep(form);
     });
 
-    // Set up school search functionality — type-to-search, no pre-load
-    if (schoolSearch && schoolSelect) {
-      // Show prompt on init
-      schoolSelect.innerHTML = '<option value="">Type above to search schools</option>';
-
-      let searchTimeout;
-      schoolSearch.addEventListener('input', (e) => {
-        clearTimeout(searchTimeout);
-        const query = e.target.value.trim();
-
-        if (query.length >= 2) {
-          schoolSelect.innerHTML = '<option value="">Searching...</option>';
-          searchTimeout = setTimeout(() => {
-            this.searchSchools(query, schoolSelect);
-          }, 300);
-        } else {
-          schoolSelect.innerHTML = '<option value="">Type above to search schools</option>';
-        }
-      });
-
-      // Allow selection by pressing Enter
-      schoolSearch.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          schoolSelect.focus();
-        }
-      });
+    // School typeahead combobox: single input → hidden input[name="school_id"]
+    const schoolInput = form.querySelector('#school-combobox');
+    const schoolListbox = form.querySelector('#school-listbox');
+    const schoolHidden = form.querySelector('#school-id');
+    if (schoolInput && schoolListbox && schoolHidden && window.SchoolCombobox) {
+      window.SchoolCombobox.init({ inputEl: schoolInput, listboxEl: schoolListbox, hiddenEl: schoolHidden });
     }
 
     // Password requirement checker
@@ -296,99 +272,6 @@ class AuthPages {
     }
 
     this.updateProgressIndicator();
-  }
-
-  /**
-     * Load schools from API and populate dropdown
-     * Supports searching by state, city, or school name
-     */
-  async loadSchools(selectElement) {
-    try {
-      const form = selectElement.closest('form');
-      const stateInput = form?.querySelector('input[name="state"]');
-      // cityInput reserved for future city-based filtering
-
-      let url = '/api/schools';
-      const params = new URLSearchParams();
-
-      // If state selected, filter by state
-      if (stateInput?.value) {
-        params.append('state', stateInput.value);
-      }
-
-      if (params.toString()) {
-        url += `?${params.toString()}`;
-      }
-
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (!data.success || !data.data) {
-        console.error('Failed to load schools:', data.message);
-        UIComponents.createToast({ message: 'Could not load schools', type: 'error' });
-        return;
-      }
-
-      // Clear existing options except the placeholder
-      selectElement.innerHTML = '<option value="">Select your school</option>';
-
-      // Add schools to dropdown
-      data.data.forEach(school => {
-        const option = document.createElement('option');
-        option.value = school.id;
-        option.textContent = `${school.name} - ${school.city}, ${school.state_province}`;
-        selectElement.appendChild(option);
-      });
-
-      // Show count if many schools loaded
-      if (data.data.length >= 500) {
-        const hint = document.createElement('option');
-        hint.disabled = true;
-        hint.textContent = `... and ${data.count} more (use search to filter)`;
-        selectElement.appendChild(hint);
-      }
-    } catch (error) {
-      console.error('Error loading schools:', error);
-      UIComponents.createToast({ message: 'Connection error loading schools', type: 'error' });
-    }
-  }
-
-  /**
-     * Search schools by name, city, or state
-     * @param {string} query - Search query
-     * @param {HTMLElement} selectElement - School select element
-     */
-  async searchSchools(query, selectElement) {
-    if (!query || query.length < 2) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/schools/search/${encodeURIComponent(query)}`);
-      const data = await response.json();
-
-      if (!data.success || !data.data) {
-        selectElement.innerHTML = '<option value="">No schools found — try a different search</option>';
-        return;
-      }
-
-      if (data.data.length === 0) {
-        selectElement.innerHTML = '<option value="">No schools found — try a different search</option>';
-        return;
-      }
-
-      // Clear and repopulate dropdown with results
-      selectElement.innerHTML = '<option value="">-- Select your school --</option>';
-      data.data.forEach(school => {
-        const option = document.createElement('option');
-        option.value = school.id;
-        option.textContent = `${school.name} — ${school.city}, ${school.state_province}`;
-        selectElement.appendChild(option);
-      });
-    } catch (error) {
-      console.error('Error searching schools:', error);
-      selectElement.innerHTML = '<option value="">Search unavailable — please try again</option>';
-    }
   }
 
   /**
@@ -410,10 +293,10 @@ class AuthPages {
     const schoolGroup = document.getElementById('school-fields-group');
     if (schoolGroup) {schoolGroup.style.display = 'none';}
     // Disable required attrs so step validation doesn't block
-    const schoolSelect = form.querySelector('select[name="school_id"]');
-    if (schoolSelect) {schoolSelect.required = false; schoolSelect.removeAttribute('aria-required');}
-    const schoolSearch = form.querySelector('#school-search');
-    if (schoolSearch) {schoolSearch.required = false;}
+    const schoolHidden = form.querySelector('input[name="school_id"]');
+    if (schoolHidden) {schoolHidden.required = false; schoolHidden.removeAttribute('aria-required');}
+    const schoolInput = form.querySelector('#school-combobox');
+    if (schoolInput) {schoolInput.required = false;}
 
     // Hide DOB field, show age confirmation instead
     const dobGroup = document.getElementById('dob-group');
@@ -447,7 +330,7 @@ class AuthPages {
       const fullName = form.querySelector('input[name="full_name"]');
       const email = form.querySelector('input[name="email"]');
       const dob = form.querySelector('input[name="date_of_birth"]');
-      const school = form.querySelector('select[name="school_id"]');
+      const school = form.querySelector('input[name="school_id"]');
       const password = form.querySelector('input[name="password"]');
       const confirmPass = form.querySelector('input[name="confirm_password"]');
 
@@ -463,7 +346,7 @@ class AuthPages {
         if (!ageConfirm?.checked) {errors.age = 'You must confirm you are 18 or older to create a bidder account';}
       } else {
         if (!dob?.value) {errors.dob = 'Date of birth is required';}
-        if (!school?.value) {errors.school = 'School is required';}
+        if (!school?.value) {errors.school = 'Please select your school from the list';}
       }
       if (!password?.value) {
         errors.password = 'Password is required';
