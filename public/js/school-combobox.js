@@ -3,12 +3,12 @@
  * Renders suggestions from GET /api/schools/search/:query and writes the
  * chosen school's id into a hidden input[name="school_id"].
  */
-(function () {
+(function() {
   'use strict';
 
-  var MIN_CHARS = 2;
-  var DEBOUNCE_MS = 250;
-  var RESULT_LIMIT = 10;
+  const MIN_CHARS = 2;
+  const DEBOUNCE_MS = 250;
+  const RESULT_LIMIT = 10;
 
   /**
    * Display label for one school suggestion.
@@ -16,12 +16,12 @@
    * @returns {string} e.g. "Lincoln High School — Chicago, IL"
    */
   function formatSchoolOption(school) {
-    var name = (school && school.name ? String(school.name) : '').trim();
-    var city = (school && school.city ? String(school.city) : '').trim();
-    var state = (school && school.state_province ? String(school.state_province) : '').trim();
-    var locality = [city, state].filter(Boolean).join(', ');
-    if (name && locality) { return name + ' — ' + locality; }
-    if (locality) { return ' — ' + locality; }
+    const name = (school && school.name ? String(school.name) : '').trim();
+    const city = (school && school.city ? String(school.city) : '').trim();
+    const state = (school && school.state_province ? String(school.state_province) : '').trim();
+    const locality = [city, state].filter(Boolean).join(', ');
+    if (name && locality) { return `${name} — ${locality}`; }
+    if (locality) { return ` — ${locality}`; }
     return name;
   }
 
@@ -30,15 +30,15 @@
    * @param {{inputEl:HTMLInputElement, listboxEl:HTMLElement, hiddenEl:HTMLInputElement}} opts
    */
   function initSchoolCombobox(opts) {
-    var inputEl = opts.inputEl;
-    var listboxEl = opts.listboxEl;
-    var hiddenEl = opts.hiddenEl;
+    const inputEl = opts.inputEl;
+    const listboxEl = opts.listboxEl;
+    const hiddenEl = opts.hiddenEl;
     if (!inputEl || !listboxEl || !hiddenEl) { return; }
 
-    var debounceTimer = null;
-    var requestSeq = 0;   // guards against out-of-order responses
-    var activeIndex = -1; // highlighted option index
-    var options = [];     // [{ id, label }]
+    let debounceTimer = null;
+    let requestSeq = 0;   // guards against out-of-order responses
+    let activeIndex = -1; // highlighted option index
+    let options = [];     // [{ id, label }]
 
     function closeList() {
       listboxEl.replaceChildren();
@@ -51,7 +51,7 @@
 
     function renderMessage(text) {
       listboxEl.replaceChildren();
-      var li = document.createElement('li');
+      const li = document.createElement('li');
       li.className = 'school-combobox__empty';
       li.setAttribute('role', 'option');
       li.setAttribute('aria-disabled', 'true');
@@ -66,14 +66,14 @@
     function renderOptions(schools) {
       listboxEl.replaceChildren();
       options = [];
-      schools.forEach(function (school, i) {
-        var li = document.createElement('li');
+      schools.forEach((school, i) => {
+        const li = document.createElement('li');
         li.className = 'school-combobox__option';
-        li.id = 'school-option-' + i;
+        li.id = `school-option-${i}`;
         li.setAttribute('role', 'option');
         li.dataset.schoolId = school.id;
         li.textContent = formatSchoolOption(school);
-        li.addEventListener('mousedown', function (e) {
+        li.addEventListener('mousedown', (e) => {
           e.preventDefault(); // keep focus in the input so blur doesn't pre-empt selection
           selectOption(i);
         });
@@ -86,8 +86,8 @@
     }
 
     function highlight(index) {
-      var items = listboxEl.querySelectorAll('.school-combobox__option');
-      items.forEach(function (el) { el.classList.remove('is-active'); });
+      const items = listboxEl.querySelectorAll('.school-combobox__option');
+      items.forEach((el) => { el.classList.remove('is-active'); });
       if (index >= 0 && index < items.length) {
         items[index].classList.add('is-active');
         inputEl.setAttribute('aria-activedescendant', items[index].id);
@@ -96,7 +96,7 @@
     }
 
     function selectOption(index) {
-      var opt = options[index];
+      const opt = options[index];
       if (!opt) { return; }
       inputEl.value = opt.label;
       hiddenEl.value = opt.id;
@@ -104,34 +104,34 @@
     }
 
     function search(query) {
-      var seq = ++requestSeq;
-      fetch('/api/schools/search/' + encodeURIComponent(query) + '?limit=' + RESULT_LIMIT)
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
+      const seq = ++requestSeq;
+      fetch(`/api/schools/search/${encodeURIComponent(query)}?limit=${RESULT_LIMIT}`)
+        .then((r) => { return r.json(); })
+        .then((data) => {
           if (seq !== requestSeq) { return; } // a newer keystroke superseded this
-          var results = (data && data.success && Array.isArray(data.data)) ? data.data : [];
+          const results = (data && data.success && Array.isArray(data.data)) ? data.data : [];
           if (results.length === 0) {
             renderMessage("No matches — can't find your school? Contact your school administrator.");
           } else {
             renderOptions(results);
           }
         })
-        .catch(function () {
+        .catch(() => {
           if (seq !== requestSeq) { return; }
           renderMessage('School search is unavailable — please try again.');
         });
     }
 
-    inputEl.addEventListener('input', function () {
+    inputEl.addEventListener('input', () => {
       hiddenEl.value = ''; // editing invalidates any prior selection
-      var q = inputEl.value.trim();
+      const q = inputEl.value.trim();
       clearTimeout(debounceTimer);
       if (q.length < MIN_CHARS) { closeList(); return; }
-      debounceTimer = setTimeout(function () { search(q); }, DEBOUNCE_MS);
+      debounceTimer = setTimeout(() => { search(q); }, DEBOUNCE_MS);
     });
 
-    inputEl.addEventListener('keydown', function (e) {
-      var items = listboxEl.querySelectorAll('.school-combobox__option');
+    inputEl.addEventListener('keydown', (e) => {
+      const items = listboxEl.querySelectorAll('.school-combobox__option');
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         if (items.length) { highlight(Math.min(activeIndex + 1, items.length - 1)); }
@@ -146,15 +146,15 @@
     });
 
     // Close after a click outside; the 150ms delay lets an option mousedown land first.
-    inputEl.addEventListener('blur', function () { setTimeout(closeList, 150); });
+    inputEl.addEventListener('blur', () => { setTimeout(closeList, 150); });
 
     closeList();
   }
 
   if (typeof window !== 'undefined') {
-    window.SchoolCombobox = { init: initSchoolCombobox, formatSchoolOption: formatSchoolOption };
+    window.SchoolCombobox = { init: initSchoolCombobox, formatSchoolOption };
   }
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { initSchoolCombobox: initSchoolCombobox, formatSchoolOption: formatSchoolOption };
+    module.exports = { initSchoolCombobox, formatSchoolOption };
   }
 })();
