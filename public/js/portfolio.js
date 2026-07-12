@@ -25,6 +25,13 @@ let _commentItemId = null;
 /** The element that had focus before a modal or the lightbox was opened. */
 let _preFocusElement = null;
 
+/** Soft cap on portfolio pieces per student — a non-blocking guidance warning,
+ *  not an enforced limit. Students may still add beyond this. */
+const PORTFOLIO_SOFT_CAP = 20;
+
+/** Latest known total of the student's (VISIBLE) pieces, set on each load. */
+let _portfolioItemCount = 0;
+
 /* =========================================================================
    Submission-state helpers
    ========================================================================= */
@@ -475,11 +482,41 @@ async function loadPortfolio() {
   const inProgress = items.filter(i => i.portfolioStatus === 'IN_PROGRESS');
   const completed  = items.filter(i => i.portfolioStatus === 'COMPLETED');
 
+  _portfolioItemCount = items.length;
+
   if (inProgressCount) { inProgressCount.textContent = String(inProgress.length); }
   if (completedCount)  { completedCount.textContent  = String(completed.length);  }
 
   renderGrid(inProgressGrid, inProgress, 'No in-progress artwork yet. Click "+ Add Artwork" to get started.');
   renderGrid(completedGrid,  completed,  'No completed artwork yet.');
+
+  _renderSoftCapNotice();
+}
+
+/**
+ * Shows or hides a passive, non-blocking notice when the student is at or over
+ * the soft cap. It never prevents adding — it's guidance only.
+ */
+function _renderSoftCapNotice() {
+  const existing = document.getElementById('portfolio-softcap-notice');
+  if (_portfolioItemCount < PORTFOLIO_SOFT_CAP) {
+    if (existing) { existing.remove(); }
+    return;
+  }
+  if (existing) {
+    existing.textContent = 'You have ' + _portfolioItemCount + ' pieces (suggested limit is '
+      + PORTFOLIO_SOFT_CAP + '). You can still add more if you need to.';
+    return;
+  }
+  const notice = document.createElement('p');
+  notice.id = 'portfolio-softcap-notice';
+  notice.className = 'portfolio-softcap-notice';
+  notice.setAttribute('role', 'status');
+  notice.textContent = 'You have ' + _portfolioItemCount + ' pieces (suggested limit is '
+    + PORTFOLIO_SOFT_CAP + '). You can still add more if you need to.';
+  const container = document.querySelector('.main-content .container');
+  const firstSection = container && container.querySelector('section');
+  if (firstSection) { container.insertBefore(notice, firstSection); }
 }
 
 /**
@@ -748,6 +785,15 @@ function _lightboxEscapeHandler(e) {
 /** Opens the Add modal (no existing item). */
 function openAddModal() {
   _editingId = null;
+
+  // Soft cap: warn but do not block when the student is already at/over the cap.
+  if (_portfolioItemCount >= PORTFOLIO_SOFT_CAP) {
+    UIComponents.createToast({
+      message: 'You already have ' + _portfolioItemCount + ' pieces (suggested limit is '
+        + PORTFOLIO_SOFT_CAP + '). You can still add more.',
+      type: 'warning'
+    });
+  }
 
   const titleEl = document.getElementById('piece-modal-title');
   if (titleEl) { titleEl.textContent = 'Add Artwork'; }
