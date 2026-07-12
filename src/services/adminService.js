@@ -7,7 +7,7 @@
  * CRITICAL: All actions are logged to admin_audit_logs for compliance
  */
 
-const { pool } = require('../models/index');
+const { pool, UserModel } = require('../models/index');
 
 /**
  * AdminService - Handles all administrative operations
@@ -1783,6 +1783,94 @@ class AdminService {
       'Admin approved teacher account'
     );
     return upd.rows[0];
+  }
+
+  /**
+   * Create a STAFF account (TEACHER, SCHOOL_ADMIN, SITE_ADMIN) on behalf of an admin.
+   *
+   * Unlike public self-registration (/api/auth/register), the creating admin is the
+   * vouching authority, so the account is created ACTIVE and email pre-verified — this
+   * lets the new staff member log in once and be routed straight to mandatory 2FA setup
+   * (login step 6a), instead of being stuck behind the email-verification / approval gates.
+   *
+   * RBAC:
+   *  - SITE_ADMIN: may create any staff role, any school.
+   *  - SCHOOL_ADMIN: may create TEACHER only, and only within their own school.
+   * STUDENT / BIDDER creation is intentionally NOT supported here — those must go through
+   * /api/auth/register, which enforces COPPA age-gating and (for minors) parental consent.
+   *
+   * @param {Object} params - { email, password, firstName, lastName, phone, schoolId, role }
+   * @param {string} adminId - id of the acting admin (from req.user.id)
+   * @returns {Promise<Object>} - { id, email, role, schoolId, accountStatus }
+   */
+  async createUser({ email, password, firstName, lastName, phone, schoolId, role }, adminId) {
+    const admin = await this.verifyAdminAccess(adminId);
+
+    // Only staff roles may be created here (students/bidders go through COPPA-aware register)
+    const staffRoles = ['SITE_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'];
+    if (!role || !staffRoles.includes(role)) {
+      throw new Error('INVALID_ROLE');
+    }
+
+    // Only SITE_ADMIN may mint admin-level accounts
+    if (['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(role) && admin.role !== 'SITE_ADMIN') {
+      throw new Error('INSUFFICIENT_PERMISSIONS');
+    }
+
+    // SCHOOL_ADMIN is confined to their own school
+    let effectiveSchoolId = schoolId || null;
+    if (admin.role === 'SCHOOL_ADMIN') {
+      if (effectiveSchoolId && effectiveSchoolId !== admin.school_id) {
+        throw new Error('CROSS_SCHOOL_ACCESS_DENIED');
+      }
+      effectiveSchoolId = admin.school_id;
+    }
+
+    // Create the account ACTIVE (UserModel handles email/password validation, dup check, hashing)
+    const userModel = new UserModel(pool);
+    let user;
+    try {
+      user = await userModel.create({
+        email,
+        password,
+        firstName,
+        lastName,
+        phoneNumber: phone || null,
+        dateOfBirth: null,
+        role,
+        schoolId: effectiveSchoolId,
+        accountStatus: 'ACTIVE'
+      });
+    } catch (err) {
+      if (err.message === 'EMAIL_ALREADY_EXISTS') {
+        throw new Error('EMAIL_ALREADY_IN_USE');
+      }
+      throw err;
+    }
+
+    // Admin vouches for the account: pre-verify the email so first login reaches 2FA setup
+    await pool.query(
+      'UPDATE users SET email_verified_at = NOW(), updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+      [user.id]
+    );
+
+    await this.logAdminAction(
+      adminId,
+      'USER_CREATED',
+      'USER',
+      user.id,
+      {},
+      { role, school_id: effectiveSchoolId, account_status: 'ACTIVE', email_verified: true },
+      `Admin created ${role} account (ACTIVE, email pre-verified)`
+    );
+
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      schoolId: user.school_id,
+      accountStatus: 'ACTIVE'
+    };
   }
 
   /**
