@@ -28,6 +28,19 @@ router.post('/csv-upload', async (req, res, next) => {
 });
 
 /**
+ * POST /api/teacher/students
+ * Add a single student: create one registration token and send the invite email.
+ * Body: { name, email }
+ */
+router.post('/students', async (req, res, next) => {
+  try {
+    return await TeacherController.addStudent(req, res);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+/**
  * GET /api/teacher/submissions
  * Get all artwork submissions for teacher's school
  */

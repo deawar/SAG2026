@@ -33,6 +33,40 @@ class TeacherController {
   }
 
   /**
+   * Fetch the teacher's display name + school name for invite-email attribution.
+   */
+  static async _getTeacherInviteIdentity(userId) {
+    const r = await pool.query(
+      `SELECT u.first_name, u.last_name, s.name AS school_name
+         FROM users u
+         LEFT JOIN schools s ON s.id = u.school_id
+        WHERE u.id = $1`,
+      [userId]
+    );
+    const t = r.rows[0] || {};
+    return {
+      teacherName: `${t.first_name || ''} ${t.last_name || ''}`.trim() || 'Your Teacher',
+      schoolName: t.school_name || 'Your School'
+    };
+  }
+
+  /**
+   * Send one student-registration-invite email. Throws on send failure so callers
+   * can decide whether the failure is fatal.
+   */
+  static async _sendRegistrationInvite({ teacherName, schoolName, token, studentEmail, studentName }) {
+    const baseUrl = process.env.FRONTEND_URL || 'https://sag.live';
+    const registrationLink = `${baseUrl}/register.html?token=${token}&email=${encodeURIComponent(studentEmail)}`;
+    const emailContent = EmailTemplateService.generateTemplate('student-registration-invite', {
+      studentName: studentName || 'Student',
+      teacherName,
+      schoolName,
+      registrationLink
+    });
+    await emailProvider.send(studentEmail, emailContent.subject, emailContent.html, emailContent.text);
+  }
+
+  /**
      * Upload CSV with student list and generate registration tokens
      * @param {Request} req - Express request
      * @param {Response} res - Express response
@@ -148,6 +182,117 @@ class TeacherController {
         message: 'Error processing CSV upload',
         errors: [error.message]
       });
+    }
+  }
+
+  /**
+   * Add a single student to the teacher's roster: create one registration_tokens
+   * invite (same model as CSV) and send the invite email immediately (best-effort).
+   * Body: { name, email }
+   */
+  static async addStudent(req, res) {
+    try {
+      const userId = req.user.id;
+      const { name, email } = req.body;
+
+      // Validate name
+      if (!name || typeof name !== 'string' || name.trim().length === 0 || name.trim().length > 200) {
+        return res.status(400).json({
+          success: false, error: 'INVALID_NAME',
+          message: 'A student name is required (max 200 characters).'
+        });
+      }
+      // Validate email
+      if (!email || !ValidationUtils.isValidEmail(email)) {
+        return res.status(400).json({
+          success: false, error: 'INVALID_EMAIL',
+          message: 'A valid email address is required.'
+        });
+      }
+
+      const studentName = name.trim();
+      const studentEmail = email.toLowerCase().trim();
+
+      // Duplicate: unused, unexpired pending invite for this teacher
+      const pendingDup = await pool.query(
+        `SELECT 1 FROM registration_tokens
+          WHERE teacher_id = $1 AND LOWER(student_email) = $2
+            AND used_at IS NULL AND token_expires_at > NOW()
+          LIMIT 1`,
+        [userId, studentEmail]
+      );
+      if (pendingDup.rowCount > 0) {
+        return res.status(409).json({
+          success: false, error: 'ALREADY_INVITED',
+          message: 'That student already has a pending invite.'
+        });
+      }
+
+      // Duplicate: already-registered student with this email under this teacher
+      const registeredDup = await pool.query(
+        `SELECT 1 FROM registration_tokens rt
+           JOIN users u ON LOWER(u.email) = LOWER(rt.student_email)
+                       AND u.deleted_at IS NULL AND u.role = 'STUDENT'
+          WHERE rt.teacher_id = $1 AND LOWER(rt.student_email) = $2
+          LIMIT 1`,
+        [userId, studentEmail]
+      );
+      if (registeredDup.rowCount > 0) {
+        return res.status(409).json({
+          success: false, error: 'ALREADY_REGISTERED',
+          message: 'That student is already registered.'
+        });
+      }
+
+      // Create the invite token (same INSERT shape as uploadCSV)
+      const token = uuidv4();
+      const insert = await pool.query(
+        `INSERT INTO registration_tokens
+              (token, teacher_id, student_email, student_name, created_by_user_id)
+           VALUES ($1, $2, $3, $4, $5)
+           RETURNING id, created_at`,
+        [token, userId, studentEmail, studentName, userId]
+      );
+      const tokenId = insert.rows[0].id;
+
+      // Send invite immediately (best-effort — a send failure must not fail the add)
+      let inviteSent = true;
+      try {
+        const identity = await TeacherController._getTeacherInviteIdentity(userId);
+        await TeacherController._sendRegistrationInvite({
+          teacherName: identity.teacherName,
+          schoolName: identity.schoolName,
+          token, studentEmail, studentName
+        });
+      } catch (err) {
+        inviteSent = false;
+        logger.error('Add-student invite email failed', { error: err.message, studentEmail });
+      }
+
+      // Audit log (best-effort)
+      await pool.query(
+        `INSERT INTO audit_logs (user_id, action_category, action_type, resource_type, resource_id, action_details)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [userId, 'USER', 'student_invited', 'registration_token', tokenId,
+          JSON.stringify({ studentEmail, studentName, inviteSent })]
+      ).catch((err) => logger.error('Add-student audit log failed', { error: err.message }));
+
+      return res.status(201).json({
+        success: true,
+        message: inviteSent ? `Invited ${studentName}` : `Added ${studentName} — invite email could not be sent`,
+        inviteSent,
+        student: {
+          id: tokenId,
+          token,
+          studentName,
+          studentEmail,
+          used: false,
+          invitedAt: insert.rows[0].created_at
+        }
+      });
+    } catch (error) {
+      logger.error('Add student error', { error: error.message, stack: error.stack, userId: req.user?.id });
+      return res.status(500).json({ success: false, message: 'Error adding student' });
     }
   }
 
@@ -510,17 +655,8 @@ class TeacherController {
         return res.status(400).json({ success: false, message: 'tokenIds array required' });
       }
 
-      // Fetch teacher name + school name
-      const teacherResult = await pool.query(
-        `SELECT u.first_name, u.last_name, s.name AS school_name
-                 FROM users u
-                 LEFT JOIN schools s ON s.id = u.school_id
-                 WHERE u.id = $1`,
-        [userId]
-      );
-      const teacher = teacherResult.rows[0] || {};
-      const teacherName = `${teacher.first_name || ''} ${teacher.last_name || ''}`.trim() || 'Your Teacher';
-      const schoolName = teacher.school_name || 'Your School';
+      // Fetch teacher name + school name (shared with addStudent)
+      const { teacherName, schoolName } = await TeacherController._getTeacherInviteIdentity(userId);
 
       // Fetch only tokens that belong to this teacher
       const placeholders = tokenIds.map((_, i) => `$${i + 2}`).join(', ');
@@ -531,20 +667,18 @@ class TeacherController {
         [userId, ...tokenIds]
       );
 
-      const baseUrl = process.env.FRONTEND_URL || 'https://sag.live';
       let sent = 0;
       const errors = [];
 
       for (const row of tokensResult.rows) {
-        const registrationLink = `${baseUrl}/register.html?token=${row.token}&email=${encodeURIComponent(row.student_email)}`;
         try {
-          const emailContent = EmailTemplateService.generateTemplate('student-registration-invite', {
-            studentName: row.student_name || 'Student',
+          await TeacherController._sendRegistrationInvite({
             teacherName,
             schoolName,
-            registrationLink
+            token: row.token,
+            studentEmail: row.student_email,
+            studentName: row.student_name
           });
-          await emailProvider.send(row.student_email, emailContent.subject, emailContent.html, emailContent.text);
           sent++;
         } catch (err) {
           logger.error('Send invite email failed', { error: err.message, studentEmail: row.student_email });
