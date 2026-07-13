@@ -78,6 +78,12 @@ class TeacherDashboard {
       csvForm.addEventListener('submit', (e) => this.handleCSVUpload(e));
     }
 
+    // Add-individual-student form
+    const addStudentForm = document.getElementById('add-student-form');
+    if (addStudentForm) {
+      addStudentForm.addEventListener('submit', (e) => this.handleAddStudent(e));
+    }
+
     // Mobile sidebar toggle
     const sidebarToggle = document.getElementById('sidebar-toggle');
     const sidebar = document.getElementById('dashboard-sidebar');
@@ -306,6 +312,43 @@ class TeacherDashboard {
       console.error('Upload error:', error);
       statusDiv.className = 'alert alert-error';
       statusDiv.textContent = `Error uploading students: ${error.message}`;
+    }
+  }
+
+  /**
+   * Add a single student (name + email) via POST /api/teacher/students,
+   * then refresh the roster so the new pending invite appears.
+   */
+  async handleAddStudent(e) {
+    e.preventDefault();
+    const nameInput  = document.getElementById('add-student-name');
+    const emailInput = document.getElementById('add-student-email');
+    const statusDiv  = document.getElementById('add-student-status');
+
+    const showStatus = (msg, type) => {
+      if (!statusDiv) { return; }
+      statusDiv.style.display = 'block';
+      statusDiv.className = `alert alert-${type}`;
+      statusDiv.textContent = msg;
+    };
+
+    const name  = (nameInput?.value || '').trim();
+    const email = (emailInput?.value || '').trim();
+
+    if (!name || !email) {
+      showStatus('Please enter both a name and an email.', 'error');
+      return;
+    }
+
+    try {
+      const response = await this.apiClient.post('/api/teacher/students', { name, email });
+      showStatus(response.message || `Invited ${name}`, response.inviteSent === false ? 'warning' : 'success');
+      if (nameInput)  { nameInput.value = ''; }
+      if (emailInput) { emailInput.value = ''; }
+      await this.loadStudents();
+    } catch (error) {
+      const msg = error?.data?.message || error.message || 'Could not add student. Please try again.';
+      showStatus(msg, 'error');
     }
   }
 

@@ -183,6 +183,26 @@
                             </form>
                         </div>
 
+                        <!-- Add Individual Student -->
+                        <div class="card">
+                            <h3>Add a Student</h3>
+                            <p>Add one student at a time. They'll get an email invite to register — a parent completes it for students under 13.</p>
+                            <form id="add-student-form" class="form">
+                                <div class="form-group">
+                                    <label for="add-student-name">Student Name <span aria-label="required">*</span></label>
+                                    <input type="text" id="add-student-name" class="form-control" maxlength="200"
+                                           required aria-required="true" placeholder="e.g. Jordan Lee">
+                                </div>
+                                <div class="form-group">
+                                    <label for="add-student-email">Email <span aria-label="required">*</span></label>
+                                    <input type="email" id="add-student-email" class="form-control"
+                                           required aria-required="true" placeholder="student@example.com">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Add &amp; Invite</button>
+                                <div id="add-student-status" class="alert" style="display:none;margin-top:0.75rem;" role="alert"></div>
+                            </form>
+                        </div>
+
                         <!-- Student Registration Links -->
                         <div class="card" id="student-links-card" style="display:none;">
                             <h3>Student Registration Links</h3>
