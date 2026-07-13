@@ -279,7 +279,7 @@ class TeacherController {
 
       return res.status(201).json({
         success: true,
-        message: inviteSent ? `Invited ${studentName}` : `Added ${studentName} — invite email could not be sent`,
+        message: inviteSent ? `Invited ${studentName}` : `Added ${studentName} — invite email could not be sent, use Send Invites to retry`,
         inviteSent,
         student: {
           id: tokenId,
