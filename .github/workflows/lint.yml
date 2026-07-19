@@ -29,9 +29,9 @@ jobs:
         run: npm run lint
         continue-on-error: false
 
-      - name: Check code formatting with Prettier
-        run: npm run format:check
-        continue-on-error: false
+      # Prettier is intentionally not used in this project — ESLint (above) is the
+      # style/quality gate. The former "format:check" step referenced a script that
+      # was never defined, so it failed every run; removed.
 
       - name: Count lines of code
         run: |
