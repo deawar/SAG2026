@@ -1,5 +1,17 @@
 const js = require('@eslint/js');
 const globals = require('globals');
+const security = require('eslint-plugin-security');
+const nodePlugin = require('eslint-plugin-n');
+const promise = require('eslint-plugin-promise');
+const sonarjs = require('eslint-plugin-sonarjs');
+
+// Enforce every recommended security rule as an error so new code cannot introduce
+// these holes. detect-object-injection is intentionally disabled — it flags any
+// `obj[variable]` access and is too noisy to be actionable.
+const securityRulesAsErrors = Object.fromEntries(
+  Object.keys(security.configs.recommended.rules).map((rule) => [rule, 'error'])
+);
+securityRulesAsErrors['security/detect-object-injection'] = 'off';
 
 module.exports = [
   // ── Global ignores ───────────────────────────────────────────────────────
@@ -224,6 +236,40 @@ module.exports = [
     files: ['public/js/artwork-carousel.js'],
     rules: {
       'no-unused-vars': 'off'
+    }
+  },
+
+  // ── Security + Node correctness + promise hygiene (backend Node code) ───────
+  // These are the "code hole" gates: injection, unsafe regex, child_process,
+  // buffer misuse, weak randomness, missing promise handling, deprecated Node APIs.
+  {
+    files: ['src/**/*.js', 'db/**/*.js', 'scripts/**/*.js'],
+    plugins: { security, n: nodePlugin, promise },
+    rules: {
+      ...securityRulesAsErrors,
+      ...nodePlugin.configs['flat/recommended-script'].rules,
+      // Intentional/known-safe patterns in this repo's layout:
+      'n/no-unpublished-require': 'off', // dev-only requires are fine here
+      'n/no-process-exit': 'off',        // servers/scripts legitimately exit
+      'n/no-missing-require': 'off',      // dynamic/optional requires used on purpose
+      ...promise.configs['flat/recommended'].rules
+    }
+  },
+
+  // ── Bug & code-smell detection across application code ──────────────────────
+  {
+    files: ['src/**/*.js', 'public/js/**/*.js'],
+    plugins: { sonarjs },
+    rules: {
+      ...sonarjs.configs.recommended.rules,
+      // Enforcement targets bugs + security holes, not stylistic preference.
+      // These subjective smells stay informational (warn) so they don't block new code:
+      'sonarjs/cognitive-complexity': 'warn',
+      'sonarjs/no-duplicate-string': 'warn',
+      'sonarjs/no-nested-conditional': 'warn',
+      'sonarjs/no-nested-template-literals': 'warn',
+      'sonarjs/no-same-line-conditional': 'warn',
+      'sonarjs/concise-regex': 'warn'
     }
   }
 ];
