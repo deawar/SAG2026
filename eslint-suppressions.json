@@ -156,9 +156,6 @@
     },
     "sonarjs/no-unused-vars": {
       "count": 1
-    },
-    "sonarjs/pseudo-random": {
-      "count": 1
     }
   },
   "src/services/biddingService.js": {

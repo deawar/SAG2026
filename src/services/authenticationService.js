@@ -1045,8 +1045,8 @@ class AuthenticationService {
       return; // Silent: don't reveal whether the email exists
     }
 
-    // Generate a 6-digit numeric code
-    const code = String(Math.floor(100000 + Math.random() * 900000));
+    // Generate a 6-digit numeric code (cryptographically secure — not Math.random)
+    const code = String(crypto.randomInt(100000, 1000000));
     const codeHash = crypto.createHash('sha256').update(code).digest('hex');
 
     // Remove any existing unused codes for this user
