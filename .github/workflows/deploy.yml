@@ -221,7 +221,9 @@ jobs:
           script: |
             cd ${{ secrets.PROD_APP_DIR }}
             mkdir -p backups
-            docker compose -f docker-compose.prod.yml exec -T postgres pg_dump -U ${{ secrets.DATABASE_USER }} ${{ secrets.DATABASE_NAME }} > backups/backup-$(date +%Y%m%d-%H%M%S).sql
+            # Read the DB user/name from the postgres container's own env (POSTGRES_USER/POSTGRES_DB)
+            # so no separate CI secrets are needed and it always matches the running database.
+            docker compose -f docker-compose.prod.yml exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > backups/backup-$(date +%Y%m%d-%H%M%S).sql
             echo "Database backup completed"
 
       - name: Deploy to production environment
@@ -257,8 +259,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.run_id }}
-          release_name: Production Release - ${{ github.run_id }}
+          tag: ${{ github.ref_name }}
+          name: Production Release ${{ github.ref_name }}
           body: |
             Production deployment from ${{ github.ref }}
             Deployed by: ${{ github.actor }}
