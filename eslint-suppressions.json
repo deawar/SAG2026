@@ -1,0 +1,193 @@
+{
+  "db/migrations.js": {
+    "security/detect-non-literal-fs-filename": {
+      "count": 5
+    }
+  },
+  "public/js/2fa-setup.js": {
+    "sonarjs/no-gratuitous-expressions": {
+      "count": 1
+    }
+  },
+  "public/js/accessibility.js": {
+    "sonarjs/pseudo-random": {
+      "count": 4
+    }
+  },
+  "public/js/admin-dashboard.js": {
+    "sonarjs/no-ignored-exceptions": {
+      "count": 4
+    }
+  },
+  "public/js/auction-labels.js": {
+    "sonarjs/constructor-for-side-effects": {
+      "count": 1
+    }
+  },
+  "public/js/auth-manager.js": {
+    "sonarjs/no-ignored-exceptions": {
+      "count": 1
+    }
+  },
+  "public/js/checkout.js": {
+    "sonarjs/no-ignored-exceptions": {
+      "count": 4
+    }
+  },
+  "public/js/index.js": {
+    "sonarjs/no-ignored-exceptions": {
+      "count": 1
+    }
+  },
+  "public/js/portfolio.js": {
+    "sonarjs/no-ignored-exceptions": {
+      "count": 2
+    }
+  },
+  "public/js/school-combobox.js": {
+    "sonarjs/no-nested-functions": {
+      "count": 1
+    }
+  },
+  "public/js/teacher-dashboard.js": {
+    "sonarjs/super-linear-regex": {
+      "count": 1
+    }
+  },
+  "public/js/theme-manager.js": {
+    "sonarjs/no-ignored-exceptions": {
+      "count": 1
+    }
+  },
+  "public/js/ui-components.js": {
+    "sonarjs/no-gratuitous-expressions": {
+      "count": 1
+    },
+    "sonarjs/no-ignored-exceptions": {
+      "count": 1
+    },
+    "sonarjs/super-linear-regex": {
+      "count": 1
+    }
+  },
+  "scripts/import-nces-schools.js": {
+    "n/hashbang": {
+      "count": 1
+    }
+  },
+  "src/app.js": {
+    "sonarjs/content-security-policy": {
+      "count": 1
+    }
+  },
+  "src/controllers/notificationController.js": {
+    "sonarjs/no-unused-vars": {
+      "count": 2
+    }
+  },
+  "src/controllers/teacherController.js": {
+    "sonarjs/no-ignored-exceptions": {
+      "count": 2
+    }
+  },
+  "src/controllers/userController.js": {
+    "sonarjs/no-ignored-exceptions": {
+      "count": 4
+    }
+  },
+  "src/index.js": {
+    "security/detect-non-literal-fs-filename": {
+      "count": 2
+    },
+    "sonarjs/no-ignored-exceptions": {
+      "count": 1
+    }
+  },
+  "src/middleware/authMiddleware.js": {
+    "sonarjs/no-ignored-exceptions": {
+      "count": 1
+    }
+  },
+  "src/middleware/securityMiddleware.js": {
+    "sonarjs/no-control-regex": {
+      "count": 1
+    },
+    "sonarjs/super-linear-regex": {
+      "count": 1
+    }
+  },
+  "src/models/index.js": {
+    "sonarjs/encryption-secure-mode": {
+      "count": 1
+    }
+  },
+  "src/routes/authRoutes.js": {
+    "sonarjs/no-ignored-exceptions": {
+      "count": 1
+    }
+  },
+  "src/routes/userRoutes.js": {
+    "sonarjs/no-ignored-exceptions": {
+      "count": 2
+    }
+  },
+  "src/services/adminService.js": {
+    "sonarjs/no-all-duplicated-branches": {
+      "count": 1
+    },
+    "sonarjs/no-unused-vars": {
+      "count": 4
+    }
+  },
+  "src/services/auctionService.js": {
+    "sonarjs/no-unused-vars": {
+      "count": 2
+    }
+  },
+  "src/services/authenticationService.js": {
+    "promise/always-return": {
+      "count": 1
+    },
+    "sonarjs/encryption-secure-mode": {
+      "count": 1
+    },
+    "sonarjs/no-ignored-exceptions": {
+      "count": 2
+    },
+    "sonarjs/no-unused-vars": {
+      "count": 1
+    },
+    "sonarjs/pseudo-random": {
+      "count": 1
+    }
+  },
+  "src/services/biddingService.js": {
+    "sonarjs/no-unused-vars": {
+      "count": 1
+    }
+  },
+  "src/services/notificationService.js": {
+    "sonarjs/no-clear-text-protocols": {
+      "count": 3
+    },
+    "sonarjs/no-ignored-exceptions": {
+      "count": 1
+    }
+  },
+  "src/services/paymentService.js": {
+    "n/no-unsupported-features/node-builtins": {
+      "count": 1
+    },
+    "sonarjs/no-ignored-exceptions": {
+      "count": 1
+    },
+    "sonarjs/no-unused-vars": {
+      "count": 1
+    }
+  },
+  "src/utils/validationUtils.js": {
+    "sonarjs/super-linear-regex": {
+      "count": 1
+    }
+  }
+}
