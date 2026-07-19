@@ -113,6 +113,7 @@ jobs:
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
         if: always() && hashFiles('trivy-results.sarif') != ''
+        continue-on-error: true  # advisory scan — an upload hiccup must not fail the deploy
         with:
           sarif_file: 'trivy-results.sarif'
 
@@ -126,7 +127,8 @@ jobs:
 
       - name: Upload Grype results
         uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
-        if: steps.grype.outcome == 'success'
+        if: always() && steps.grype.outputs.sarif != ''
+        continue-on-error: true  # advisory scan — a stale Grype DB / empty SARIF must not fail the deploy
         with:
           sarif_file: ${{ steps.grype.outputs.sarif }}
 
@@ -187,7 +189,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [build, scan]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Manual/controlled release: production deploys only on a version tag (e.g. v1.2.0),
+    # never on routine pushes to main. Push a tag to deploy; otherwise redeploy by hand.
+    if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
 
     steps:
       - name: Checkout code
