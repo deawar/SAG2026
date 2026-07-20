@@ -20,6 +20,20 @@ _Rewritten 2026-07-19. Read this first to resume with minimal ramp-up._
 4. Earlier: teacher "Add a Student" (`POST /api/teacher/students`) and admin staff-creation (`POST /api/admin/users`, ACTIVE+email-verified) — both merged/pushed.
 
 ## NEXT SESSION — do these
+0. **Build these 4 dev tools FIRST** (user-approved 2026-07-19 — "tools that make my job easier on this project"):
+   a. `scripts/check-schema-drift.js` (+ `npm run check:schema`) — parse column names & inline CHECK/constraint
+      defs from `schema.sql`; parse the idempotent startup DDL/ALTER block in `src/index.js`; report anything in
+      `schema.sql` NOT mirrored in the startup DDL (the recurring live-500 cause). Exit non-zero on drift.
+   b. `scripts/ci.js` (+ `npm run ci`) — for each workflow (deploy/lint/test/security) print the latest run's
+      conclusion; for failures, resolve the failed step via `gh run view <id> --json jobs` and print the error lines
+      from `gh run view <id> --log-failed`. Replaces the manual gh run list/watch/view+grep dance.
+   c. `npm run verify` — run `npm run lint` + `npx jest`, print a compact PASS/FAIL + test counts (a scripts/verify.js
+      wrapper is fine). One command answers "is it green?" before commits.
+   d. Permission allowlist — invoke the `fewer-permission-prompts` skill (scans transcripts) or `update-config` to add
+      safe read-only commands to `.claude/settings.json`: `gh run *`, `npx jest *`, `npx eslint *`, `git status/log/diff`,
+      `node scripts/*`. Reduces approval prompts.
+   NOTE: all four scripts live under `scripts/` which is linted with the security plugin — avoid `child_process` with
+   non-literal args / add scoped eslint-disable if needed, and NO shebang (n/hashbang errors). Run `npm run lint` after.
 1. **Encryption hardening #2 (scoped, ready to implement):** read `docs/superpowers/specs/2026-07-19-encryption-migration-scope.md`. TL;DR: `_encryptData`/`_decryptData` are duplicated in `src/services/authenticationService.js` (326/336) and `src/models/index.js` (614/624), use AES-256-CBC + `'default-key'` fallback + static salt. They encrypt 2FA backup codes (`users.backup_codes`). Plan: one shared `src/utils/encryption.js`, AES-256-GCM with a `v2:` versioned format + legacy CBC read path (zero data migration), require `ENCRYPTION_KEY` (no fallback). Verify prod has `ENCRYPTION_KEY` set (same value) before deploy. Then `lint:prune`.
 2. Lower-priority baselined findings to triage (`node scripts/lint-security-report.js --all`): `sonarjs/super-linear-regex` (ReDoS: validationUtils.js:11, securityMiddleware.js:313), `no-ignored-exceptions` (29 swallowed catches, mostly frontend), `detect-non-literal-fs-filename` (7, trusted migration/schema paths — likely false positives).
 
