@@ -283,6 +283,11 @@ class AdminService {
       [newFirstName, newLastName, newEmail, newPhoneNumber, newSchoolId, userId]
     );
 
+    if (schoolId !== undefined && newSchoolId !== user.school_id) {
+      const GalleryModel = require('../models/galleryModel');
+      await new GalleryModel(pool).cascadeStudentSchoolChange(userId);
+    }
+
     await this.logAdminAction(
       adminId,
       'USER_PROFILE_UPDATED',
