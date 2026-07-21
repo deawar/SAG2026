@@ -79,4 +79,19 @@ describe('Gallery same-school interactions', () => {
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('CROSS_SCHOOL_DENIED');
   });
+
+  test('cross-school roster-remove attempt → 403 CROSS_SCHOOL_DENIED', async () => {
+    // DELETE /roster/:studentUserId — teacher from school-1 trying to remove student from school-2
+    // (1) resolveViewer for actor (teacher)
+    mockPool.query.mockResolvedValueOnce({ rows: [{ id: 't-1', role: 'TEACHER', school_id: 'school-1' }], rowCount: 1 });
+    // (2) resolveViewer for target (student in different school)
+    mockPool.query.mockResolvedValueOnce({ rows: [{ id: 'stu-2', role: 'STUDENT', school_id: 'school-2' }], rowCount: 1 });
+    // No delete query fires — denied before reaching removeFromRoster
+
+    const res = await request(app)
+      .delete('/api/gallery/roster/stu-2')
+      .set('Authorization', `Bearer ${teacherToken}`);
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('CROSS_SCHOOL_DENIED');
+  });
 });

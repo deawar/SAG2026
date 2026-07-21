@@ -58,6 +58,10 @@ class GalleryController {
       if (!viewer || !['TEACHER', 'SCHOOL_ADMIN'].includes(viewer.role) || !viewer.school_id) {
         return res.status(403).json({ success: false, message: 'Only a teacher/admin can manage the roster.' });
       }
+      const target = await model.resolveViewer(req.params.studentUserId);
+      if (!target || target.role !== 'STUDENT' || target.school_id !== viewer.school_id) {
+        return res.status(403).json({ success: false, error: 'CROSS_SCHOOL_DENIED', message: 'That student is not in your school.' });
+      }
       await model.removeFromRoster(viewer.school_id, req.params.studentUserId);
       await auditGallery(viewer.id, 'COMPLIANCE', 'GALLERY_ROSTER_REMOVE', req.params.studentUserId, { schoolId: viewer.school_id });
       return res.json({ success: true });
