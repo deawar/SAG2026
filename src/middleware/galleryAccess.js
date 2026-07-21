@@ -32,7 +32,7 @@ async function requireGalleryAccess(req, res, next) {
     // External access via an ACCEPTED cross-school grant (deny-by-default: only an
     // ACCEPTED grant with a bound invited teacher or an enablement row grants access).
     const access = await grants.getViewerGrantAccess(viewer, schoolId);
-    if (access.allowed) {
+    if (access.allowed === true) {
       await auditGallery(viewer.id, 'COMPLIANCE', 'GALLERY_CROSS_SCHOOL_VIEW', schoolId, { via: access.via, grantId: access.grantId });
       req.galleryViewer = viewer; req.galleryGrant = access; return next();
     }

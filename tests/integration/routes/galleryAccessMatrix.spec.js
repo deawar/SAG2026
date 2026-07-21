@@ -47,6 +47,7 @@ describe('Gallery access matrix (deny-by-default)', () => {
     mockPool.query.mockResolvedValueOnce({ rows: [{ id: 'x-2', role: 'TEACHER', school_id: 'school-2' }], rowCount: 1 });
     const res = await request(app).get('/api/gallery/school-1').set('Authorization', `Bearer ${tok({ userId: 'x-2', role: 'TEACHER', schoolId: 'school-2' })}`);
     expect(res.status).toBe(403);
+    expect(res.body.error).toBe('GALLERY_ACCESS_DENIED');
   });
   test('no token → 401', async () => {
     const res = await request(app).get('/api/gallery/school-1');
