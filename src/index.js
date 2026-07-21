@@ -285,6 +285,13 @@ async function startServer() {
       } catch (gcErr) {
         console.warn('⚠️  Gallery comments schema warning:', gcErr.message);
       }
+
+      // Scheduled auction transitions (auto-start / auto-end). Not in tests.
+      if (process.env.NODE_ENV !== 'test') {
+        const auctionScheduler = require('./services/auctionScheduler');
+        auctionScheduler.start();
+        console.log('✅ Auction scheduler running (60s sweep)');
+      }
     } else {
       console.warn('⚠️  Skipping auth/user routes (database unavailable)');
     }
