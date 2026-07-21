@@ -14,6 +14,7 @@ class GalleryController {
   }
 
   // PATCH /api/gallery/items/:id/share  (STUDENT only; own items)  Body: { sharedToGallery?, commentsAllowed? }
+  // Security boundary: ownership (student_user_id = req.user.id in model), NOT live-role freshness — see addRoster for live-role pattern.
   static async setShare(req, res, next) {
     try {
       const { sharedToGallery, commentsAllowed } = req.body;
