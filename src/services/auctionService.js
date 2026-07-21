@@ -530,18 +530,20 @@ class AuctionService {
 
       const auction = auctionResult.rows[0];
 
-      if (auction.auction_status === 'ENDED') {
+      if (auction.auction_status !== 'LIVE') {
         return {
           success: false,
-          message: 'Auction is already ended'
+          message: auction.auction_status === 'ENDED'
+            ? 'Auction is already ended'
+            : `Only LIVE auctions can be ended (status: ${auction.auction_status})`
         };
       }
 
       // Get all artwork in auction with highest bids
       const artworkResult = await client.query(
         `SELECT a.id, a.title,
-                (SELECT placed_by_user_id FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE' ORDER BY bid_amount DESC LIMIT 1) as winner_id,
-                (SELECT bid_amount FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE' ORDER BY bid_amount DESC LIMIT 1) as winning_bid
+                (SELECT placed_by_user_id FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE' ORDER BY bid_amount DESC, placed_at ASC LIMIT 1) as winner_id,
+                (SELECT bid_amount FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE' ORDER BY bid_amount DESC, placed_at ASC LIMIT 1) as winning_bid
          FROM artwork a
          WHERE a.auction_id = $1`,
         [auctionId]
@@ -563,12 +565,15 @@ class AuctionService {
             winningBid: piece.winning_bid
           });
 
-          // Mark winning bid as ACCEPTED, others as CANCELLED
+          // Mark the single winning bid ACCEPTED (highest amount, earliest placed on tie).
+          // NOTE: UPDATE has no ORDER BY/LIMIT in Postgres — pick the row in a subselect.
           await client.query(
             `UPDATE bids SET bid_status = 'ACCEPTED'
-             WHERE artwork_id = $1 AND placed_by_user_id = $2 AND bid_status = 'ACTIVE'
-             ORDER BY bid_amount DESC LIMIT 1`,
-            [piece.id, piece.winner_id]
+             WHERE id = (SELECT id FROM bids
+                          WHERE artwork_id = $1 AND bid_status = 'ACTIVE'
+                          ORDER BY bid_amount DESC, placed_at ASC
+                          LIMIT 1)`,
+            [piece.id]
           );
         }
       }
