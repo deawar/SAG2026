@@ -2,6 +2,8 @@
 const { pool } = require('../models/index');
 const GalleryModel = require('../models/galleryModel');
 const model = new GalleryModel(pool);
+const GalleryGrantModel = require('../models/galleryGrantModel');
+const grants = new GalleryGrantModel(pool);
 
 async function auditGallery(actorId, category, actionType, resourceId, details) {
   try {
@@ -27,7 +29,13 @@ async function requireGalleryAccess(req, res, next) {
     if (viewer.school_id && viewer.school_id === schoolId) {
       req.galleryViewer = viewer; return next();
     }
-    // --- Plan B inserts the accepted-grant + enablement branch HERE, before the deny ---
+    // External access via an ACCEPTED cross-school grant (deny-by-default: only an
+    // ACCEPTED grant with a bound invited teacher or an enablement row grants access).
+    const access = await grants.getViewerGrantAccess(viewer, schoolId);
+    if (access.allowed) {
+      await auditGallery(viewer.id, 'COMPLIANCE', 'GALLERY_CROSS_SCHOOL_VIEW', schoolId, { via: access.via, grantId: access.grantId });
+      req.galleryViewer = viewer; req.galleryGrant = access; return next();
+    }
     await auditGallery(viewer.id, 'SECURITY', 'GALLERY_ACCESS_DENIED', schoolId, { viewerSchool: viewer.school_id, role: viewer.role });
     return res.status(403).json({ success: false, error: 'GALLERY_ACCESS_DENIED', message: "You do not have access to this school's gallery." });
   } catch (err) { return next(err); }
