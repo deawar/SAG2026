@@ -7,8 +7,11 @@ const logger = require('../utils/logger');
 const ValidationUtils = require('../utils/validationUtils');
 const GalleryGrantModel = require('../models/galleryGrantModel');
 const { EmailProvider } = require('../services/notificationService');
+const GalleryCommentModel = require('../models/galleryCommentModel');
 const model = new GalleryModel(pool);
 const grants = new GalleryGrantModel(pool);
+const comments = new GalleryCommentModel(pool);
+const MAX_COMMENT_BODY = 2000;
 
 const _smtpPort = Number.parseInt(process.env.SMTP_PORT, 10) || 587;
 const emailProvider = new EmailProvider({
@@ -223,6 +226,44 @@ class GalleryController {
       await grants.removeMember(g.id, req.params.studentUserId);
       await auditGallery(viewer.id, 'COMPLIANCE', 'GALLERY_MEMBER_DISABLED', req.params.studentUserId, { grantId: g.id });
       return res.json({ success: true });
+    } catch (e) { return next(e); }
+  }
+
+  // ── Comments (Plan C: pre-moderated) ─────────────────────────────────────────
+
+  // POST /api/gallery/items/:id/comments  (behind requireGalleryItemAccess)  { body }
+  static async submitComment(req, res, next) {
+    try {
+      const viewer = req.galleryViewer;   // live row incl. grade_level (guard set it)
+      const item = req.galleryItem;       // live gallery item (guard set it)
+      if (viewer.role !== 'STUDENT') {
+        return res.status(403).json({ success: false, error: 'STUDENTS_ONLY', message: 'Only students may comment in the gallery.' });
+      }
+      if (!item.gallery_comments_allowed) {
+        return res.status(403).json({ success: false, error: 'COMMENTS_DISABLED', message: 'The artist has not enabled comments on this piece.' });
+      }
+      const crossSchool = viewer.school_id !== item.owner_school_id;
+      if (crossSchool && (!viewer.grade_level || viewer.grade_level !== item.artist_grade)) {
+        await auditGallery(viewer.id, 'SECURITY', 'GALLERY_COMMENT_DENIED', item.id,
+          { reason: 'GRADE_MISMATCH', viewerGrade: viewer.grade_level || null, artistGrade: item.artist_grade || null });
+        return res.status(403).json({ success: false, error: 'GRADE_MISMATCH',
+          message: 'Cross-school comments are limited to students in the same grade as the artist.' });
+      }
+      const body = typeof req.body.body === 'string' ? req.body.body.trim() : '';
+      if (body.length < 1 || body.length > MAX_COMMENT_BODY) {
+        return res.status(400).json({ success: false, error: 'INVALID_BODY', message: `Comment must be 1–${MAX_COMMENT_BODY} characters.` });
+      }
+      const row = await comments.createComment({ portfolioItemId: item.id, authorUserId: viewer.id, authorSchoolId: viewer.school_id, body });
+      await auditGallery(viewer.id, 'COMPLIANCE', 'GALLERY_COMMENT_SUBMITTED', row.id, { portfolioItemId: item.id, crossSchool });
+      return res.status(201).json({ success: true, comment: { id: row.id, status: row.status } });
+    } catch (e) { return next(e); }
+  }
+
+  // GET /api/gallery/items/:id/comments  (behind requireGalleryItemAccess) — APPROVED only
+  static async listItemComments(req, res, next) {
+    try {
+      const rows = await comments.listApprovedForItem(req.galleryItem.id);
+      return res.json({ success: true, comments: rows });
     } catch (e) { return next(e); }
   }
 }
