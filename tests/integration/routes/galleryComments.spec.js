@@ -145,3 +145,65 @@ describe('Gallery comments — submit & read', () => {
     expect(listCall).toContain("c.status = 'APPROVED'");
   });
 });
+
+describe('Gallery comments — host moderation', () => {
+  let app;
+  beforeAll(() => { mockDb.reset(); app = createApp(mockDb); });
+  beforeEach(() => {
+    mockPool.query.mockReset();
+    mockPool.query.mockResolvedValue({ rows: [], rowCount: 0 });
+    mockDb.reset();
+  });
+
+  test('host TEACHER lists pending queue → 200', async () => {
+    mockPool.query
+      .mockResolvedValueOnce({ rows: [{ id: 'teach-host', role: 'TEACHER', school_id: HOST_SCHOOL, grade_level: null }], rowCount: 1 }) // resolveViewer
+      .mockResolvedValueOnce({ rows: [{ id: COMMENT_ID, body: 'hi', createdAt: 't', portfolioItemId: ITEM_ID, itemTitle: 'Sunset', authorFirstName: 'Ana', authorOrigin: 'SAME_SCHOOL' }], rowCount: 1 }); // listPendingForSchool
+    const res = await request(app).get('/api/gallery/comments/pending')
+      .set('Authorization', `Bearer ${hostTeacherTok}`);
+    expect(res.status).toBe(200);
+    expect(res.body.comments).toHaveLength(1);
+    expect(mockPool.query.mock.calls[1][1]).toEqual([HOST_SCHOOL]);
+  });
+
+  test('STUDENT hits pending queue → 403 (role gate)', async () => {
+    const res = await request(app).get('/api/gallery/comments/pending')
+      .set('Authorization', `Bearer ${sameStudentTok}`);
+    expect(res.status).toBe(403);
+  });
+
+  test('host TEACHER approves → 200 APPROVED + audit', async () => {
+    mockPool.query
+      .mockResolvedValueOnce({ rows: [{ id: 'teach-host', role: 'TEACHER', school_id: HOST_SCHOOL, grade_level: null }], rowCount: 1 }) // resolveViewer
+      .mockResolvedValueOnce({ rows: [{ id: COMMENT_ID, status: 'APPROVED' }], rowCount: 1 })  // moderateComment
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 });                                        // audit APPROVED
+    const res = await request(app).post(`/api/gallery/comments/${COMMENT_ID}/approve`)
+      .set('Authorization', `Bearer ${hostTeacherTok}`);
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('APPROVED');
+    const modCall = mockPool.query.mock.calls[1];
+    expect(modCall[1]).toEqual([COMMENT_ID, HOST_SCHOOL, 'APPROVED', 'teach-host']);
+  });
+
+  test('host TEACHER rejects → 200 REJECTED', async () => {
+    mockPool.query
+      .mockResolvedValueOnce({ rows: [{ id: 'teach-host', role: 'TEACHER', school_id: HOST_SCHOOL, grade_level: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [{ id: COMMENT_ID, status: 'REJECTED' }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 1 });
+    const res = await request(app).post(`/api/gallery/comments/${COMMENT_ID}/reject`)
+      .set('Authorization', `Bearer ${hostTeacherTok}`);
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('REJECTED');
+  });
+
+  test('guest-school TEACHER cannot approve → 404 (school-scoped update matches no row)', async () => {
+    const guestTok = tok({ userId: 'teach-guest', role: 'TEACHER', schoolId: EXT_SCHOOL });
+    mockPool.query
+      .mockResolvedValueOnce({ rows: [{ id: 'teach-guest', role: 'TEACHER', school_id: EXT_SCHOOL, grade_level: null }], rowCount: 1 })
+      .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // moderateComment → no row
+    const res = await request(app).post(`/api/gallery/comments/${COMMENT_ID}/approve`)
+      .set('Authorization', `Bearer ${guestTok}`);
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('COMMENT_NOT_FOUND');
+  });
+});

@@ -266,5 +266,43 @@ class GalleryController {
       return res.json({ success: true, comments: rows });
     } catch (e) { return next(e); }
   }
+
+  // GET /api/gallery/comments/pending  (host TEACHER/SCHOOL_ADMIN)
+  static async pendingComments(req, res, next) {
+    try {
+      const viewer = await model.resolveViewer(req.user.id);
+      if (!viewer || !['TEACHER', 'SCHOOL_ADMIN'].includes(viewer.role) || !viewer.school_id) {
+        return res.status(403).json({ success: false, message: 'Only host-school staff can moderate.' });
+      }
+      const rows = await comments.listPendingForSchool(viewer.school_id);
+      return res.json({ success: true, comments: rows });
+    } catch (e) { return next(e); }
+  }
+
+  static async _moderateComment(req, res, next, status, actionType) {
+    try {
+      const viewer = await model.resolveViewer(req.user.id);
+      if (!viewer || !['TEACHER', 'SCHOOL_ADMIN'].includes(viewer.role) || !viewer.school_id) {
+        return res.status(403).json({ success: false, message: 'Only host-school staff can moderate.' });
+      }
+      const row = await comments.moderateComment(req.params.id, viewer.school_id, status, viewer.id);
+      if (!row) {
+        return res.status(404).json({ success: false, error: 'COMMENT_NOT_FOUND',
+          message: 'Comment not found, already moderated, or not in your school.' });
+      }
+      await auditGallery(viewer.id, 'COMPLIANCE', actionType, row.id, { status: row.status });
+      return res.json({ success: true, status: row.status });
+    } catch (e) { return next(e); }
+  }
+
+  // POST /api/gallery/comments/:id/approve  (host TEACHER/SCHOOL_ADMIN)
+  static async approveComment(req, res, next) {
+    return GalleryController._moderateComment(req, res, next, 'APPROVED', 'GALLERY_COMMENT_APPROVED');
+  }
+
+  // POST /api/gallery/comments/:id/reject  (host TEACHER/SCHOOL_ADMIN)
+  static async rejectComment(req, res, next) {
+    return GalleryController._moderateComment(req, res, next, 'REJECTED', 'GALLERY_COMMENT_REJECTED');
+  }
 }
 module.exports = GalleryController;
