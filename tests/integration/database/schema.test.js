@@ -630,6 +630,12 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
       const t = await db.query("SELECT to_regclass('public.gallery_roster') AS t");
       expect(t.rows[0].t).toBe('gallery_roster');
     });
+
+    test('cross-school grant tables exist', async () => {
+      const g = await db.query("SELECT to_regclass('public.gallery_grants') AS a, to_regclass('public.gallery_grant_members') AS b");
+      expect(g.rows[0].a).toBe('gallery_grants');
+      expect(g.rows[0].b).toBe('gallery_grant_members');
+    });
   });
 
   /**

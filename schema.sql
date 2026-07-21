@@ -177,6 +177,37 @@ CREATE TABLE gallery_roster (
 );
 CREATE INDEX idx_gallery_roster_school ON gallery_roster(school_id);
 
+-- Cross-school grant tables (Plan B: gallery invitations between schools)
+CREATE TABLE gallery_grants (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  host_school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+  host_band VARCHAR(20) NOT NULL,
+  invited_email CITEXT NOT NULL,
+  invited_school_id UUID REFERENCES schools(id) ON DELETE SET NULL,
+  invited_teacher_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  invited_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','ACCEPTED','DECLINED','REVOKED')),
+  invite_token_hash VARCHAR(64) NOT NULL,
+  token_expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  accepted_at TIMESTAMP WITH TIME ZONE,
+  revoked_at TIMESTAMP WITH TIME ZONE,
+  revoked_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE INDEX idx_gallery_grants_host ON gallery_grants(host_school_id, status);
+CREATE INDEX idx_gallery_grants_invited_teacher ON gallery_grants(invited_teacher_user_id);
+CREATE INDEX idx_gallery_grants_token ON gallery_grants(invite_token_hash) WHERE status = 'PENDING';
+
+CREATE TABLE gallery_grant_members (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  grant_id UUID NOT NULL REFERENCES gallery_grants(id) ON DELETE CASCADE,
+  student_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  enabled_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (grant_id, student_user_id)
+);
+CREATE INDEX idx_gallery_grant_members_student ON gallery_grant_members(student_user_id);
+
 -- Payment Gateways Configuration (created before auctions)
 CREATE TABLE payment_gateways (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

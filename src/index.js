@@ -233,6 +233,39 @@ async function startServer() {
       } catch (galErr) {
         console.warn('⚠️  Gallery schema warning:', galErr.message);
       }
+
+      // Cross-school grant tables (Plan B — idempotent, safe every boot).
+      try {
+        await db.query(`CREATE TABLE IF NOT EXISTS gallery_grants (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          host_school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+          host_band VARCHAR(20) NOT NULL,
+          invited_email CITEXT NOT NULL,
+          invited_school_id UUID REFERENCES schools(id) ON DELETE SET NULL,
+          invited_teacher_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+          invited_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+          status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','ACCEPTED','DECLINED','REVOKED')),
+          invite_token_hash VARCHAR(64) NOT NULL,
+          token_expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          accepted_at TIMESTAMP WITH TIME ZONE,
+          revoked_at TIMESTAMP WITH TIME ZONE,
+          revoked_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL)`);
+        await db.query('CREATE INDEX IF NOT EXISTS idx_gallery_grants_host ON gallery_grants(host_school_id, status)');
+        await db.query('CREATE INDEX IF NOT EXISTS idx_gallery_grants_invited_teacher ON gallery_grants(invited_teacher_user_id)');
+        await db.query('CREATE INDEX IF NOT EXISTS idx_gallery_grants_token ON gallery_grants(invite_token_hash) WHERE status = \'PENDING\'');
+        await db.query(`CREATE TABLE IF NOT EXISTS gallery_grant_members (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          grant_id UUID NOT NULL REFERENCES gallery_grants(id) ON DELETE CASCADE,
+          student_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          enabled_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE (grant_id, student_user_id))`);
+        await db.query('CREATE INDEX IF NOT EXISTS idx_gallery_grant_members_student ON gallery_grant_members(student_user_id)');
+        console.log('✅ Gallery grants schema ready');
+      } catch (grantErr) {
+        console.warn('⚠️  Gallery grants schema warning:', grantErr.message);
+      }
     } else {
       console.warn('⚠️  Skipping auth/user routes (database unavailable)');
     }
