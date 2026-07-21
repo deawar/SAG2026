@@ -40,6 +40,8 @@ State a view can't hold (grants, roster, comment approvals) lives in real tables
   school with NULL band **cannot invite or accept** cross-school grants (guarded in code with a clear error).
 - `portfolio_items.shared_to_gallery BOOLEAN NOT NULL DEFAULT false` — student opt-in.
 - `portfolio_items.gallery_comments_allowed BOOLEAN NOT NULL DEFAULT false` — student per-piece comment toggle.
+- `users.grade_level VARCHAR(20)` — nullable; set for students. Enables **exact same-grade** comment gating
+  for cross-school viewers (compared against a piece's `artist_grade`).
 
 ### New tables
 ```sql
@@ -104,7 +106,7 @@ Indexes: `gallery_roster(school_id)`, `gallery_grants(host_school_id, status)`,
 | SCHOOL_ADMIN / TEACHER of S | ✅ | — (they moderate) |
 | STUDENT of S | ✅ | ✅ (pre-moderated) |
 | TEACHER / SCHOOL_ADMIN of external X | ✅ iff ACCEPTED grant S↔X and they are the grant's invited party | — |
-| STUDENT of external X | ✅ iff ACCEPTED grant S↔X **and** `gallery_grant_members` row (band guaranteed by grant) | ✅ if owner allows (pre-moderated) |
+| STUDENT of external X | ✅ iff ACCEPTED grant S↔X **and** `gallery_grant_members` row (band guaranteed by grant) | ✅ if owner allows **and** commenter `grade_level` == piece `artist_grade` (pre-moderated) |
 | anyone else | ❌ 403 | ❌ 403 |
 
 **Single guard** `requireGalleryAccess(req, schoolId)` computes this; there is exactly one code path.
@@ -171,17 +173,17 @@ GALLERY_COMMENT_REJECTED, GALLERY_STUDENT_TRANSFER_CLEANUP. `SECURITY`: GALLERY_
 - Revocation cascade: revoke → enabled students 403 on next request.
 - Transfer/drop: items disappear on next request; opt-in reset; enablement rows gone.
 - Comment stays hidden until APPROVED; host-only moderation (guest-school teacher cannot approve).
+- Cross-school comment requires exact same grade (`grade_level` == `artist_grade`); mismatched grade → 403.
 - Least-privilege: external student without an enablement row is 403 even under an ACCEPTED grant.
 - PII projection: cross-school response contains no email/DOB/last name.
 
-## Assumptions & open items (confirm during spec review)
-- **Transfer default = reset opt-in** (re-consent at new school). Flip to carry-over only if desired.
+## Decisions & assumptions (confirmed in spec review 2026-07-20)
+- **Transfer = reset opt-in** (re-consent at new school). ✅ confirmed.
+- **Same-grade comments = exact match** via new `users.grade_level`: a **cross-school** viewer may comment
+  only when their `grade_level` equals the piece's `artist_grade` (and the owner allows). **Same-school**
+  students are peers, gated only by the owner's toggle (no grade check). ✅ confirmed (grade_level added).
 - **Band lives on `schools`** (must be set before a school can invite/accept). Existing schools have NULL
   band → they must set it first; guarded with a clear error.
-- **"Same grade level" for comments:** commenter grade is **not** a stored `users` field (grade exists only
-  as item-level `artist_grade`). v1 enforces **same-band** (already guaranteed by the grant) as the comment
-  eligibility gate; exact same-grade matching is deferred until a reliable student-grade field exists. **This
-  is the one place the implementation is looser than the literal "same grade level" wording — please confirm.**
 - **Comment moderation = host school only** (guest-school teachers see their students' activity via audit,
   not an approval queue).
 
