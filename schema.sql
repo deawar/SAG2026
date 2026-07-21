@@ -208,6 +208,21 @@ CREATE TABLE gallery_grant_members (
 );
 CREATE INDEX idx_gallery_grant_members_student ON gallery_grant_members(student_user_id);
 
+-- Gallery comments (Plan C: pre-moderated; only APPROVED rows are ever rendered)
+CREATE TABLE gallery_comments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  portfolio_item_id UUID NOT NULL REFERENCES portfolio_items(id) ON DELETE CASCADE,
+  author_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  author_school_id UUID REFERENCES schools(id) ON DELETE SET NULL,
+  body TEXT NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','APPROVED','REJECTED')),
+  moderated_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  moderated_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT gallery_comment_body_check CHECK (length(trim(body)) > 0)
+);
+CREATE INDEX idx_gallery_comments_item_status ON gallery_comments(portfolio_item_id, status);
+
 -- Payment Gateways Configuration (created before auctions)
 CREATE TABLE payment_gateways (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
