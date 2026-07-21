@@ -209,6 +209,30 @@ async function startServer() {
       } catch (pfErr) {
         console.warn('⚠️  Portfolio schema warning:', pfErr.message);
       }
+
+      // School Gallery feature schema (idempotent — safe every boot).
+      // Adds grade_band to schools, grade_level to users, opt-in flags to
+      // portfolio_items, and the gallery_roster join table (Task 1).
+      try {
+        await db.query('ALTER TABLE schools ADD COLUMN IF NOT EXISTS grade_band VARCHAR(20)');
+        await db.query('ALTER TABLE schools DROP CONSTRAINT IF EXISTS schools_grade_band_check');
+        await db.query(`ALTER TABLE schools ADD CONSTRAINT schools_grade_band_check
+          CHECK (grade_band IS NULL OR grade_band IN ('ELEMENTARY','MIDDLE','HIGH'))`);
+        await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS grade_level VARCHAR(20)');
+        await db.query('ALTER TABLE portfolio_items ADD COLUMN IF NOT EXISTS shared_to_gallery BOOLEAN NOT NULL DEFAULT false');
+        await db.query('ALTER TABLE portfolio_items ADD COLUMN IF NOT EXISTS gallery_comments_allowed BOOLEAN NOT NULL DEFAULT false');
+        await db.query(`CREATE TABLE IF NOT EXISTS gallery_roster (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+          student_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          added_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE (school_id, student_user_id))`);
+        await db.query('CREATE INDEX IF NOT EXISTS idx_gallery_roster_school ON gallery_roster(school_id)');
+        console.log('✅ Gallery schema ready');
+      } catch (galErr) {
+        console.warn('⚠️  Gallery schema warning:', galErr.message);
+      }
     } else {
       console.warn('⚠️  Skipping auth/user routes (database unavailable)');
     }

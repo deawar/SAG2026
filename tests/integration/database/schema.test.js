@@ -611,6 +611,29 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
 
   /**
    * =========================================================================
+   * SCHOOL GALLERY SCHEMA TESTS (Task 1)
+   * =========================================================================
+   */
+
+  describe('School Gallery Schema', () => {
+    test('school-gallery schema: columns + gallery_roster exist', async () => {
+      const cols = await db.query(`
+        SELECT table_name, column_name FROM information_schema.columns
+        WHERE (table_name='schools' AND column_name='grade_band')
+           OR (table_name='portfolio_items' AND column_name IN ('shared_to_gallery','gallery_comments_allowed'))
+           OR (table_name='users' AND column_name='grade_level')`);
+      const got = cols.rows.map(r => `${r.table_name}.${r.column_name}`);
+      expect(got).toEqual(expect.arrayContaining([
+        'schools.grade_band', 'portfolio_items.shared_to_gallery',
+        'portfolio_items.gallery_comments_allowed', 'users.grade_level'
+      ]));
+      const t = await db.query("SELECT to_regclass('public.gallery_roster') AS t");
+      expect(t.rows[0].t).toBe('gallery_roster');
+    });
+  });
+
+  /**
+   * =========================================================================
    * DATA INTEGRITY TESTS (2 tests)
    * =========================================================================
    */
