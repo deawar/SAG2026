@@ -5,6 +5,14 @@ const GalleryController = require('../controllers/galleryController');
 const { requireGalleryAccess } = require('../middleware/galleryAccess');
 const { verifyRole } = require('../middleware/authMiddleware');
 
+// Grant routes MUST come before /:schoolId to avoid being captured by the param
+router.get('/grants', verifyRole('TEACHER', 'SCHOOL_ADMIN'), GalleryController.listGrants);
+router.post('/grants', verifyRole('TEACHER'), GalleryController.invite);
+router.post('/grants/:id/accept', verifyRole('TEACHER', 'SCHOOL_ADMIN'), GalleryController.acceptGrant);
+router.post('/grants/:id/revoke', verifyRole('TEACHER', 'SCHOOL_ADMIN'), GalleryController.revokeGrant);
+router.post('/grants/:id/members', verifyRole('TEACHER'), GalleryController.enableMember);
+router.delete('/grants/:id/members/:studentUserId', verifyRole('TEACHER'), GalleryController.disableMember);
+
 router.get('/:schoolId', requireGalleryAccess, GalleryController.view);
 router.patch('/items/:id/share', verifyRole('STUDENT'), GalleryController.setShare);
 router.post('/roster', verifyRole('TEACHER', 'SCHOOL_ADMIN'), GalleryController.addRoster);
