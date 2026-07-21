@@ -255,7 +255,7 @@ class ArtworkCarousel {
               loading="${index < 3 ? 'eager' : 'lazy'}"
               onerror="this.src='/images/placeholder-art.svg'"
             >
-            ${this._renderStatusBadge(item.status)}
+            ${this._renderStatusBadge(this._effectiveStatus(item))}
           </div>
           <div class="ac-caption">
             <h3 class="ac-slide-title">${this._esc(item.title)}</h3>
@@ -268,6 +268,15 @@ class ArtworkCarousel {
         </a>
         ${actions}
       </div>`;
+  }
+
+  // The DB may still say LIVE after ends_at passes (ending an auction is a
+  // manual action, there is no scheduler) — degrade to ENDED for display.
+  _effectiveStatus(item) {
+    if (item.status === 'LIVE' && item.endTime && new Date(item.endTime) <= new Date()) {
+      return 'ENDED';
+    }
+    return item.status;
   }
 
   _renderStatusBadge(status) {
@@ -463,4 +472,8 @@ class ArtworkCarousel {
     if (h > 0)  { return `${h}h ${m}m remaining`; }
     return `${m}m remaining`;
   }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = ArtworkCarousel;
 }
