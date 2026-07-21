@@ -10,7 +10,7 @@ async function auditGallery(actorId, category, actionType, resourceId, details) 
        VALUES ($1,$2,$3,'SCHOOL_GALLERY',$4,$5)`,
       [actorId, category, actionType, resourceId, details ? JSON.stringify(details) : null]
     );
-  } catch (e) { /* best-effort audit; never block the request */ }
+  } catch (e) { console.error('[gallery-audit] failed to write audit log:', e.message); }
 }
 
 // Sole authorization path for a school's gallery. Deny-by-default.

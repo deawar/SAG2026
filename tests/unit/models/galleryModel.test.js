@@ -33,6 +33,18 @@ describe('GalleryModel', () => {
       expect(sql).not.toMatch(/pi\.school_id/);
     });
 
+    it('requires gallery_roster membership (transfer/drop removes items from view)', async () => {
+      await model.getSchoolGalleryItems('s1');
+      const [sql] = fakeDb.query.mock.calls[0];
+      expect(sql).toMatch(/gallery_roster/);          // membership required (transfer/drop removes items)
+    });
+
+    it('excludes soft-deleted owners (u.deleted_at IS NULL)', async () => {
+      await model.getSchoolGalleryItems('s1');
+      const [sql] = fakeDb.query.mock.calls[0];
+      expect(sql).toMatch(/u\.deleted_at IS NULL/);   // soft-deleted owners excluded
+    });
+
     it('filters on shared_to_gallery = true', async () => {
       await model.getSchoolGalleryItems('s1');
       const [sql] = fakeDb.query.mock.calls[0];
