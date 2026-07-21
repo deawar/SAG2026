@@ -185,6 +185,11 @@ function createApp(db) {
     app.use('/api/teacher', teacherRoutes);
   }
 
+  // Gallery routes — manage their own DB access via pool; auth guard resolves viewer live
+  const galleryRoutes = require('./routes/galleryRoutes');
+  const authMiddlewareGallery = require('./middleware/authMiddleware');
+  app.use('/api/gallery', authMiddlewareGallery.verifyToken, galleryRoutes);
+
   // ==========================================================================
   // API ROUTES — NO DB REQUIRED (auctions, bidding, payments)
   // These routes manage their own DB access internally.
