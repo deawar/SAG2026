@@ -240,4 +240,44 @@ describe('Gallery grant endpoints', () => {
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('NOT_A_PARTY');
   });
+
+  // ──────────────────────────────────────────────────────────────────
+  // 8a. disable member: invited teacher, ACCEPTED grant → 200
+  // ──────────────────────────────────────────────────────────────────
+  test('disable member: invited teacher on ACCEPTED grant → 200', async () => {
+    // 1) resolveViewer → invited teacher
+    mockPool.query.mockResolvedValueOnce({ rows: [{ id: 't-1', role: 'TEACHER', school_id: 'school-2' }], rowCount: 1 });
+    // 2) getGrantForRevoker → ACCEPTED grant with invited_teacher_user_id matching actor
+    mockPool.query.mockResolvedValueOnce({ rows: [{ id: 'grant-1', host_school_id: 'school-1', invited_school_id: 'school-2', invited_teacher_user_id: 't-1', status: 'ACCEPTED' }], rowCount: 1 });
+    // 3) grants.removeMember DELETE
+    mockPool.query.mockResolvedValueOnce({ rowCount: 1 });
+    // 4) auditGallery INSERT
+    mockPool.query.mockResolvedValueOnce({ rows: [] });
+
+    const actorToken = tok({ userId: 't-1', role: 'TEACHER', schoolId: 'school-2' });
+    const res = await request(app)
+      .delete('/api/gallery/grants/grant-1/members/some-student')
+      .set('Authorization', `Bearer ${actorToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  // ──────────────────────────────────────────────────────────────────
+  // 8b. disable member: non-ACCEPTED grant (REVOKED) → 403
+  // ──────────────────────────────────────────────────────────────────
+  test('disable member: non-ACCEPTED grant (REVOKED) → 403', async () => {
+    // 1) resolveViewer → invited teacher
+    mockPool.query.mockResolvedValueOnce({ rows: [{ id: 't-1', role: 'TEACHER', school_id: 'school-2' }], rowCount: 1 });
+    // 2) getGrantForRevoker → REVOKED grant — guard fires before removeMember
+    mockPool.query.mockResolvedValueOnce({ rows: [{ id: 'grant-1', host_school_id: 'school-1', invited_school_id: 'school-2', invited_teacher_user_id: 't-1', status: 'REVOKED' }], rowCount: 1 });
+
+    const actorToken = tok({ userId: 't-1', role: 'TEACHER', schoolId: 'school-2' });
+    const res = await request(app)
+      .delete('/api/gallery/grants/grant-1/members/some-student')
+      .set('Authorization', `Bearer ${actorToken}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
+  });
 });
