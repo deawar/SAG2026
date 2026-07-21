@@ -32,6 +32,7 @@ CREATE TABLE schools (
   verified_at TIMESTAMP WITH TIME ZONE,
   theme_preset VARCHAR(50),
   theme_colors JSONB,
+  grade_band VARCHAR(20) CHECK (grade_band IN ('ELEMENTARY','MIDDLE','HIGH')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT school_name_check CHECK (length(trim(name)) > 0),
@@ -86,6 +87,7 @@ CREATE TABLE users (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   deleted_at TIMESTAMP WITH TIME ZONE,
+  grade_level VARCHAR(20),
   CONSTRAINT user_email_check CHECK (email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$')
 );
 
@@ -122,6 +124,8 @@ CREATE TABLE portfolio_items (
   moderated_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   moderated_at         TIMESTAMP WITH TIME ZONE,
   moderation_reason    TEXT,
+  shared_to_gallery    BOOLEAN NOT NULL DEFAULT false,
+  gallery_comments_allowed BOOLEAN NOT NULL DEFAULT false,
   created_at           TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at           TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   deleted_at           TIMESTAMP WITH TIME ZONE,
@@ -161,6 +165,17 @@ CREATE TABLE portfolio_comment_reads (
   last_read_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, portfolio_item_id)
 );
+
+-- Gallery Roster (students opted-in to school gallery)
+CREATE TABLE gallery_roster (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+  student_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  added_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (school_id, student_user_id)
+);
+CREATE INDEX idx_gallery_roster_school ON gallery_roster(school_id);
 
 -- Payment Gateways Configuration (created before auctions)
 CREATE TABLE payment_gateways (
