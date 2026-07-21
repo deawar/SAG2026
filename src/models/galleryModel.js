@@ -61,6 +61,14 @@ class GalleryModel {
     );
     return r.rows[0] || null;
   }
+
+  // When a student leaves/changes school: drop them from all rosters, remove all their
+  // cross-school enablements, and reset their gallery opt-in (re-consent at the new school).
+  async cascadeStudentSchoolChange(studentUserId) {
+    await this.db.query('DELETE FROM gallery_roster WHERE student_user_id = $1', [studentUserId]);
+    await this.db.query('DELETE FROM gallery_grant_members WHERE student_user_id = $1', [studentUserId]);
+    await this.db.query('UPDATE portfolio_items SET shared_to_gallery = false, updated_at = NOW() WHERE student_user_id = $1', [studentUserId]);
+  }
 }
 
 module.exports = GalleryModel;

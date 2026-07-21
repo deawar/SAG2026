@@ -136,6 +136,41 @@ describe('GalleryModel', () => {
     });
   });
 
+  // ── cascadeStudentSchoolChange ────────────────────────────────────────────
+
+  describe('cascadeStudentSchoolChange', () => {
+    it('issues exactly three queries', async () => {
+      await model.cascadeStudentSchoolChange('stu-1');
+      expect(fakeDb.query).toHaveBeenCalledTimes(3);
+    });
+
+    it('first query DELETEs from gallery_roster for the student', async () => {
+      await model.cascadeStudentSchoolChange('stu-1');
+      const [sql, params] = fakeDb.query.mock.calls[0];
+      expect(sql).toMatch(/DELETE FROM gallery_roster/);
+      expect(params).toEqual(['stu-1']);
+    });
+
+    it('second query DELETEs from gallery_grant_members for the student', async () => {
+      await model.cascadeStudentSchoolChange('stu-1');
+      const [sql, params] = fakeDb.query.mock.calls[1];
+      expect(sql).toMatch(/DELETE FROM gallery_grant_members/);
+      expect(params).toEqual(['stu-1']);
+    });
+
+    it('third query UPDATEs portfolio_items setting shared_to_gallery = false', async () => {
+      await model.cascadeStudentSchoolChange('stu-1');
+      const [sql, params] = fakeDb.query.mock.calls[2];
+      expect(sql).toMatch(/UPDATE portfolio_items SET shared_to_gallery/);
+      expect(params).toEqual(['stu-1']);
+    });
+
+    it('returns undefined (Promise<void>)', async () => {
+      const result = await model.cascadeStudentSchoolChange('stu-1');
+      expect(result).toBeUndefined();
+    });
+  });
+
   // ── resolveViewer ─────────────────────────────────────────────────────────
 
   describe('resolveViewer', () => {
