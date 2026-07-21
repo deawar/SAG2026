@@ -636,6 +636,11 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
       expect(g.rows[0].a).toBe('gallery_grants');
       expect(g.rows[0].b).toBe('gallery_grant_members');
     });
+
+    test('gallery_comments table exists', async () => {
+      const c = await db.query("SELECT to_regclass('public.gallery_comments') AS t");
+      expect(c.rows[0].t).toBe('gallery_comments');
+    });
   });
 
   /**
