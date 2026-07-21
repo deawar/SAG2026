@@ -41,4 +41,19 @@ async function requireGalleryAccess(req, res, next) {
   } catch (err) { return next(err); }
 }
 
-module.exports = { requireGalleryAccess, auditGallery, model };
+// Item-level guard for comment routes: resolve the item's HOST school (owner's
+// live school), then delegate to requireGalleryAccess — authorization stays a
+// single code path. Items outside live gallery content 404 (no existence oracle).
+async function requireGalleryItemAccess(req, res, next) {
+  try {
+    const item = await model.getCommentableItem(req.params.id);
+    if (!item) {
+      return res.status(404).json({ success: false, error: 'ITEM_NOT_IN_GALLERY', message: 'Item not found in any gallery.' });
+    }
+    req.galleryItem = item;
+    req.params.schoolId = item.owner_school_id;
+    return requireGalleryAccess(req, res, next);
+  } catch (err) { return next(err); }
+}
+
+module.exports = { requireGalleryAccess, requireGalleryItemAccess, auditGallery, model };
