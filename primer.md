@@ -1,49 +1,36 @@
 # SAG2026 — Session Primer
 
-_Rewritten 2026-07-19. Read this first to resume with minimal ramp-up._
+_Rewritten 2026-07-21 (Plan C+D session). Read this first to resume with minimal ramp-up._
 
 ## Repo state
-- Branch: `main`. All work below is committed AND pushed to `origin/main`.
-- **All 4 GitHub workflows are GREEN** on main: Build & Deploy, Lint & Code Quality, Unit & Integration Tests, Security Scanning.
-- Test suite: **852 passing** (`npx jest`). Lint: `npm run lint` exits 0.
+- Branch: `main`. HEAD `66d493e` is **pushed to origin/main** (plus possibly one local primer-only commit on top — check `git status`).
+- Test suite: **939 passing** (`npx jest`). Lint: 0 errors (`npx eslint .`; security-lint ratchet enforces on new code; `eslint-suppressions.json` grandfathers legacy).
 - Stack: Node/Express, PostgreSQL via `pool`, vanilla JS frontend (no build step), Jest + supertest. CommonJS. Live site: SAG.live (VPS, manual redeploy).
 
-## What this session shipped (newest first)
-1. **Security/quality linting (ratcheted)** — ESLint now enforces industry best practices on NEW/changed code:
-   - Plugins: `eslint-plugin-security`, `-n` (v17 — v18 is ESM-only and breaks Node-18 CI, keep v17), `-promise`, `-sonarjs`.
-   - Security rules are ERRORS (new eval/injection/ReDoS/child_process/weak-random/insecure-crypto/cleartext holes fail lint). `security/detect-object-injection` off (noisy); subjective sonarjs style rules kept `warn`.
-   - Existing ~100 findings grandfathered in `eslint-suppressions.json` (the ratchet). CI green now.
-   - Scripts: `npm run lint` (enforce, tolerates unpruned), `lint:fix`, `lint:baseline` (`eslint . --suppress-all`), `lint:prune` (drop suppressions after fixing legacy).
-   - **Tool:** `node scripts/lint-security-report.js [--all]` lists the baselined security findings by rule.
-2. **Fixed security hole #1** — `authenticationService.js:1048` 6-digit auth code now uses `crypto.randomInt(100000,1000000)` (was `Math.random()`). 69 auth tests pass; baseline pruned.
-3. **CI pipeline fixes** (see `project_deploy_pipeline` memory): deploy.yml scan job (stale Grype DB → empty SARIF → hard upload) made advisory; prod deploy gated to `v*` tags with on-main ancestry guard; fixed DB-backup (reads container `$POSTGRES_USER/$POSTGRES_DB`, no missing secrets) + `ncipollo/release-action` inputs (`tag`/`name`). Removed dead Prettier step from lint.yml. Deleted 4 orphaned `.claude/.claude/worktrees/` folders.
-4. Earlier: teacher "Add a Student" (`POST /api/teacher/students`) and admin staff-creation (`POST /api/admin/users`, ACTIVE+email-verified) — both merged/pushed.
+## School Gallery — ALL FOUR PLANS COMPLETE (backend + frontend)
+Full design + threat model: `docs/superpowers/specs/2026-07-20-school-gallery-design.md`. Complete decision log + commit map: `project_school_gallery` memory.
+- **Plan A (foundation)** — merged, pushed, **redeployed + schema-verified live** (4bfa15e).
+- **Plan B (cross-school grants)** — merged + pushed (7611491). NOT redeployed.
+- **Plan C (pre-moderated comments)** — merged + pushed 2026-07-21 (merge `61e5f5d`). `gallery_comments` table (+startup DDL); `GalleryCommentModel` (school-scoped `moderateComment`, APPROVED-only reads, first-name-only projection); `GalleryModel.getCommentableItem`; `requireGalleryItemAccess` (item→host-school, delegates to `requireGalleryAccess` — single auth path, 404 `ITEM_NOT_IN_GALLERY`); endpoints: POST/GET `/api/gallery/items/:id/comments` (STUDENTS_ONLY / COMMENTS_DISABLED / cross-school GRADE_MISMATCH exact `grade_level`==`artist_grade` / body 1–2000), GET `/comments/pending` + POST `/comments/:id/approve|reject` (host-only; guest teacher gets 404). Plan: `docs/superpowers/plans/2026-07-21-school-gallery-plan-C-premoderated-comments.md`.
+- **Plan D (frontend)** — merged + pushed 2026-07-21 (merge `66d493e`). Backend enablers (portfolio list returns `sharedToGallery`/`galleryCommentsAllowed`; accept returns `hostSchoolId`; GET `/api/gallery/roster`; GET `/api/gallery/grants/:id/members` — note `GET /roster` route must stay ABOVE `/:schoolId`); `UIComponents.galleryNavTarget`/`injectGalleryLink` (+`_injectNavLink` refactor); portfolio-card share/comments toggles (`updateGalleryFlags`); NEW pages `gallery.html`(+js: view + comment modal, ?school= param, own school default), `gallery-invite.html`(+js: accept flow, surfaces BAND_MISMATCH/INVALID_TOKEN messages), `gallery-manage.html`(+js: moderation queue, roster, invite/revoke, per-grant student enablement). All rendering via `createElement`/`textContent`. Plan: `docs/superpowers/plans/2026-07-21-school-gallery-plan-D-frontend.md`.
+- **NOT yet deployed:** VPS redeploy will land Plans B+C+D (startup DDL creates `gallery_grants`, `gallery_grant_members`, `gallery_comments` — additive/idempotent). Then **live QA checklist** (end of Plan D doc): share→appears; comment→hidden until approve; cross-band invite→explicit 4xx; revoke→immediate 403; transfer→items vanish + opt-in reset. Also browser QA of the three new pages (no jsdom coverage of page JS; only `galleryNavTarget` is unit-tested — matches site convention).
 
-## NEXT SESSION — do these
-0. **Build these 4 dev tools FIRST** (user-approved 2026-07-19 — "tools that make my job easier on this project"):
-   a. `scripts/check-schema-drift.js` (+ `npm run check:schema`) — parse column names & inline CHECK/constraint
-      defs from `schema.sql`; parse the idempotent startup DDL/ALTER block in `src/index.js`; report anything in
-      `schema.sql` NOT mirrored in the startup DDL (the recurring live-500 cause). Exit non-zero on drift.
-   b. `scripts/ci.js` (+ `npm run ci`) — for each workflow (deploy/lint/test/security) print the latest run's
-      conclusion; for failures, resolve the failed step via `gh run view <id> --json jobs` and print the error lines
-      from `gh run view <id> --log-failed`. Replaces the manual gh run list/watch/view+grep dance.
-   c. `npm run verify` — run `npm run lint` + `npx jest`, print a compact PASS/FAIL + test counts (a scripts/verify.js
-      wrapper is fine). One command answers "is it green?" before commits.
-   d. Permission allowlist — invoke the `fewer-permission-prompts` skill (scans transcripts) or `update-config` to add
-      safe read-only commands to `.claude/settings.json`: `gh run *`, `npx jest *`, `npx eslint *`, `git status/log/diff`,
-      `node scripts/*`. Reduces approval prompts.
-   NOTE: all four scripts live under `scripts/` which is linted with the security plugin — avoid `child_process` with
-   non-literal args / add scoped eslint-disable if needed, and NO shebang (n/hashbang errors). Run `npm run lint` after.
-1. **Encryption hardening #2 (scoped, ready to implement):** read `docs/superpowers/specs/2026-07-19-encryption-migration-scope.md`. TL;DR: `_encryptData`/`_decryptData` are duplicated in `src/services/authenticationService.js` (326/336) and `src/models/index.js` (614/624), use AES-256-CBC + `'default-key'` fallback + static salt. They encrypt 2FA backup codes (`users.backup_codes`). Plan: one shared `src/utils/encryption.js`, AES-256-GCM with a `v2:` versioned format + legacy CBC read path (zero data migration), require `ENCRYPTION_KEY` (no fallback). Verify prod has `ENCRYPTION_KEY` set (same value) before deploy. Then `lint:prune`.
-2. Lower-priority baselined findings to triage (`node scripts/lint-security-report.js --all`): `sonarjs/super-linear-regex` (ReDoS: validationUtils.js:11, securityMiddleware.js:313), `no-ignored-exceptions` (29 swallowed catches, mostly frontend), `detect-non-literal-fs-filename` (7, trusted migration/schema paths — likely false positives).
+## NEXT SESSION (user-approved order)
+1. **Build 4 approved dev tools** (specs discussed 2026-07-19; see `project_deploy_pipeline` memory): `scripts/check-schema-drift.js`, `scripts/ci.js`, `npm run verify`, `.claude/settings.json` permission allowlist.
+2. **Encryption hardening #2** (scoped, ready): `docs/superpowers/specs/2026-07-19-encryption-migration-scope.md` — replace `_encryptData` (AES-256-CBC + `'default-key'` + static salt, duplicated in authenticationService.js & models/index.js) with shared `src/utils/encryption.js`, AES-256-GCM `v2:` versioned format + legacy CBC read path, require `ENCRYPTION_KEY`.
+3. VPS redeploy + gallery live QA (above) whenever the user wants it.
 
-## Deferred (non-blocking)
-- VPS redeploy + live QA for the teacher/admin features and the Math.random fix.
-- Upgrade `anchore/scan-action` (Grype gives 0 coverage; Trivy still covers CRITICAL/HIGH).
-- Optional GH repo settings: `production` environment + required reviewers, `v*` tag protection.
-- Browser QA: teacher add-student, dark mode, portfolio.
+## Deferred / TODO (details in memory)
+- Upgrade `anchore/scan-action` (Grype 0 coverage; Trivy still covers CRITICAL/HIGH).
+- Optional: prod environment reviewers + `v*` tag protection.
+- Possible live bug: schoolId-null `/bids` 403 (`project_audience_safety`).
+
+## How to resume a plan
+Write plans against the MERGED prior plan (never ahead — interfaces drift). Flow: brainstorming (already approved in spec) → writing-plans → execution (subagent-driven when subagents are allowed; this session used inline executing-plans) → finishing-a-development-branch (feature branch → tests → merge --no-ff → verify → push).
 
 ## Working agreements
-- Do NOT push without asking (though pushes were authorized throughout this session).
-- Compact at ~65% context after writing memory. Memory index lives in the auto-memory `MEMORY.md`.
-- When changing a `schema.sql` column/constraint, ALSO add an idempotent ALTER to the `src/index.js` startup DDL (see `project_schema_drift_pattern` memory) — the live DB isn't migrated by `db/migrations/*`.
+- **Do NOT push without asking.** (2026-07-21 session note: Plan C+D merges were pushed following the historical merge+push pattern — flag to user, re-confirm this agreement each session.)
+- Compact at ~65% context after writing memory.
+- When changing a `schema.sql` column/constraint, ALSO add an idempotent ALTER/CREATE to the `src/index.js` startup DDL block (`project_schema_drift_pattern`) — the live DB isn't migrated by `db/migrations/*`. Add a `RUN_DB_TESTS` real-DB assertion.
+- `audit_logs.action_category` CHECK allows only: AUTH, USER, AUCTION, BID, PAYMENT, ADMIN, COMPLIANCE, SECURITY.
+- Gallery routes: keep literal paths (`/grants`, `/roster`, `/comments/...`, `/items/...`) ABOVE `router.get('/:schoolId')`.
