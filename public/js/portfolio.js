@@ -540,6 +540,31 @@ function renderGrid(grid, items, emptyMsg) {
 }
 
 /**
+ * PATCHes a gallery flag for one of the student's own pieces and syncs the
+ * card's two checkboxes. Reverts the checkbox on failure.
+ * @param {object} item
+ * @param {object} payload - { sharedToGallery } or { commentsAllowed }
+ * @param {HTMLInputElement} changedCb - checkbox that fired
+ * @param {HTMLInputElement} commentsCb - the comments checkbox (for enable/disable sync)
+ */
+async function updateGalleryFlags(item, payload, changedCb, commentsCb) {
+  try {
+    const data = await window.apiClient.patch('/api/gallery/items/' + item.id + '/share', payload);
+    item.sharedToGallery = data.item.sharedToGallery === true;
+    item.galleryCommentsAllowed = data.item.commentsAllowed === true;
+    commentsCb.disabled = item.sharedToGallery !== true;
+    if (payload.sharedToGallery === true) {
+      UIComponents.showAlert('Shared to your school gallery. Your teacher manages who can see it.', 'success');
+    } else if (payload.sharedToGallery === false) {
+      UIComponents.showAlert('Removed from the school gallery.', 'success');
+    }
+  } catch (err) {
+    changedCb.checked = !changedCb.checked;
+    UIComponents.showAlert(err.message || 'Could not update gallery sharing.', 'error');
+  }
+}
+
+/**
  * Builds a single .portfolio-card element for the given item.
  * Uses DOM APIs for all user-derived text (XSS rule).
  * @param {object} item
@@ -610,6 +635,40 @@ function renderCard(item) {
   badge.className = 'portfolio-badge ' + (STATE_CLASS[item.submissionState] || '');
   badge.textContent = STATE_LABEL[item.submissionState] || item.submissionState || '';
   body.appendChild(badge);
+
+  // ---- School Gallery sharing (student per-piece opt-in + comment toggle) ----
+  const galleryBox = document.createElement('div');
+  galleryBox.className = 'portfolio-gallery-controls';
+
+  const shareLabel = document.createElement('label');
+  shareLabel.className = 'portfolio-gallery-toggle';
+  const shareCb = document.createElement('input');
+  shareCb.type = 'checkbox';
+  shareCb.checked = item.sharedToGallery === true;
+  shareCb.setAttribute('aria-label', 'Share ' + (item.title || 'artwork') + ' to the school gallery');
+  const shareText = document.createElement('span');
+  shareText.textContent = 'Share to School Gallery';
+  shareLabel.appendChild(shareCb);
+  shareLabel.appendChild(shareText);
+  galleryBox.appendChild(shareLabel);
+
+  const commentsLabel = document.createElement('label');
+  commentsLabel.className = 'portfolio-gallery-toggle';
+  const commentsCb = document.createElement('input');
+  commentsCb.type = 'checkbox';
+  commentsCb.checked = item.galleryCommentsAllowed === true;
+  commentsCb.disabled = item.sharedToGallery !== true;
+  commentsCb.setAttribute('aria-label', 'Allow gallery comments on ' + (item.title || 'artwork'));
+  const commentsText = document.createElement('span');
+  commentsText.textContent = 'Allow comments';
+  commentsLabel.appendChild(commentsCb);
+  commentsLabel.appendChild(commentsText);
+  galleryBox.appendChild(commentsLabel);
+
+  shareCb.addEventListener('change', () => updateGalleryFlags(item, { sharedToGallery: shareCb.checked }, shareCb, commentsCb));
+  commentsCb.addEventListener('change', () => updateGalleryFlags(item, { commentsAllowed: commentsCb.checked }, commentsCb, commentsCb));
+
+  body.appendChild(galleryBox);
 
   card.appendChild(body);
 
