@@ -19,7 +19,9 @@ function mapItem(row) {
     rejectionReason: row.rejection_reason ?? null,
     createdAt: row.created_at,
     commentCount: Number.parseInt(row.comment_count, 10) || 0,
-    unreadCount: Number.parseInt(row.unread_count, 10) || 0
+    unreadCount: Number.parseInt(row.unread_count, 10) || 0,
+    sharedToGallery: row.shared_to_gallery === true,
+    galleryCommentsAllowed: row.gallery_comments_allowed === true
   };
 }
 
@@ -80,7 +82,8 @@ module.exports = (db) => {
       const studentId = req.user?.id;
       const result = await db.query(
         `SELECT id, title, description, medium, artist_grade, image_url,
-                portfolio_status, submission_state, rejection_reason, created_at
+                portfolio_status, submission_state, rejection_reason, created_at,
+                shared_to_gallery, gallery_comments_allowed
                ,(SELECT COUNT(*) FROM portfolio_comments c
                   WHERE c.portfolio_item_id = portfolio_items.id AND c.deleted_at IS NULL) AS comment_count
                ,(SELECT COUNT(*) FROM portfolio_comments c
