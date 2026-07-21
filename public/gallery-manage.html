@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Manage the School Gallery - moderation, roster, invitations">
+    <title>Manage School Gallery - Silent Auction Gallery</title>
+
+    <!-- Google Fonts: Cormorant Garant (headings) + DM Sans (body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,500;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap">
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+</head>
+<body>
+    <!-- Skip link -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <!-- Navigation Header -->
+    <header class="navbar" role="banner">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="logo" aria-label="Silent Auction Gallery Home">
+                    <img src="/images/logo/SAGLive.png" alt="Silent Auction Gallery Logo" class="logo-img">
+                    <span class="logo-text">SAG</span>
+                </a>
+            </div>
+            <nav class="navbar-nav" role="navigation" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="/auctions.html" class="nav-link">Auctions</a></li>
+                    <li><a href="/" class="nav-link">Home</a></li>
+                    <li><a href="/bidder-welcome.html" class="nav-link">For Bidders</a></li>
+                </ul>
+            </nav>
+            <div class="navbar-auth">
+                <button class="btn btn-profile" id="user-menu-btn" aria-label="User account menu" aria-expanded="false">
+                    <span id="user-name"></span>
+                    <span class="menu-icon" aria-hidden="true">▼</span>
+                </button>
+                <div class="user-dropdown" id="user-dropdown" style="display:none;" role="menu">
+                    <a href="/user-dashboard.html" class="dropdown-item" role="menuitem">Dashboard</a>
+                    <button class="dropdown-item" id="logout-btn" role="menuitem">Logout</button>
+                </div>
+            </div>
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content">
+        <div class="container">
+            <nav class="breadcrumb" role="navigation" aria-label="Breadcrumb navigation">
+                <ol>
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/gallery.html">School Gallery</a></li>
+                    <li><span aria-current="page">Manage</span></li>
+                </ol>
+            </nav>
+            <div class="page-header" role="region" aria-label="Page Header">
+                <h1>Manage School Gallery</h1>
+            </div>
+
+            <section aria-labelledby="moderation-h" style="margin-bottom:var(--spacing-2xl);">
+                <h2 id="moderation-h">Comments Awaiting Approval (<span id="pending-count">0</span>)</h2>
+                <p class="section-help">Comments never appear in the gallery until you approve them.</p>
+                <ul id="pending-list" class="comment-thread__list" aria-live="polite"></ul>
+            </section>
+
+            <section aria-labelledby="roster-h" style="margin-bottom:var(--spacing-2xl);">
+                <h2 id="roster-h">Gallery Roster</h2>
+                <p class="section-help">Only students on the roster can have shared artwork in the gallery.</p>
+                <div class="form-row" style="align-items:flex-end;gap:1rem;">
+                    <div class="form-group" style="flex:1;">
+                        <label for="roster-student-select">Add a student</label>
+                        <select id="roster-student-select" class="form-control"><option value="">Loading students…</option></select>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="roster-add-btn">Add to Roster</button>
+                </div>
+                <ul id="roster-list" aria-live="polite" style="list-style:none;padding:0;"></ul>
+            </section>
+
+            <section aria-labelledby="grants-h" style="margin-bottom:var(--spacing-2xl);">
+                <h2 id="grants-h">Share With Another School</h2>
+                <p class="section-help">Invite a teacher or school admin (same grade band) by email. They must be registered to accept.</p>
+                <div class="form-row" style="align-items:flex-end;gap:1rem;" id="invite-row">
+                    <div class="form-group" style="flex:1;">
+                        <label for="invite-email-input">Teacher / admin email</label>
+                        <input type="email" id="invite-email-input" class="form-control" placeholder="teacher@otherschool.edu" autocomplete="off">
+                    </div>
+                    <button type="button" class="btn btn-primary" id="invite-send-btn">Send Invitation</button>
+                </div>
+                <ul id="host-grants-list" aria-live="polite" style="list-style:none;padding:0;"></ul>
+            </section>
+
+            <section aria-labelledby="enable-h">
+                <h2 id="enable-h">Galleries Shared With Us</h2>
+                <p class="section-help">For each accepted invitation, choose which of your students may view (least privilege).</p>
+                <div id="invited-grants"></div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Alert Container -->
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About SAG</h3>
+                    <p>Silent Auction Gallery supports education through art.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="/auctions.html">Auctions</a></li>
+                        <li><a href="/">Home</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Legal</h3>
+                    <ul>
+                        <li><a href="/privacy.html">Privacy Policy</a></li>
+                        <li><a href="/terms.html">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/theme-manager.js"></script>
+    <script src="/js/accessibility.js"></script>
+    <script src="/js/api-client.js"></script>
+    <script src="/js/auth-manager.js"></script>
+    <script src="/js/ui-components.js"></script>
+    <script src="/js/gallery-manage.js"></script>
+</body>
+</html>
