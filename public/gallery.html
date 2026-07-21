@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="School Gallery - student artwork shared by the school">
+    <title>School Gallery - Silent Auction Gallery</title>
+
+    <!-- Google Fonts: Cormorant Garant (headings) + DM Sans (body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,500;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap">
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/accessibility.css">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico">
+</head>
+<body>
+    <!-- Skip link -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <!-- Navigation Header -->
+    <header class="navbar" role="banner">
+        <div class="navbar-container">
+            <div class="navbar-brand">
+                <a href="/" class="logo" aria-label="Silent Auction Gallery Home">
+                    <img src="/images/logo/SAGLive.png" alt="Silent Auction Gallery Logo" class="logo-img">
+                    <span class="logo-text">SAG</span>
+                </a>
+            </div>
+            <nav class="navbar-nav" role="navigation" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="/auctions.html" class="nav-link">Auctions</a></li>
+                    <li><a href="/" class="nav-link">Home</a></li>
+                    <li><a href="/bidder-welcome.html" class="nav-link">For Bidders</a></li>
+                </ul>
+            </nav>
+            <div class="navbar-auth">
+                <button class="btn btn-profile" id="user-menu-btn" aria-label="User account menu" aria-expanded="false">
+                    <span id="user-name"></span>
+                    <span class="menu-icon" aria-hidden="true">▼</span>
+                </button>
+                <div class="user-dropdown" id="user-dropdown" style="display:none;" role="menu">
+                    <a href="/user-dashboard.html" class="dropdown-item" role="menuitem">Dashboard</a>
+                    <button class="dropdown-item" id="logout-btn" role="menuitem">Logout</button>
+                </div>
+            </div>
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content">
+        <div class="container">
+
+            <!-- Breadcrumb Navigation -->
+            <nav class="breadcrumb" role="navigation" aria-label="Breadcrumb navigation">
+                <ol>
+                    <li><a href="/">Home</a></li>
+                    <li><span aria-current="page">School Gallery</span></li>
+                </ol>
+            </nav>
+
+            <!-- Page Header -->
+            <div class="page-header" role="region" aria-label="Page Header">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+                    <h1>School Gallery</h1>
+                    <a class="btn btn-secondary" id="gallery-manage-link" href="/gallery-manage.html" style="display:none;">Manage Gallery</a>
+                </div>
+                <p class="section-help" id="gallery-subtitle">Artwork shared by students of this school.</p>
+            </div>
+
+            <p id="gallery-status" class="section-help" aria-live="polite">Loading gallery…</p>
+            <div class="portfolio-grid" id="gallery-grid" aria-label="Shared artwork"></div>
+        </div>
+    </main>
+
+    <!-- ===== Full-Screen Lightbox ===== -->
+    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Full-screen image view" hidden>
+        <button class="lightbox-close-btn" id="lightbox-close" aria-label="Close image view">&times;</button>
+        <img id="lightbox-img" src="" alt="" class="lightbox-img-full">
+    </div>
+
+    <!-- ===== Comment Thread Modal (approved comments + pre-moderated compose) ===== -->
+    <div class="modal" id="comment-modal" role="dialog" aria-modal="true" aria-labelledby="comment-modal-title" hidden style="display:none;">
+        <div class="modal-content modal-medium">
+            <button class="modal-close" id="comment-modal-close" aria-label="Close comment thread">&times;</button>
+
+            <h2 id="comment-modal-title">Comments</h2>
+
+            <div class="comment-thread" id="comment-thread">
+                <ul class="comment-thread__list" id="comment-thread-list" aria-live="polite" aria-label="Comment thread">
+                    <li class="comment-thread__empty" id="comment-thread-empty">Loading comments…</li>
+                </ul>
+
+                <div class="comment-thread__compose" id="comment-compose" style="display:none;">
+                    <p class="section-help">Comments are reviewed by a teacher before they appear.</p>
+                    <label for="comment-body-input" class="sr-only">Write a comment</label>
+                    <textarea
+                        id="comment-body-input"
+                        class="form-control"
+                        placeholder="Write a kind comment… (max 2000 characters)"
+                        maxlength="2000"
+                        rows="3"
+                        aria-describedby="comment-char-count"
+                    ></textarea>
+                    <p class="comment-thread__char-count" id="comment-char-count" aria-live="polite">0 / 2000</p>
+                    <button type="button" class="btn btn-primary btn-sm comment-thread__submit" id="comment-submit-btn">Post Comment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alert-container" class="alert-container" role="region" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About SAG</h3>
+                    <p>Silent Auction Gallery supports education through art.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="/auctions.html">Auctions</a></li>
+                        <li><a href="/">Home</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Legal</h3>
+                    <ul>
+                        <li><a href="/privacy.html">Privacy Policy</a></li>
+                        <li><a href="/terms.html">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Silent Auction Gallery. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/theme-manager.js"></script>
+    <script src="/js/accessibility.js"></script>
+    <script src="/js/api-client.js"></script>
+    <script src="/js/auth-manager.js"></script>
+    <script src="/js/ui-components.js"></script>
+    <script src="/js/gallery.js"></script>
+</body>
+</html>
