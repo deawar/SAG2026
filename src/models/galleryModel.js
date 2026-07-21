@@ -72,6 +72,19 @@ class GalleryModel {
     return r.rowCount;
   }
 
+  async listRoster(schoolId) {
+    const r = await this.db.query(
+      `SELECT gr.student_user_id AS "studentUserId", u.first_name AS "firstName",
+              u.last_name AS "lastName", u.grade_level AS "gradeLevel"
+         FROM gallery_roster gr
+         JOIN users u ON u.id = gr.student_user_id AND u.deleted_at IS NULL
+        WHERE gr.school_id = $1
+        ORDER BY u.last_name ASC, u.first_name ASC`,
+      [schoolId]
+    );
+    return r.rows;
+  }
+
   async resolveViewer(userId) {
     const r = await this.db.query(
       'SELECT id, role, school_id, grade_level FROM users WHERE id = $1 AND deleted_at IS NULL',

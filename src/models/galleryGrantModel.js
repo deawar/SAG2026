@@ -76,6 +76,14 @@ class GalleryGrantModel {
     return r.rowCount;
   }
 
+  async listMembers(grantId) {
+    const r = await this.db.query(
+      'SELECT student_user_id AS "studentUserId" FROM gallery_grant_members WHERE grant_id = $1',
+      [grantId]
+    );
+    return r.rows;
+  }
+
   // THE guard lookup. Deny-by-default: returns allowed:false unless a live ACCEPTED grant matches.
   async getViewerGrantAccess(viewer, hostSchoolId) {
     if (['TEACHER', 'SCHOOL_ADMIN'].includes(viewer.role)) {
