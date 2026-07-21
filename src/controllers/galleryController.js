@@ -217,7 +217,7 @@ class GalleryController {
     try {
       const viewer = await model.resolveViewer(req.user.id);
       const g = await grants.getGrantForRevoker(req.params.id);
-      if (!g || !viewer || viewer.id !== g.invited_teacher_user_id) {
+      if (!g || g.status !== 'ACCEPTED' || !viewer || viewer.id !== g.invited_teacher_user_id) {
         return res.status(403).json({ success: false, message: 'Only the invited teacher can disable students.' });
       }
       await grants.removeMember(g.id, req.params.studentUserId);
