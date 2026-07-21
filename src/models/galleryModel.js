@@ -38,6 +38,24 @@ class GalleryModel {
     return r.rows[0] || null;
   }
 
+  // An item is commentable/readable only while it is live gallery content:
+  // shared + VISIBLE + not deleted, owner active and on their CURRENT school's roster.
+  async getCommentableItem(itemId) {
+    const r = await this.db.query(
+      `SELECT pi.id, pi.student_user_id, u.school_id AS owner_school_id,
+              pi.gallery_comments_allowed, pi.artist_grade
+         FROM portfolio_items pi
+         JOIN users u ON u.id = pi.student_user_id AND u.deleted_at IS NULL
+         JOIN gallery_roster gr ON gr.student_user_id = pi.student_user_id AND gr.school_id = u.school_id
+        WHERE pi.id = $1
+          AND pi.shared_to_gallery = true
+          AND pi.moderation_status = 'VISIBLE'
+          AND pi.deleted_at IS NULL`,
+      [itemId]
+    );
+    return r.rows[0] || null;
+  }
+
   async addToRoster(schoolId, studentUserId, addedByUserId) {
     await this.db.query(
       `INSERT INTO gallery_roster (school_id, student_user_id, added_by_user_id)
@@ -56,7 +74,7 @@ class GalleryModel {
 
   async resolveViewer(userId) {
     const r = await this.db.query(
-      'SELECT id, role, school_id FROM users WHERE id = $1 AND deleted_at IS NULL',
+      'SELECT id, role, school_id, grade_level FROM users WHERE id = $1 AND deleted_at IS NULL',
       [userId]
     );
     return r.rows[0] || null;
