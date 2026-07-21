@@ -64,6 +64,10 @@ describe('endAuction winning-bid update', () => {
     expect(result.success).toBe(true);
     expect(result.winnersCount).toBe(1);
 
+    // Flush the post-commit setImmediate winner-email block so any rejection
+    // surfaces here (user lookup returns empty rows → path exits via continue).
+    await new Promise((resolve) => setImmediate(resolve));
+
     const updateBids = client.query.mock.calls.find(c => typeof c[0] === 'string' && c[0].includes('UPDATE bids'));
     expect(updateBids).toBeTruthy();
     // Valid Postgres: UPDATE has no ORDER BY/LIMIT — the winner must be picked in a subselect.
@@ -71,10 +75,59 @@ describe('endAuction winning-bid update', () => {
     expect(updateBids[0]).toContain('ORDER BY bid_amount DESC, placed_at ASC');
     expect(updateBids[1]).toEqual(['art-1']); // old broken code passed [piece.id, piece.winner_id]
   });
+
+  test('endAuction refuses a non-LIVE auction (cannot resurrect CANCELLED/APPROVED)', async () => {
+    const client = { query: jest.fn(), release: jest.fn() };
+    pool.connect.mockResolvedValue(client);
+    client.query.mockImplementation((sql) => {
+      if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') { return Promise.resolve({}); }
+      if (/FROM auctions a/.test(sql)) {
+        return Promise.resolve({ rows: [{ id: 'auc-2', auction_status: 'CANCELLED', artwork_count: 0 }] });
+      }
+      return Promise.resolve({ rows: [], rowCount: 0 });
+    });
+    const result = await auctionService.endAuction('auc-2');
+    expect(result.success).toBe(false);
+    const updates = client.query.mock.calls.filter(c => typeof c[0] === 'string' && c[0].includes('UPDATE auctions'));
+    expect(updates).toHaveLength(0);
+  });
 });
 ```
 - [ ] **Step 2: Run → FAIL** (current SQL has params `[piece.id, piece.winner_id]` and no subselect; with a real DB it would be a syntax error).
-- [ ] **Step 3: Fix `src/services/auctionService.js`** — replace:
+- [ ] **Step 3: Fix `src/services/auctionService.js`** — three changes in `endAuction` (per plan review):
+
+**(a) LIVE-only guard** — replace the ENDED-only early return (~line 533):
+```js
+      if (auction.auction_status === 'ENDED') {
+        return {
+          success: false,
+          message: 'Auction is already ended'
+        };
+      }
+```
+with:
+```js
+      if (auction.auction_status !== 'LIVE') {
+        return {
+          success: false,
+          message: auction.auction_status === 'ENDED'
+            ? 'Auction is already ended'
+            : `Only LIVE auctions can be ended (status: ${auction.auction_status})`
+        };
+      }
+```
+(The early return path must still COMMIT/release as the current code path does — keep the surrounding structure.)
+
+**(b) Tie-break alignment** — in the artwork query (~line 542-548), add `, placed_at ASC` to BOTH subqueries so the reported winner and the ACCEPTED bid can never disagree on tied amounts:
+```js
+        `SELECT a.id, a.title,
+                (SELECT placed_by_user_id FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE' ORDER BY bid_amount DESC, placed_at ASC LIMIT 1) as winner_id,
+                (SELECT bid_amount FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE' ORDER BY bid_amount DESC, placed_at ASC LIMIT 1) as winning_bid
+         FROM artwork a
+         WHERE a.auction_id = $1`,
+```
+
+**(c) The invalid UPDATE** — replace:
 ```js
           // Mark winning bid as ACCEPTED, others as CANCELLED
           await client.query(
@@ -139,10 +192,11 @@ describe('auctionScheduler.sweep', () => {
       .mockResolvedValueOnce({ rows: [], rowCount: 0 });                           // due-LIVE select
     const out = await scheduler.sweep();
     expect(out.started).toBe(2);
-    const startSql = pool.query.mock.calls[0][0];
+    // Normalize whitespace so SQL reformatting can't silently break the test.
+    const startSql = pool.query.mock.calls[0][0].replace(/\s+/g, ' ');
     expect(startSql).toContain("auction_status = 'APPROVED'");
     expect(startSql).toContain('starts_at <= NOW()');
-    expect(startSql).toContain('ends_at   >  NOW()');
+    expect(startSql).toContain('ends_at > NOW()');
     expect(startSql).toContain('deleted_at IS NULL');
     const auditSql = pool.query.mock.calls[1][0];
     expect(auditSql).toContain('INSERT INTO audit_logs');
@@ -181,11 +235,17 @@ describe('auctionScheduler.sweep', () => {
   });
 
   test('start() is idempotent and stop() clears the timer', () => {
-    jest.useFakeTimers();
+    // Real timers (the real timer object has unref); assert via spies.
+    const setSpy = jest.spyOn(global, 'setInterval');
+    const clearSpy = jest.spyOn(global, 'clearInterval');
     scheduler.start(60000);
-    scheduler.start(60000); // no second timer
+    scheduler.start(60000); // second call must be a no-op
+    expect(setSpy).toHaveBeenCalledTimes(1);
     scheduler.stop();
-    jest.useRealTimers();
+    scheduler.stop(); // second stop must be a no-op
+    expect(clearSpy).toHaveBeenCalledTimes(1);
+    setSpy.mockRestore();
+    clearSpy.mockRestore();
   });
 });
 ```
