@@ -41,13 +41,13 @@ describe('Portfolio create + list', () => {
   test('GET /api/portfolio lists only the current student\'s pieces', async () => {
     mockDb.query.mockResolvedValueOnce({
       rows: [
-        { id: 'pi-1', title: 'Sunset', description: null, medium: 'Oil', artist_grade: '9', image_url: PNG, portfolio_status: 'IN_PROGRESS', submission_state: 'NOT_SUBMITTED', created_at: new Date() }
+        { id: 'pi-1', title: 'Sunset', description: null, medium: 'Oil', artist_grade: '9', image_url: PNG, portfolio_status: 'IN_PROGRESS', submission_state: 'NOT_SUBMITTED', created_at: new Date(), shared_to_gallery: true, gallery_comments_allowed: false }
       ], rowCount: 1
     });
     const res = await request(app).get('/api/portfolio').set('Authorization', `Bearer ${studentToken()}`);
     expect(res.status).toBe(200);
     expect(res.body.items).toHaveLength(1);
-    expect(res.body.items[0]).toMatchObject({ id: 'pi-1', portfolioStatus: 'IN_PROGRESS', submissionState: 'NOT_SUBMITTED' });
+    expect(res.body.items[0]).toMatchObject({ id: 'pi-1', portfolioStatus: 'IN_PROGRESS', submissionState: 'NOT_SUBMITTED', sharedToGallery: true, galleryCommentsAllowed: false });
     const select = mockDb.query.mock.calls.find(c => /FROM portfolio_items/.test(c[0]));
     expect(select[1]).toContain('stu-1');
   });

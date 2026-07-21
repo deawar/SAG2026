@@ -892,7 +892,32 @@ class UIComponents {
    * @param {string} role
    */
   static injectPortfolioLink(role) {
-    const target = UIComponents.portfolioNavTarget(role);
+    UIComponents._injectNavLink(UIComponents.portfolioNavTarget(role));
+  }
+
+  /**
+   * Map a user role to its School Gallery nav destination.
+   * @param {string} role
+   * @returns {{label:string, href:string}|null}
+   */
+  static galleryNavTarget(role) {
+    if (role === 'STUDENT' || role === 'TEACHER' || role === 'SCHOOL_ADMIN') {
+      return { label: 'School Gallery', href: '/gallery.html' };
+    }
+    return null;
+  }
+
+  static injectGalleryLink(role) {
+    UIComponents._injectNavLink(UIComponents.galleryNavTarget(role));
+  }
+
+  /**
+   * Inject a role-derived link into the shared navbar (top nav list + user
+   * dropdown), on every page. Idempotent: skips insertion if a link to the
+   * same href already exists (pages that hardcode it).
+   * @param {{label:string, href:string}|null} target
+   */
+  static _injectNavLink(target) {
     if (!target) { return; }
     const onThisPage = window.location.pathname === target.href;
 
@@ -1002,6 +1027,9 @@ class UIComponents {
 
       // Portfolio link — visible on every page for students/teachers/admins
       UIComponents.injectPortfolioLink(user.role);
+
+      // School Gallery link — students + school staff
+      UIComponents.injectGalleryLink(user.role);
     } else {
       if (loginBtn) {loginBtn.style.display = 'block';}
       if (registerBtn) {registerBtn.style.display = 'block';}

@@ -112,6 +112,7 @@ describe('Gallery grant endpoints', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.status).toBe('ACCEPTED');
+    expect(res.body.hostSchoolId).toBe(HOST_SCHOOL);
   });
 
   // ──────────────────────────────────────────────────────────────────

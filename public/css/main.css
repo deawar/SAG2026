@@ -4127,3 +4127,21 @@ body:has(.hero) .navbar {
     color: var(--color-gray, #666666);
     cursor: default;
 }
+
+/* School Gallery share controls on portfolio cards (Plan D) */
+.portfolio-gallery-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border, #ddd);
+  font-size: 0.85rem;
+}
+.portfolio-gallery-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+.portfolio-gallery-toggle input[type="checkbox"] { accent-color: var(--color-primary, #4a6da7); }

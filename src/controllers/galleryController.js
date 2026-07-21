@@ -89,6 +89,18 @@ class GalleryController {
     } catch (e) { return next(e); }
   }
 
+  // GET /api/gallery/roster  (host TEACHER/SCHOOL_ADMIN)
+  static async listRoster(req, res, next) {
+    try {
+      const viewer = await model.resolveViewer(req.user.id);
+      if (!viewer || !['TEACHER', 'SCHOOL_ADMIN'].includes(viewer.role) || !viewer.school_id) {
+        return res.status(403).json({ success: false, message: 'Only a teacher/admin can manage the roster.' });
+      }
+      const roster = await model.listRoster(viewer.school_id);
+      return res.json({ success: true, roster });
+    } catch (e) { return next(e); }
+  }
+
   // ── Grant helpers ────────────────────────────────────────────────────────────
 
   static async _schoolBand(schoolId) {
@@ -159,7 +171,7 @@ class GalleryController {
       const upd = await grants.acceptGrant(grant.id, { invitedSchoolId: viewer.school_id, invitedTeacherUserId: viewer.id });
       if (!upd) { return res.status(409).json({ success: false, error: 'ALREADY_RESOLVED', message: 'This invitation is no longer pending.' }); }
       await auditGallery(viewer.id, 'COMPLIANCE', 'GALLERY_INVITE_ACCEPTED', grant.id, { hostSchoolId: grant.host_school_id, invitedSchoolId: viewer.school_id });
-      return res.json({ success: true, grantId: grant.id, status: 'ACCEPTED' });
+      return res.json({ success: true, grantId: grant.id, status: 'ACCEPTED', hostSchoolId: grant.host_school_id });
     } catch (e) { return next(e); }
   }
 
@@ -226,6 +238,19 @@ class GalleryController {
       await grants.removeMember(g.id, req.params.studentUserId);
       await auditGallery(viewer.id, 'COMPLIANCE', 'GALLERY_MEMBER_DISABLED', req.params.studentUserId, { grantId: g.id });
       return res.json({ success: true });
+    } catch (e) { return next(e); }
+  }
+
+  // GET /api/gallery/grants/:id/members  (bound invited TEACHER)
+  static async listMembers(req, res, next) {
+    try {
+      const viewer = await model.resolveViewer(req.user.id);
+      const g = await grants.getGrantForRevoker(req.params.id);
+      if (!g || !viewer || viewer.id !== g.invited_teacher_user_id) {
+        return res.status(403).json({ success: false, message: 'Only the invited teacher can view enabled students.' });
+      }
+      const members = await grants.listMembers(g.id);
+      return res.json({ success: true, members });
     } catch (e) { return next(e); }
   }
 
