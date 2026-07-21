@@ -16,6 +16,9 @@ router.delete('/grants/:id/members/:studentUserId', verifyRole('TEACHER'), Galle
 // Comment routes (Plan C) — item guard resolves the host school then delegates
 router.get('/items/:id/comments', requireGalleryItemAccess, GalleryController.listItemComments);
 router.post('/items/:id/comments', requireGalleryItemAccess, GalleryController.submitComment);
+router.get('/comments/pending', verifyRole('TEACHER', 'SCHOOL_ADMIN'), GalleryController.pendingComments);
+router.post('/comments/:id/approve', verifyRole('TEACHER', 'SCHOOL_ADMIN'), GalleryController.approveComment);
+router.post('/comments/:id/reject', verifyRole('TEACHER', 'SCHOOL_ADMIN'), GalleryController.rejectComment);
 
 router.get('/:schoolId', requireGalleryAccess, GalleryController.view);
 router.patch('/items/:id/share', verifyRole('STUDENT'), GalleryController.setShare);
