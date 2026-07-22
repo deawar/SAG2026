@@ -10,7 +10,10 @@ Thumbs.db
 backups/
 uploads/
 # Claude Code AI memory and Superpowers plugin state (local tooling, machine-specific)
-.claude/
+# (contents-form .claude/* so the settings.json exception below can apply —
+#  git cannot re-include a file inside an excluded directory)
+.claude/*
+!.claude/settings.json
 .superpowers/
 
 # Server-specific config files (belong on the VPS, not in repo)
