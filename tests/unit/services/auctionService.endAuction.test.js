@@ -55,5 +55,27 @@ describe('endAuction winning-bid update', () => {
     expect(result.success).toBe(false);
     const updates = client.query.mock.calls.filter(c => typeof c[0] === 'string' && c[0].includes('UPDATE auctions'));
     expect(updates).toHaveLength(0);
+    // The early return must close the transaction — releasing a pooled client
+    // mid-BEGIN leaks "idle in transaction" and keeps the FOR UPDATE row lock.
+    expect(client.query).toHaveBeenCalledWith('ROLLBACK');
+    expect(client.release).toHaveBeenCalled();
+  });
+
+  test('winner determination locks artwork rows (serializes with placeBid)', async () => {
+    const client = { query: jest.fn(), release: jest.fn() };
+    pool.connect.mockResolvedValue(client);
+    client.query.mockImplementation((sql) => {
+      if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') { return Promise.resolve({}); }
+      if (/FROM auctions a/.test(sql)) {
+        return Promise.resolve({ rows: [{ id: 'auc-1', auction_status: 'LIVE', platform_fee_percentage: 10, artwork_count: 1 }] });
+      }
+      if (/FROM artwork a/.test(sql)) {
+        return Promise.resolve({ rows: [] });
+      }
+      return Promise.resolve({ rows: [], rowCount: 1 });
+    });
+    await auctionService.endAuction('auc-1');
+    const artworkCall = client.query.mock.calls.find(c => typeof c[0] === 'string' && /FROM artwork a/.test(c[0]));
+    expect(artworkCall[0]).toContain('FOR UPDATE OF a');
   });
 });
