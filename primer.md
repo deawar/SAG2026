@@ -1,11 +1,17 @@
 # SAG2026 — Session Primer
 
-_Rewritten 2026-07-21 (Plan C+D session). Read this first to resume with minimal ramp-up._
+_Rewritten 2026-07-21 (Plan C+D + auto-transitions session). Read this first to resume with minimal ramp-up._
 
 ## Repo state
-- Branch: `main`. HEAD `66d493e` is **pushed to origin/main** (plus possibly one local primer-only commit on top — check `git status`).
-- Test suite: **939 passing** (`npx jest`). Lint: 0 errors (`npx eslint .`; security-lint ratchet enforces on new code; `eslint-suppressions.json` grandfathers legacy).
+- Branch: `main`. Origin has `ff6bbf2` (gallery A-D + carousel badge fix, VPS **redeployed & QA'd**). Local HEAD `70f0f49` adds **auction auto-transitions — NOT pushed, awaiting user approval + redeploy**.
+- Test suite: **951 passing** (`npx jest`). Lint: 0 errors (`npx eslint .`; security-lint ratchet on new code; `eslint-suppressions.json` grandfathers legacy).
 - Stack: Node/Express, PostgreSQL via `pool`, vanilla JS frontend (no build step), Jest + supertest. CommonJS. Live site: SAG.live (VPS, manual redeploy).
+
+## Auction auto-transitions (2026-07-21, local main, agent-pipeline built)
+Spec `docs/superpowers/specs/2026-07-21-auction-auto-transitions-design.md`, plan `docs/superpowers/plans/2026-07-21-auction-auto-transitions.md`. Built via user-requested agent pipeline (opus plan-review → opus implementer → opus security review → opus issue-finder; all findings applied).
+- `src/services/auctionScheduler.js`: 60s in-process sweep (started in `src/index.js`, not under test; unref'd, idempotent start, re-entrancy guard, auto-end capped 100/sweep). APPROVED→LIVE at `starts_at` (requires ≥1 APPROVED artwork, window still open; audits `auction_auto_started`); LIVE→`endAuction` at `ends_at` (full finalization: winners, fees, audit, winner emails).
+- `endAuction` fixes: invalid `UPDATE bids ... ORDER BY LIMIT` (Postgres syntax error — manual end ALWAYS failed for auctions with bids) → subselect w/ `placed_at ASC` tie-break (aligned across winner subqueries); LIVE-only guard; **ROLLBACK before guard early-returns** (was leaking idle-in-transaction pooled clients + FOR UPDATE locks — same fix applied to `autoExtendAuction`); artwork read is `FOR UPDATE OF a` (serializes winner determination vs `placeBid`'s artwork lock).
+- Deferred review findings (documented, pre-existing): `_calculatePlatformFee` ignores `platform_fee_minimum` + default 3 vs schema 3.5 (fee only lands in audit JSON today); finalization creates no `transactions` row (winners pay via checkout afterward — confirm intended flow); winner subselects not auction-scoped (only matters if artwork re-auctioned); DB-down boot logs 2 errors/min until DB returns (self-heals).
 
 ## School Gallery — ALL FOUR PLANS COMPLETE (backend + frontend)
 Full design + threat model: `docs/superpowers/specs/2026-07-20-school-gallery-design.md`. Complete decision log + commit map: `project_school_gallery` memory.
