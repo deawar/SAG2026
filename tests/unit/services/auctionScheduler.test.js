@@ -34,7 +34,7 @@ describe('auctionScheduler.sweep', () => {
     expect(startSql).toContain('ends_at > NOW()');
     expect(startSql).toContain('deleted_at IS NULL');
     // Empty auctions must never auto-go LIVE (mirrors manual start's artwork check).
-    expect(startSql).toContain("EXISTS (SELECT 1 FROM artwork");
+    expect(startSql).toContain('EXISTS (SELECT 1 FROM artwork');
     expect(startSql).toContain("artwork.artwork_status = 'APPROVED'");
     const auditSql = pool.query.mock.calls[1][0];
     expect(auditSql).toContain('INSERT INTO audit_logs');
