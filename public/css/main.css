@@ -271,13 +271,19 @@ a:focus {
 }
 
 /* Brand wordmark on every page — prominent per user preference (asset is
-   326x264, displayed at 2x-crisp sizes). The PNG is an opaque light card
-   with dark text, so it stays readable in dark mode too. */
+   326x264, displayed at 2x-crisp sizes). Background is TRANSPARENT (dark
+   ink only), so it sits directly on the navbar with no visible box. */
 .logo-img {
     display: block;
     height: 132px;
     width: auto;
-    border-radius: 8px;
+}
+
+/* Dark mode: the ink is near-black — invert it to white on dark navbars. */
+@media (prefers-color-scheme: dark) {
+    .logo-img {
+        filter: invert(1);
+    }
 }
 
 /* The wordmark contains the full name — the "SAG" text beside it is redundant.
