@@ -33,6 +33,9 @@ describe('auctionScheduler.sweep', () => {
     expect(startSql).toContain('starts_at <= NOW()');
     expect(startSql).toContain('ends_at > NOW()');
     expect(startSql).toContain('deleted_at IS NULL');
+    // Empty auctions must never auto-go LIVE (mirrors manual start's artwork check).
+    expect(startSql).toContain("EXISTS (SELECT 1 FROM artwork");
+    expect(startSql).toContain("artwork.artwork_status = 'APPROVED'");
     const auditSql = pool.query.mock.calls[1][0];
     expect(auditSql).toContain('INSERT INTO audit_logs');
     expect(pool.query.mock.calls[1][1]).toEqual(expect.arrayContaining(['AUCTION', 'auction_auto_started', 'a1']));
@@ -46,9 +49,22 @@ describe('auctionScheduler.sweep', () => {
     expect(out.ended).toBe(2);
     expect(auctionService.endAuction).toHaveBeenCalledWith('L1');
     expect(auctionService.endAuction).toHaveBeenCalledWith('L2');
-    const dueSql = pool.query.mock.calls[1][0];
+    const dueSql = pool.query.mock.calls[1][0].replace(/\s+/g, ' ');
     expect(dueSql).toContain("auction_status = 'LIVE'");
     expect(dueSql).toContain('ends_at <= NOW()');
+    expect(dueSql).toContain('LIMIT 100'); // backlog cap per sweep
+  });
+
+  test('overlapping sweep is skipped (re-entrancy guard)', async () => {
+    let releaseFirst;
+    pool.query.mockImplementationOnce(() => new Promise((resolve) => { releaseFirst = resolve; }));
+    const first = scheduler.sweep();                 // blocks on auto-start query
+    const second = await scheduler.sweep();          // must skip, not stack
+    expect(second).toEqual({ started: 0, ended: 0 });
+    releaseFirst({ rows: [], rowCount: 0 });
+    await first;
+    // Only the first sweep's queries ran (auto-start + auto-end selects).
+    expect(pool.query).toHaveBeenCalledTimes(2);
   });
 
   test('one failing endAuction does not stop the rest', async () => {

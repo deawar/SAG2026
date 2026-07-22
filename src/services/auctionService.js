@@ -531,6 +531,9 @@ class AuctionService {
       const auction = auctionResult.rows[0];
 
       if (auction.auction_status !== 'LIVE') {
+        // Close the transaction before returning — releasing a pooled client
+        // with an open BEGIN leaks "idle in transaction" + keeps the row lock.
+        await client.query('ROLLBACK');
         return {
           success: false,
           message: auction.auction_status === 'ENDED'
@@ -539,13 +542,16 @@ class AuctionService {
         };
       }
 
-      // Get all artwork in auction with highest bids
+      // Get all artwork in auction with highest bids. FOR UPDATE serializes
+      // against placeBid's artwork row lock so an in-flight last-second bid
+      // commits before the winner is read.
       const artworkResult = await client.query(
         `SELECT a.id, a.title,
                 (SELECT placed_by_user_id FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE' ORDER BY bid_amount DESC, placed_at ASC LIMIT 1) as winner_id,
                 (SELECT bid_amount FROM bids WHERE artwork_id = a.id AND bid_status = 'ACTIVE' ORDER BY bid_amount DESC, placed_at ASC LIMIT 1) as winning_bid
          FROM artwork a
-         WHERE a.auction_id = $1`,
+         WHERE a.auction_id = $1
+         FOR UPDATE OF a`,
         [auctionId]
       );
 
@@ -677,6 +683,8 @@ class AuctionService {
 
       // Check if auto-extend is enabled
       if (!auction.auto_extend_enabled) {
+        // Same leak shape as endAuction's guard: close the transaction first.
+        await client.query('ROLLBACK');
         return {
           success: false,
           message: 'Auto-extend is not enabled for this auction'
