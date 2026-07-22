@@ -270,13 +270,14 @@ a:focus {
     border-radius: var(--radius-md);
 }
 
-/* Brand wordmark on every page — navbar-sized but legible. The PNG is an
-   opaque light card with dark text, so it stays readable in dark mode too. */
+/* Brand wordmark on every page — prominent per user preference (asset is
+   326x264, displayed at 2x-crisp sizes). The PNG is an opaque light card
+   with dark text, so it stays readable in dark mode too. */
 .logo-img {
     display: block;
-    height: 44px;
+    height: 132px;
     width: auto;
-    border-radius: 6px;
+    border-radius: 8px;
 }
 
 /* The wordmark contains the full name — the "SAG" text beside it is redundant.
@@ -288,7 +289,7 @@ a:focus {
 
 @media (max-width: 768px) {
     .logo-img {
-        height: 36px;
+        height: 72px;
     }
 }
 
