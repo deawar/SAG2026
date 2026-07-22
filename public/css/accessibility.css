@@ -601,6 +601,12 @@ textarea:disabled {
     .nav-link:focus {
         color: var(--color-platform-coral);
     }
+    /* Active page chip: main.css hardcodes color:#fff on a
+       --color-platform-dark background. That token inverts to near-white
+       here, so the hardcoded white text disappeared — use dark text. */
+    .nav-link.active {
+        color: var(--color-platform-white);
+    }
     .user-dropdown {
         background-color: var(--color-surface);
         border-color: var(--color-lighter-gray);

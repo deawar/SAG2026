@@ -43,4 +43,12 @@ describe('site branding (logo + favicon on every page)', () => {
     const css = fs.readFileSync(path.join(PUBLIC_DIR, 'css', 'main.css'), 'utf8');
     expect(css).toContain("content: url('/images/logo/SAGLive-dark.png')");
   });
+
+  test('dark mode overrides the active nav chip text (was white-on-white)', () => {
+    // main.css hardcodes .nav-link.active { color:#fff } on a token background
+    // that inverts to near-white in dark mode — the dark block must re-color it.
+    const a11y = fs.readFileSync(path.join(PUBLIC_DIR, 'css', 'accessibility.css'), 'utf8');
+    const darkBlock = a11y.slice(a11y.indexOf('@media (prefers-color-scheme: dark)'));
+    expect(darkBlock).toMatch(/\.nav-link\.active\s*\{[^}]*color:\s*var\(--color-platform-white\)/);
+  });
 });
