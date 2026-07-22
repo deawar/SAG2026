@@ -607,6 +607,23 @@ textarea:disabled {
     .nav-link.active {
         color: var(--color-platform-white);
     }
+    /* Same trap on the secondary-button hover (light chip, hardcoded #fff). */
+    .btn-secondary:hover {
+        color: var(--color-platform-white);
+    }
+
+    /* Bands that are INTENTIONALLY dark-with-white-text in the design
+       (hero-style sections). The inverted --color-platform-dark token turned
+       their backgrounds near-white under the hardcoded white text — pin them
+       to the design navy so they look the same in both modes. */
+    .how-it-works,
+    .auth-split-left,
+    .artwork-image-wrapper {
+        background: #1A1A2E;
+    }
+    .school-context-bar {
+        background: var(--school-primary, #1A1A2E);
+    }
     .user-dropdown {
         background-color: var(--color-surface);
         border-color: var(--color-lighter-gray);
