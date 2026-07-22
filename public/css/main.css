@@ -279,10 +279,11 @@ a:focus {
     width: auto;
 }
 
-/* Dark mode: the ink is near-black — invert it to white on dark navbars. */
+/* Dark mode: swap to the white-ink variant (invert would turn the red
+   "Auction" cyan). Same geometry, white text + coral red for contrast. */
 @media (prefers-color-scheme: dark) {
     .logo-img {
-        filter: invert(1);
+        content: url('/images/logo/SAGLive-dark.png');
     }
 }
 
