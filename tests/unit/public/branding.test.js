@@ -51,4 +51,14 @@ describe('site branding (logo + favicon on every page)', () => {
     const darkBlock = a11y.slice(a11y.indexOf('@media (prefers-color-scheme: dark)'));
     expect(darkBlock).toMatch(/\.nav-link\.active\s*\{[^}]*color:\s*var\(--color-platform-white\)/);
   });
+
+  test('dark mode keeps intentionally-dark bands dark (white text sections)', () => {
+    // .how-it-works etc. hardcode white text on a --color-platform-dark bg;
+    // the inverted token made those bands light → white-on-white.
+    const a11y = fs.readFileSync(path.join(PUBLIC_DIR, 'css', 'accessibility.css'), 'utf8');
+    const darkBlock = a11y.slice(a11y.indexOf('@media (prefers-color-scheme: dark)'));
+    expect(darkBlock).toMatch(/\.how-it-works[^{]*\{[^}]*background:\s*#1A1A2E/i);
+    expect(darkBlock).toMatch(/\.auth-split-left/);
+    expect(darkBlock).toMatch(/\.school-context-bar\s*\{[^}]*var\(--school-primary/);
+  });
 });
