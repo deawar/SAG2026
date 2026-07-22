@@ -21,10 +21,18 @@ Full design + threat model: `docs/superpowers/specs/2026-07-20-school-gallery-de
 - **Plan D (frontend)** — merged + pushed 2026-07-21 (merge `66d493e`). Backend enablers (portfolio list returns `sharedToGallery`/`galleryCommentsAllowed`; accept returns `hostSchoolId`; GET `/api/gallery/roster`; GET `/api/gallery/grants/:id/members` — note `GET /roster` route must stay ABOVE `/:schoolId`); `UIComponents.galleryNavTarget`/`injectGalleryLink` (+`_injectNavLink` refactor); portfolio-card share/comments toggles (`updateGalleryFlags`); NEW pages `gallery.html`(+js: view + comment modal, ?school= param, own school default), `gallery-invite.html`(+js: accept flow, surfaces BAND_MISMATCH/INVALID_TOKEN messages), `gallery-manage.html`(+js: moderation queue, roster, invite/revoke, per-grant student enablement). All rendering via `createElement`/`textContent`. Plan: `docs/superpowers/plans/2026-07-21-school-gallery-plan-D-frontend.md`.
 - **NOT yet deployed:** VPS redeploy will land Plans B+C+D (startup DDL creates `gallery_grants`, `gallery_grant_members`, `gallery_comments` — additive/idempotent). Then **live QA checklist** (end of Plan D doc): share→appears; comment→hidden until approve; cross-band invite→explicit 4xx; revoke→immediate 403; transfer→items vanish + opt-in reset. Also browser QA of the three new pages (no jsdom coverage of page JS; only `galleryNavTarget` is unit-tested — matches site convention).
 
-## NEXT SESSION (user-approved order)
-1. **Build 4 approved dev tools** (specs discussed 2026-07-19; see `project_deploy_pipeline` memory): `scripts/check-schema-drift.js`, `scripts/ci.js`, `npm run verify`, `.claude/settings.json` permission allowlist.
-2. **Encryption hardening #2** (scoped, ready): `docs/superpowers/specs/2026-07-19-encryption-migration-scope.md` — replace `_encryptData` (AES-256-CBC + `'default-key'` + static salt, duplicated in authenticationService.js & models/index.js) with shared `src/utils/encryption.js`, AES-256-GCM `v2:` versioned format + legacy CBC read path, require `ENCRYPTION_KEY`.
-3. VPS redeploy + gallery live QA (above) whenever the user wants it.
+## NEXT SESSION — OPTIMIZATION PHASE (user-declared next project, 2026-07-21)
+Full plan + verified evidence: `project_performance_optimization` memory. Order:
+1. **Measure one real click** (DevTools network tab, auctions page on SAG.live) — baseline payload sizes/timings.
+2. **Images out of JSON → files/thumbnails** — base64 data-URLs stored in DB and shipped inline in list JSON (worst: `listAuctions` cover_image × 60). THE real project; brainstorm first (storage location, thumbnails, AUTH on image URLs for minors' art, migration of existing rows, cache headers).
+3. **`compression` middleware + `express.static` maxAge** (~30 min; app.js:107 has neither).
+4. **Bids composite index `(artwork_id, bid_status, bid_amount DESC)` + fire-and-forget audit INSERTs** (~1 hr with tests; schema-drift rule applies to the index).
+Rejected (don't revisit): Express→Ultimate Express — `ws` attaches to the Node http/https server (uWS has none), in-app TLS differs, ~1ms/request gain.
+
+## Backlog after optimization
+- **Remaining 3 dev tools** (allowlist DONE `0393ce5`): `scripts/check-schema-drift.js`, `scripts/ci.js`, `npm run verify`.
+- **Encryption hardening #2** (scoped, ready): `docs/superpowers/specs/2026-07-19-encryption-migration-scope.md` — replace `_encryptData` (AES-256-CBC + `'default-key'` + static salt, duplicated in authenticationService.js & models/index.js) with shared `src/utils/encryption.js`, AES-256-GCM `v2:` versioned format + legacy CBC read path, require `ENCRYPTION_KEY`.
+- VPS redeploy for auction auto-transitions (pushed `c8b0508`, scheduler activates on boot) + its live QA; portfolio-comments condensed audit (`docs/qa/portfolio-comments-moderation-qa-live-audit.md`, 20 manual rows).
 
 ## Deferred / TODO (details in memory)
 - Upgrade `anchore/scan-action` (Grype 0 coverage; Trivy still covers CRITICAL/HIGH).
