@@ -37,4 +37,10 @@ describe('site branding (logo + favicon on every page)', () => {
   test('the logo asset exists', () => {
     expect(fs.existsSync(path.join(PUBLIC_DIR, 'images', 'logo', 'SAGLive.png'))).toBe(true);
   });
+
+  test('the dark-mode logo variant exists and main.css swaps to it', () => {
+    expect(fs.existsSync(path.join(PUBLIC_DIR, 'images', 'logo', 'SAGLive-dark.png'))).toBe(true);
+    const css = fs.readFileSync(path.join(PUBLIC_DIR, 'css', 'main.css'), 'utf8');
+    expect(css).toContain("content: url('/images/logo/SAGLive-dark.png')");
+  });
 });
