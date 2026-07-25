@@ -935,35 +935,36 @@ textarea.form-control {
 }
 
 .filter-actions .btn-primary {
-    background-color: var(--color-platform-coral, #FF4136);
-    color: white;
-    border: none;
+    background-color: var(--color-platform-coral, #FF4136) !important;
+    color: white !important;
+    border: none !important;
 }
 
 .filter-actions .btn-primary:hover {
-    background-color: #E60000;
-    transform: translateY(-1px);
+    background-color: #E60000 !important;
+    transform: translateY(-1px) !important;
 }
 
 .filter-actions .btn-primary:focus {
-    outline: 2px solid var(--color-focus);
-    outline-offset: 2px;
+    outline: 2px solid var(--color-focus) !important;
+    outline-offset: 2px !important;
 }
 
 .filter-actions .btn-secondary {
-    background-color: var(--color-white);
-    color: var(--color-dark);
-    border: 1.5px solid var(--color-lighter-gray);
+    background-color: var(--color-white) !important;
+    color: var(--color-dark) !important;
+    border: 1.5px solid var(--color-lighter-gray) !important;
+    min-width: 100% !important;
 }
 
 .filter-actions .btn-secondary:hover {
-    background-color: var(--color-lightest-gray);
-    border-color: var(--color-light-gray);
+    background-color: var(--color-lightest-gray) !important;
+    border-color: var(--color-light-gray) !important;
 }
 
 .filter-actions .btn-secondary:focus {
-    outline: 2px solid var(--color-focus);
-    outline-offset: 2px;
+    outline: 2px solid var(--color-focus) !important;
+    outline-offset: 2px !important;
 }
 
 /* Dark mode support */
