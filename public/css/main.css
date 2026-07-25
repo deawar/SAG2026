@@ -916,55 +916,64 @@ textarea.form-control {
     width: 100%;
 }
 
+/* Both buttons are stacked in a flex column, so they share the container
+   width and are spaced by the flex `gap`. The `.filter-actions .btn`
+   selector (specificity 0,2,0) out-ranks the base .btn/.btn-block/.btn-*
+   rules, so no !important is needed. */
 .filter-actions .btn {
-    width: 100% !important;
-    height: 48px !important;
-    min-height: 48px !important;
-    max-height: 48px !important;
-    padding: 12px 24px !important;
-    font-size: var(--font-size-base) !important;
-    font-weight: 600 !important;
-    border-radius: 10px !important;
-    transition: all var(--transition-normal) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    flex-shrink: 0 !important;
-    white-space: normal !important;
-    line-height: 1.2 !important;
+    width: 100%;
+    height: 48px;
+    min-height: 48px;
+    margin: 0;
+    padding: 12px 24px;
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    border-radius: 10px;
+    line-height: 1.2;
+    transition: all var(--transition-normal);
+}
+
+/* accessibility.css adds `.btn + .btn { margin-left: var(--spacing-md) }`
+   as touch-target spacing for side-by-side buttons. In this stacked column
+   that left margin pushes Reset out of the container and creates horizontal
+   overflow (a scrollbar + misalignment). Both `.filter-actions .btn` (0,2,0)
+   and `.btn + .btn` (0,2,0) tie on specificity, and accessibility.css loads
+   last — so it wins the tie. Match the sibling pattern scoped to the
+   container (0,3,0) to reliably reset it without !important. */
+.filter-actions .btn + .btn {
+    margin-left: 0;
 }
 
 .filter-actions .btn-primary {
-    background-color: var(--color-platform-coral, #FF4136) !important;
-    color: white !important;
-    border: none !important;
+    background-color: var(--color-platform-coral, #FF4136);
+    color: white;
+    border: none;
 }
 
 .filter-actions .btn-primary:hover {
-    background-color: #E60000 !important;
-    transform: translateY(-1px) !important;
+    background-color: #E60000;
+    transform: translateY(-1px);
 }
 
 .filter-actions .btn-primary:focus {
-    outline: 2px solid var(--color-focus) !important;
-    outline-offset: 2px !important;
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
 }
 
 .filter-actions .btn-secondary {
-    background-color: var(--color-white) !important;
-    color: var(--color-dark) !important;
-    border: 1.5px solid var(--color-lighter-gray) !important;
-    min-width: 100% !important;
+    background-color: var(--color-white);
+    color: var(--color-dark);
+    border: 1.5px solid var(--color-lighter-gray);
 }
 
 .filter-actions .btn-secondary:hover {
-    background-color: var(--color-lightest-gray) !important;
-    border-color: var(--color-light-gray) !important;
+    background-color: var(--color-lightest-gray);
+    border-color: var(--color-light-gray);
 }
 
 .filter-actions .btn-secondary:focus {
-    outline: 2px solid var(--color-focus) !important;
-    outline-offset: 2px !important;
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
 }
 
 /* Dark mode support */
