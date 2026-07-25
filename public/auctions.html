@@ -96,42 +96,44 @@
             <div class="auctions-container">
                 <!-- Filters Sidebar -->
                 <aside class="filters-sidebar" role="complementary" aria-label="Auction Filters">
-                    <h2>Filters</h2>
-                    <form id="filters-form" aria-label="Filter auctions">
+                    <h2 class="filters-title">Curate Your Selection</h2>
+                    <form id="filters-form" aria-label="Filter auctions" class="gallery-filters">
                         <!-- Status Filter -->
-                        <fieldset class="filter-group">
-                            <legend><label for="filter-status">Status</label></legend>
+                        <fieldset class="filter-group filter-group-primary">
+                            <legend class="filter-eyebrow">
+                                <label for="filter-status">Now Showing</label>
+                            </legend>
                             <select id="filter-status" class="filter-control" aria-describedby="filter-status-help">
                                 <option value="">All Auctions</option>
-                                <option value="active">Active</option>
+                                <option value="active">Active Auctions</option>
                                 <option value="ending_soon">Ending Soon</option>
                                 <option value="closed">Closed</option>
                             </select>
-                            <small id="filter-status-help" class="help-text">Filter by auction status</small>
+                            <small id="filter-status-help" class="help-text">Choose which auctions to see</small>
                         </fieldset>
 
                         <!-- Price Range Filter -->
                         <fieldset class="filter-group">
-                            <legend>Price Range</legend>
+                            <legend class="filter-eyebrow">Price Range</legend>
                             <div class="price-inputs">
                                 <div class="form-group">
-                                    <label for="filter-price-min">Minimum</label>
-                                    <input 
-                                        type="number" 
-                                        id="filter-price-min" 
-                                        class="filter-control" 
-                                        placeholder="Min" 
+                                    <label for="filter-price-min" class="filter-label">Minimum</label>
+                                    <input
+                                        type="number"
+                                        id="filter-price-min"
+                                        class="filter-control"
+                                        placeholder="$0"
                                         min="0"
                                         aria-label="Minimum price"
                                     >
                                 </div>
                                 <div class="form-group">
-                                    <label for="filter-price-max">Maximum</label>
-                                    <input 
-                                        type="number" 
-                                        id="filter-price-max" 
-                                        class="filter-control" 
-                                        placeholder="Max" 
+                                    <label for="filter-price-max" class="filter-label">Maximum</label>
+                                    <input
+                                        type="number"
+                                        id="filter-price-max"
+                                        class="filter-control"
+                                        placeholder="$500+"
                                         min="0"
                                         aria-label="Maximum price"
                                     >
@@ -141,19 +143,19 @@
 
                         <!-- School Filter -->
                         <fieldset class="filter-group">
-                            <legend><label for="filter-school">School</label></legend>
+                            <legend class="filter-eyebrow">School</legend>
                             <select id="filter-school" class="filter-control" aria-describedby="filter-school-help">
                                 <option value="">All Schools</option>
                                 <!-- Populated by JavaScript -->
                             </select>
-                            <small id="filter-school-help" class="help-text">Filter by school</small>
+                            <small id="filter-school-help" class="help-text">Browse by school</small>
                         </fieldset>
 
                         <!-- Sort Options -->
-                        <fieldset class="filter-group">
-                            <legend><label for="sort-by">Sort By</label></legend>
+                        <fieldset class="filter-group filter-group-last">
+                            <legend class="filter-eyebrow">Organize By</legend>
                             <select id="sort-by" class="filter-control">
-                                <option value="newest">Newest</option>
+                                <option value="newest">Newest First</option>
                                 <option value="ending-soon">Ending Soon</option>
                                 <option value="price-low">Price: Low to High</option>
                                 <option value="price-high">Price: High to Low</option>
@@ -162,8 +164,10 @@
                         </fieldset>
 
                         <!-- Apply Filters Button -->
-                        <button type="button" class="btn btn-primary btn-block" id="apply-filters">Apply Filters</button>
-                        <button type="button" class="btn btn-secondary btn-block" id="clear-filters" aria-label="Clear all filters">Clear Filters</button>
+                        <div class="filter-actions">
+                            <button type="button" class="btn btn-primary btn-block" id="apply-filters">Apply Filters</button>
+                            <button type="button" class="btn btn-secondary btn-block" id="clear-filters" aria-label="Clear all filters">Reset</button>
+                        </div>
                     </form>
                 </aside>
 

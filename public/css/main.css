@@ -777,6 +777,243 @@ textarea.form-control {
     margin-bottom: 0;
 }
 
+/* ===== Gallery Filter Form ===== */
+.filters-sidebar {
+    display: flex;
+    flex-direction: column;
+}
+
+.filters-title {
+    font-family: var(--font-display);
+    font-size: var(--font-size-2xl);
+    font-weight: 600;
+    margin-bottom: var(--spacing-lg);
+    color: var(--color-dark);
+    letter-spacing: -0.01em;
+}
+
+.gallery-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.filter-group {
+    border: none;
+    margin: 0;
+    padding: var(--spacing-lg) 0;
+    border-top: 1px solid var(--color-lighter-gray);
+
+    /* Remove default fieldset styling */
+    all: revert-layer;
+    display: block;
+}
+
+.filter-group:first-of-type {
+    padding-top: 0;
+    border-top: none;
+}
+
+.filter-group-last {
+    border-bottom: 1px solid var(--color-lighter-gray);
+}
+
+/* Eyebrow labels: refined, small caps, secondary color */
+.filter-eyebrow {
+    display: block;
+    text-transform: uppercase;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--color-gray);
+    margin-bottom: var(--spacing-md);
+    font-family: var(--font-body);
+}
+
+.filter-eyebrow label {
+    display: inline;
+    margin: 0;
+    font-weight: inherit;
+    font-size: inherit;
+    color: inherit;
+    text-transform: inherit;
+    letter-spacing: inherit;
+}
+
+/* Filter-specific label (for price inputs) */
+.filter-label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--color-dark);
+    margin-bottom: var(--spacing-sm);
+    display: block;
+}
+
+/* Filter controls: refined, minimal styling */
+.filter-control {
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--color-lighter-gray);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-base);
+    font-family: inherit;
+    background-color: var(--color-white);
+    color: var(--color-dark);
+    transition: border-color var(--transition-normal), box-shadow var(--transition-normal), background-color var(--transition-normal);
+    cursor: pointer;
+}
+
+.filter-control:hover {
+    border-color: var(--color-light-gray);
+}
+
+.filter-control:focus {
+    outline: none;
+    border-color: var(--color-platform-coral, #FF4136);
+    box-shadow: 0 0 0 3px rgba(255, 65, 54, 0.1);
+}
+
+.filter-control:disabled {
+    background-color: var(--color-lightest-gray);
+    color: var(--color-gray);
+    cursor: not-allowed;
+    border-color: var(--color-lighter-gray);
+}
+
+/* Price inputs: two-column grid */
+.price-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+}
+
+.price-inputs .form-group {
+    margin-bottom: 0;
+}
+
+.price-inputs .form-group label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    margin-bottom: var(--spacing-sm);
+}
+
+/* Help text in filters */
+.filter-group .help-text {
+    font-size: 0.75rem;
+    color: var(--color-gray);
+    margin-top: var(--spacing-xs);
+    display: block;
+}
+
+/* Filter actions: buttons */
+.filter-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--color-lighter-gray);
+    width: 100%;
+}
+
+.filter-actions .btn {
+    width: 100%;
+    height: 48px;
+    padding: 12px 24px;
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    border-radius: 10px;
+    transition: all var(--transition-normal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.filter-actions .btn-primary {
+    background-color: var(--color-platform-coral, #FF4136);
+    color: white;
+    border: none;
+}
+
+.filter-actions .btn-primary:hover {
+    background-color: #E60000;
+    transform: translateY(-1px);
+}
+
+.filter-actions .btn-primary:focus {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+}
+
+.filter-actions .btn-secondary {
+    background-color: var(--color-white);
+    color: var(--color-dark);
+    border: 1.5px solid var(--color-lighter-gray);
+}
+
+.filter-actions .btn-secondary:hover {
+    background-color: var(--color-lightest-gray);
+    border-color: var(--color-light-gray);
+}
+
+.filter-actions .btn-secondary:focus {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .gallery-filters {
+        color: #e0e0e0;
+    }
+
+    .filter-control {
+        background-color: #2a2a2a;
+        color: #e0e0e0;
+        border-color: #444;
+    }
+
+    .filter-control:hover {
+        border-color: #555;
+    }
+
+    .filter-control:focus {
+        box-shadow: 0 0 0 3px rgba(255, 65, 54, 0.2);
+    }
+
+    .filter-group,
+    .filter-group-last {
+        border-color: #444;
+    }
+
+    .filter-eyebrow {
+        color: #999;
+    }
+
+    .filter-label {
+        color: #e0e0e0;
+    }
+
+    .filter-group .help-text {
+        color: #999;
+    }
+
+    .filter-actions {
+        border-color: #444;
+    }
+
+    .filter-actions .btn-secondary {
+        border-color: #555;
+        color: #e0e0e0;
+    }
+
+    .filter-actions .btn-secondary:hover {
+        background-color: #333;
+        border-color: #666;
+    }
+}
+
 /* Inline form error banner — shown inside the form above the submit button */
 .form-error-banner {
     background-color: #ffebee;
