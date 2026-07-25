@@ -1066,6 +1066,29 @@ class UIComponents {
       });
     }
 
+    // "Sign up" link inside the login modal — takes the visitor to the
+    // dedicated multi-step registration page (consistent with every other
+    // register entry point in the app). Present on all pages that embed the
+    // shared login modal (home, auctions, dashboards).
+    const switchToRegister = document.getElementById('switch-to-register');
+    if (switchToRegister) {
+      switchToRegister.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = '/register.html';
+      });
+    }
+
+    // "Login" link inside the register modal — swaps back to the login modal.
+    const switchToLogin = document.getElementById('switch-to-login');
+    if (switchToLogin) {
+      switchToLogin.addEventListener('click', (e) => {
+        e.preventDefault();
+        const registerModal = document.getElementById('register-modal');
+        if (registerModal) { registerModal.style.display = 'none'; }
+        this.showModal('login-modal');
+      });
+    }
+
     // User menu toggle
     const userMenuBtn = document.getElementById('user-menu-btn');
     const userDropdown = document.getElementById('user-dropdown');
