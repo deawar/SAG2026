@@ -396,12 +396,46 @@
     .filters-sidebar {
         margin-bottom: var(--spacing-2xl);
         position: relative;
-        max-height: 200px;
-        overflow-y: auto;
+        max-height: none;
+        overflow-y: visible;
     }
-    
+
+    .filters-title {
+        font-size: var(--font-size-xl);
+    }
+
     .filter-group {
         margin-bottom: var(--spacing-lg);
+        padding: var(--spacing-md) 0 !important;
+    }
+
+    .filter-group:first-of-type {
+        padding-top: 0 !important;
+    }
+
+    .filter-eyebrow {
+        font-size: 0.6rem;
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .price-inputs {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+    }
+
+    .filter-control {
+        font-size: 16px;
+    }
+
+    .filter-actions {
+        gap: var(--spacing-sm);
+        margin-top: var(--spacing-md);
+        padding-top: var(--spacing-md);
+    }
+
+    .filter-actions .btn {
+        height: 44px;
+        font-size: var(--font-size-sm);
     }
     
     /* Mobile Alert Container */
