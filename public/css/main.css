@@ -275,7 +275,7 @@ a:focus {
    ink only), so it sits directly on the navbar with no visible box. */
 .logo-img {
     display: block;
-    height: 132px;
+    height: 297px;
     width: auto;
 }
 
@@ -296,7 +296,7 @@ a:focus {
 
 @media (max-width: 768px) {
     .logo-img {
-        height: 72px;
+        height: 162px;
     }
 }
 
