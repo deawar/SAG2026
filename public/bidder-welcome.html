@@ -183,6 +183,13 @@
             margin-right: auto;
         }
         .cta-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+        /* On narrow screens the two CTAs wrap onto separate lines; make them
+           full-width so they stack flush instead of each centering to its own
+           (unequal) width. */
+        @media (max-width: 480px) {
+            .cta-btns { flex-direction: column; }
+            .cta-btns .btn { width: 100%; }
+        }
     </style>
 </head>
 <body>

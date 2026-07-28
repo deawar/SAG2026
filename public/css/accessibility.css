@@ -768,11 +768,14 @@ input[type="radio"] {
     justify-content: center;
 }
 
-/* Spacing between touch targets */
-.btn + .btn,
-button + button {
-    margin-left: var(--spacing-md);
-}
+/* Spacing between touch targets is handled by each button group's container
+   via flex `gap` (navbar-auth, filter-actions, hero-ctas, modal actions, …).
+   A previous `.btn + .btn { margin-left }` rule here added a LEFT margin to the
+   second button, which is only correct in a row — it pushed stacked/full-width
+   buttons out of their container on mobile (misalignment + horizontal
+   scrollbars) and double-spaced row groups that already use `gap`. Removed in
+   favor of container `gap`. Touch-target SIZE (min 44px) is still enforced by
+   the min-width/height rule above, independent of inter-button spacing. */
 
 /* ===== Color Not the Only Means ===== */
 /* Never use color alone to convey information */
