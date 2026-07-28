@@ -275,7 +275,7 @@ a:focus {
    ink only), so it sits directly on the navbar with no visible box. */
 .logo-img {
     display: block;
-    height: 297px;
+    height: 120px;
     width: auto;
 }
 
@@ -296,7 +296,7 @@ a:focus {
 
 @media (max-width: 768px) {
     .logo-img {
-        height: 162px;
+        height: 84px;
     }
 }
 
@@ -931,17 +931,6 @@ textarea.form-control {
     border-radius: 10px;
     line-height: 1.2;
     transition: all var(--transition-normal);
-}
-
-/* accessibility.css adds `.btn + .btn { margin-left: var(--spacing-md) }`
-   as touch-target spacing for side-by-side buttons. In this stacked column
-   that left margin pushes Reset out of the container and creates horizontal
-   overflow (a scrollbar + misalignment). Both `.filter-actions .btn` (0,2,0)
-   and `.btn + .btn` (0,2,0) tie on specificity, and accessibility.css loads
-   last — so it wins the tie. Match the sibling pattern scoped to the
-   container (0,3,0) to reliably reset it without !important. */
-.filter-actions .btn + .btn {
-    margin-left: 0;
 }
 
 .filter-actions .btn-primary {
