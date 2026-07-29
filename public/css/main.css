@@ -1727,6 +1727,57 @@ textarea.form-control {
     outline: 2px solid var(--color-focus);
 }
 
+/* ===== Dismissible Modal Alert (status dialog) ===== */
+/* Centered card + dim backdrop for important status messages (auth outcomes,
+   errors, prompts). Reuses .modal/.modal-content; stacked above other modals
+   and toasts so it's never hidden. Dismiss via OK, ×, backdrop click, or Esc. */
+.modal-alert {
+    align-items: center;        /* base .modal aligns to top; center the alert */
+    z-index: 1100;
+}
+
+.modal-alert-content {
+    max-width: 420px;
+    text-align: center;
+}
+
+.modal-alert-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto var(--spacing-md);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.modal-alert-title {
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--spacing-sm);
+}
+
+.modal-alert-message {
+    color: var(--color-dark-gray);
+    margin-bottom: var(--spacing-lg);
+}
+
+.modal-alert-actions {
+    display: flex;
+    justify-content: center;
+}
+
+.modal-alert-actions .btn {
+    min-width: 130px;
+}
+
+.modal-alert-success .modal-alert-icon { background-color: #e8f5e9; color: #2e7d32; }
+.modal-alert-error   .modal-alert-icon { background-color: #ffebee; color: #c62828; }
+.modal-alert-warning .modal-alert-icon { background-color: #fff3e0; color: #e65100; }
+.modal-alert-info    .modal-alert-icon { background-color: #e0f2f1; color: #00695c; }
+
 /* ===== Tables ===== */
 table {
     width: 100%;

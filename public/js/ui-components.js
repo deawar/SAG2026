@@ -544,6 +544,84 @@ class UIComponents {
   }
 
   /**
+     * Show a dismissible modal alert (centered dialog with a dim backdrop).
+     * Used for important status messages (auth outcomes, errors, prompts) that
+     * must not be missed — unlike toasts, it stays until the user dismisses it.
+     * Dismiss via the OK button, the close (×), clicking the backdrop, or Esc.
+     * @param {object} options
+     * @param {string} [options.title]       - Optional heading
+     * @param {string} options.message       - Body text
+     * @param {string} [options.type=info]   - success | error | warning | info (icon + accent)
+     * @param {string} [options.confirmText=OK] - Confirm button label
+     * @param {number} [options.autoClose=0] - Auto-dismiss after N ms (0 = manual only)
+     * @param {Function} [options.onClose]   - Called once after the modal is dismissed
+     * @returns {{ close: Function, element: HTMLElement }}
+     */
+  static showModalAlert(options = {}) {
+    const {
+      title = '',
+      message = '',
+      type = 'info',
+      confirmText = 'OK',
+      autoClose = 0,
+      onClose = null
+    } = options;
+
+    // Only one alert dialog at a time — replace any existing one.
+    document.querySelectorAll('.modal-alert').forEach((el) => el.remove());
+
+    const icon = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' }[type] || 'ℹ';
+    const uid = (UIComponents._modalAlertSeq = (UIComponents._modalAlertSeq || 0) + 1);
+    const titleId = `modal-alert-title-${uid}`;
+    const msgId = `modal-alert-msg-${uid}`;
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal modal-alert';
+    backdrop.setAttribute('role', 'alertdialog');
+    backdrop.setAttribute('aria-modal', 'true');
+    backdrop.setAttribute('aria-labelledby', title ? titleId : msgId);
+    backdrop.setAttribute('aria-describedby', msgId);
+    backdrop.innerHTML = `
+            <div class="modal-content modal-alert-content modal-alert-${type}" role="document">
+                <button class="modal-close" aria-label="Close dialog">&times;</button>
+                <div class="modal-alert-icon" aria-hidden="true">${icon}</div>
+                ${title ? `<h2 class="modal-alert-title" id="${titleId}">${this.escapeHtml(title)}</h2>` : ''}
+                <p class="modal-alert-message" id="${msgId}">${this.escapeHtml(message)}</p>
+                <div class="modal-alert-actions">
+                    <button class="btn btn-primary modal-alert-confirm">${this.escapeHtml(confirmText)}</button>
+                </div>
+            </div>
+        `;
+
+    const prevFocus = document.activeElement;
+    document.body.appendChild(backdrop);
+
+    let closed = false;
+    const close = () => {
+      if (closed) {return;}
+      closed = true;
+      document.removeEventListener('keydown', onKey);
+      backdrop.remove();
+      if (prevFocus && typeof prevFocus.focus === 'function') {prevFocus.focus();}
+      if (typeof onClose === 'function') {onClose();}
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') {close();}
+    };
+
+    backdrop.querySelector('.modal-alert-confirm').addEventListener('click', close);
+    backdrop.querySelector('.modal-close').addEventListener('click', close);
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) {close();} });
+    document.addEventListener('keydown', onKey);
+
+    backdrop.querySelector('.modal-alert-confirm').focus();
+
+    if (autoClose > 0) {setTimeout(close, autoClose);}
+
+    return { close, element: backdrop };
+  }
+
+  /**
      * Create dropdown component
      * @param {object} options - Dropdown options
      * @returns {HTMLElement}
