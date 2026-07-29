@@ -89,15 +89,14 @@ class AuthPages {
 
       if (!response.ok) {
         const msg = data.message || 'Login failed. Please check your credentials.';
-        // Show inline banner (dedicated login page)
-        const banner = document.getElementById('login-error-banner');
-        if (banner) {
-          banner.textContent = msg;
-          banner.removeAttribute('hidden');
-        } else {
-          // Fallback for modal-based login contexts
-          UIComponents.showAlert(msg, 'error');
-        }
+        // A dedicated "verify your email" response reads as a prompt, not a
+        // failure — show it as an info dialog; everything else is an error.
+        const needsVerify = data.needsVerification || /verify.*email|email.*verif/i.test(msg);
+        UIComponents.showModalAlert({
+          title: needsVerify ? 'Verify your email' : 'Login failed',
+          message: msg,
+          type: needsVerify ? 'info' : 'error'
+        });
         return;
       }
 
@@ -127,23 +126,31 @@ class AuthPages {
             schoolId: data.data.schoolId || null
           }));
         }
-        UIComponents.createToast({ message: 'Logged in successfully!', type: 'success' });
         const role = data.data?.role;
         const adminRoles = ['SUPER_ADMIN', 'SITE_ADMIN', 'SCHOOL_ADMIN'];
         const rawReturnTo = new URLSearchParams(window.location.search).get('returnTo') || '';
         // Safety: only honour same-origin paths (no protocol, no host, must start with /)
         const returnTo = /^\/[^/\\]/.test(rawReturnTo) ? rawReturnTo : null;
-        setTimeout(() => {
+        const goNext = () => {
           if (returnTo) {
             window.location.href = returnTo;
           } else {
             window.location.href = adminRoles.includes(role) ? '/admin-dashboard.html' : '/index.html';
           }
-        }, 1000);
+        };
+        // Confirmation dialog; redirects when dismissed (or after a short beat).
+        UIComponents.showModalAlert({
+          title: 'Welcome back',
+          message: 'Logged in successfully!',
+          type: 'success',
+          confirmText: 'Continue',
+          autoClose: 1500,
+          onClose: goNext
+        });
       }
     } catch (error) {
       console.error('Login error:', error);
-      UIComponents.createToast({ message: 'Connection error', type: 'error' });
+      UIComponents.showModalAlert({ title: 'Connection error', message: 'Could not reach the server. Please try again.', type: 'error' });
     }
   }
 
@@ -376,13 +383,8 @@ class AuthPages {
       if (confirmPass?.value !== password?.value) {errors.confirmpass = 'Passwords do not match';}
 
       if (Object.keys(errors).length > 0) {
+        // Errors are shown inline on the fields; no floating toast needed.
         UIComponents.displayFormErrors(form, errors);
-        if (errors.password) {
-          UIComponents.createToast({ message: errors.password, type: 'error' });
-        }
-        if (errors.age) {
-          UIComponents.createToast({ message: errors.age, type: 'error' });
-        }
         return false;
       }
     } else if (step === 2) {
@@ -566,8 +568,7 @@ class AuthPages {
           return;
         }
         const errorMessage = data.message || 'Registration failed';
-        UIComponents.createToast({ message: errorMessage, type: 'error' });
-        UIComponents.showAlert(errorMessage, 'error');
+        UIComponents.showModalAlert({ title: 'Registration failed', message: errorMessage, type: 'error' });
         return;
       }
 
@@ -582,11 +583,17 @@ class AuthPages {
         });
       }
 
-      UIComponents.createToast({ message: 'Account created! Setting up 2FA...', type: 'success' });
-      setTimeout(() => { window.location.href = '/2fa-setup.html'; }, 800);
+      UIComponents.showModalAlert({
+        title: 'Account created',
+        message: 'Your account is ready. Next, let’s set up two-factor authentication.',
+        type: 'success',
+        confirmText: 'Set up 2FA',
+        autoClose: 1800,
+        onClose: () => { window.location.href = '/2fa-setup.html'; }
+      });
     } catch (error) {
       console.error('Registration error:', error);
-      UIComponents.createToast({ message: `Connection error: ${error.message}`, type: 'error' });
+      UIComponents.showModalAlert({ title: 'Connection error', message: 'Could not reach the server. Please try again.', type: 'error' });
     }
   }
 
@@ -690,15 +697,21 @@ class AuthPages {
       UIComponents.hideLoading(loader);
 
       if (!response.ok) {
-        UIComponents.showAlert('Invalid verification code', 'error');
+        UIComponents.showModalAlert({ title: 'Invalid code', message: 'That verification code was not correct. Please try again.', type: 'error' });
         return;
       }
 
-      UIComponents.createToast({ message: '2FA enabled successfully!', type: 'success' });
-      setTimeout(() => { window.location.href = '/user-dashboard.html'; }, 1500);
+      UIComponents.showModalAlert({
+        title: '2FA enabled',
+        message: 'Two-factor authentication is now protecting your account.',
+        type: 'success',
+        confirmText: 'Continue',
+        autoClose: 1800,
+        onClose: () => { window.location.href = '/user-dashboard.html'; }
+      });
     } catch (error) {
       console.error('2FA setup error:', error);
-      UIComponents.createToast({ message: 'Connection error', type: 'error' });
+      UIComponents.showModalAlert({ title: 'Connection error', message: 'Could not reach the server. Please try again.', type: 'error' });
     }
   }
 
@@ -764,15 +777,21 @@ class AuthPages {
       UIComponents.hideLoading(loader);
 
       if (!response.ok) {
-        UIComponents.showAlert('Invalid code', 'error');
+        UIComponents.showModalAlert({ title: 'Invalid code', message: 'That code was not correct. Please try again.', type: 'error' });
         return;
       }
 
-      UIComponents.createToast({ message: 'Verified successfully!', type: 'success' });
-      setTimeout(() => { window.location.href = '/user-dashboard.html'; }, 1000);
+      UIComponents.showModalAlert({
+        title: 'Verified',
+        message: 'You’re verified. Taking you to your dashboard.',
+        type: 'success',
+        confirmText: 'Continue',
+        autoClose: 1500,
+        onClose: () => { window.location.href = '/user-dashboard.html'; }
+      });
     } catch (error) {
       console.error('2FA verify error:', error);
-      UIComponents.createToast({ message: 'Connection error', type: 'error' });
+      UIComponents.showModalAlert({ title: 'Connection error', message: 'Could not reach the server. Please try again.', type: 'error' });
     }
   }
 
@@ -878,15 +897,21 @@ class AuthPages {
       UIComponents.hideLoading(loader);
 
       if (!response.ok) {
-        UIComponents.showAlert(data.message || 'Reset failed', 'error');
+        UIComponents.showModalAlert({ title: 'Reset failed', message: data.message || 'We couldn’t reset your password. Please try again.', type: 'error' });
         return;
       }
 
-      UIComponents.createToast({ message: 'Password reset successfully!', type: 'success' });
-      setTimeout(() => { window.location.href = '/login.html'; }, 1500);
+      UIComponents.showModalAlert({
+        title: 'Password reset',
+        message: 'Your password has been changed. You can now log in.',
+        type: 'success',
+        confirmText: 'Go to login',
+        autoClose: 1800,
+        onClose: () => { window.location.href = '/login.html'; }
+      });
     } catch (error) {
       console.error('Token password reset error:', error);
-      UIComponents.createToast({ message: 'Connection error', type: 'error' });
+      UIComponents.showModalAlert({ title: 'Connection error', message: 'Could not reach the server. Please try again.', type: 'error' });
     }
   }
 
@@ -966,14 +991,14 @@ class AuthPages {
       const data = await response.json();
 
       if (!response.ok) {
-        UIComponents.showAlert(data.message || 'Failed to send code', 'error');
+        UIComponents.showModalAlert({ title: 'Couldn’t send code', message: data.message || 'We couldn’t send the reset code. Please try again.', type: 'error' });
         return false;
       }
 
       return true;
     } catch (error) {
       console.error('Send code error:', error);
-      UIComponents.createToast({ message: 'Connection error', type: 'error' });
+      UIComponents.showModalAlert({ title: 'Connection error', message: 'Could not reach the server. Please try again.', type: 'error' });
       return false;
     }
   }
@@ -1034,15 +1059,21 @@ class AuthPages {
       UIComponents.hideLoading(loader);
 
       if (!response.ok) {
-        UIComponents.showAlert(data.message || 'Reset failed', 'error');
+        UIComponents.showModalAlert({ title: 'Reset failed', message: data.message || 'We couldn’t reset your password. Please try again.', type: 'error' });
         return;
       }
 
-      UIComponents.createToast({ message: 'Password reset successfully!', type: 'success' });
-      setTimeout(() => { window.location.href = '/login.html'; }, 1500);
+      UIComponents.showModalAlert({
+        title: 'Password reset',
+        message: 'Your password has been changed. You can now log in.',
+        type: 'success',
+        confirmText: 'Go to login',
+        autoClose: 1800,
+        onClose: () => { window.location.href = '/login.html'; }
+      });
     } catch (error) {
       console.error('Password reset error:', error);
-      UIComponents.createToast({ message: 'Connection error', type: 'error' });
+      UIComponents.showModalAlert({ title: 'Connection error', message: 'Could not reach the server. Please try again.', type: 'error' });
     }
   }
 
