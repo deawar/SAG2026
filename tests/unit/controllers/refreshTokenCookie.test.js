@@ -125,3 +125,23 @@ describe('UserController.refreshToken — cookie-based', () => {
     expect(set.opts).toEqual(expect.objectContaining({ httpOnly: true, sameSite: 'strict', path: '/api/auth' }));
   });
 });
+
+describe('UserController.logout clears the refresh cookie', () => {
+  test('logout clears refresh_token with the matching path', async () => {
+    // Mock tokenBlacklist for this test
+    const { tokenBlacklist } = require('../../../src/services/authenticationService');
+    jest.spyOn(tokenBlacklist, 'revoke').mockResolvedValue(undefined);
+
+    const ctrl = new UserController({}, { jwtService: {} });
+    const res = fakeRes();
+    // req.user carries the access token's jti/exp (set by verifyToken middleware).
+    await ctrl.logout({ user: { id: 'user-1', jti: 'access-jti', exp: Math.floor(Date.now() / 1000) + 900 }, body: {} }, res, jest.fn());
+
+    expect(res.body.success).toBe(true);
+    const cleared = res.cleared.find(c => c.name === 'refresh_token');
+    expect(cleared).toBeTruthy();
+    expect(cleared.opts).toEqual(expect.objectContaining({ path: '/api/auth' }));
+
+    tokenBlacklist.revoke.mockRestore();
+  });
+});

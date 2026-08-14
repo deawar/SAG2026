@@ -451,6 +451,7 @@ class UserController {
         }
       }
 
+      clearRefreshCookie(res);
       return res.json({
         success: true,
         message: 'Logged out successfully'
