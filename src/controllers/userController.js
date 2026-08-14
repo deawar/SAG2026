@@ -8,6 +8,7 @@
 const crypto = require('crypto');
 const ValidationUtils = require('../utils/validationUtils');
 const { tokenBlacklist } = require('../services/authenticationService');
+const { setRefreshCookie, clearRefreshCookie } = require('../utils/refreshCookie');
 
 // Per-account 2FA failure tracker (in-memory; resets on restart).
 // Provides account-level lockout independent of IP so rotating IPs cannot
@@ -469,10 +470,10 @@ class UserController {
    */
   async refreshToken(req, res, next) {
     try {
-      const { refreshToken } = req.body;
+      const refreshToken = req.cookies?.refresh_token;
 
       if (!refreshToken) {
-        return res.status(400).json({
+        return res.status(401).json({
           success: false,
           message: 'Refresh token required'
         });
@@ -541,13 +542,13 @@ class UserController {
       // 5. Register the new refresh token as a session
       await this._createSessionRecord(user.id, newRefreshTokenResult.jti, req);
 
-      // 6. Return both new tokens
+      // 6. Rotated refresh token → cookie; only the access token is returned.
+      setRefreshCookie(res, newRefreshTokenResult.token);
       return res.json({
         success: true,
         message: 'Token refreshed successfully',
         data: {
           accessToken: accessTokenResult.token,
-          refreshToken: newRefreshTokenResult.token,
           expiresIn: accessTokenResult.expiresIn
         }
       });
