@@ -19,6 +19,33 @@
 - No CSRF tokens in this phase (Bearer still guards all state-changing endpoints).
 - Follow existing test patterns: `tests/security/*` use `require('../helpers/createTestApp')`; `tests/integration/routes/*` use `supertest` + `src/app` + `tests/helpers/mockDb` + locally-signed JWTs (`jwt.sign(payload, process.env.JWT_ACCESS_SECRET, { algorithm: 'HS256' })`).
 
+**TEST-STRATEGY AMENDMENT (governs over any supertest test code below):** The
+default `mockDb.query` returns `{ rows: [], rowCount: 0 }`, so login/refresh
+never reach a 200 under supertest — a `Set-Cookie` assertion behind an
+`if (res.status === 200)` guard would never run. Therefore the cookie behavior
+for `login`, `verify2FA`, `refreshToken`, and `logout` is verified with
+**direct controller unit tests** (`tests/unit/controllers/refreshTokenCookie.test.js`):
+construct `new UserController(mockUserModel, mockAuthService)`, call the handler
+with a fake `req` (cookies/body/headers/user) and a fake `res` that captures
+`.cookie()`, `.clearCookie()`, `.status()`, and `.json()`, and assert
+unconditionally. The `/2fa/force-verify` inline route handler (not a controller
+method) is covered by the Task 1 helper unit test plus the manual checklist
+(no brittle db-sequence mock). Use this fake-`res` throughout:
+
+```javascript
+function fakeRes() {
+  const res = {
+    statusCode: 200,
+    cookies: [], cleared: [], body: null,
+    status(c) { this.statusCode = c; return this; },
+    cookie(name, val, opts) { this.cookies.push({ name, val, opts }); return this; },
+    clearCookie(name, opts) { this.cleared.push({ name, opts }); return this; },
+    json(payload) { this.body = payload; return this; }
+  };
+  return res;
+}
+```
+
 ## File Structure
 
 - **Create** `src/utils/refreshCookie.js` — single source of truth for cookie name/attributes; exports `REFRESH_COOKIE_NAME`, `setRefreshCookie(res, token)`, `clearRefreshCookie(res)`.
@@ -153,64 +180,83 @@ git commit -m "feat(auth): add refresh-token cookie helper (httpOnly/strict/path
 **Files:**
 - Modify: `src/app.js` (after body parsing, ~line 112)
 - Modify: `src/controllers/userController.js:470-479` (`refreshToken`)
-- Test: `tests/integration/routes/refreshTokenCookieIntegrationTest.spec.js`
+- Test: `tests/unit/controllers/refreshTokenCookie.test.js`
 
 **Interfaces:**
 - Consumes: `REFRESH_COOKIE_NAME`, `setRefreshCookie` from Task 1.
-- Produces: `POST /api/auth/refresh` returns `200 { data: { accessToken, expiresIn } }` (no `refreshToken` in body), sets a rotated `refresh_token` cookie, and returns `401` when the cookie is absent.
+- Produces: `refreshToken(req, res, next)` reads `req.cookies.refresh_token`, returns `401` when absent, otherwise sets a rotated `refresh_token` cookie (via `res.cookie`) and returns `res.json({ data: { accessToken, expiresIn } })` with **no** `refreshToken` in the body.
 
 - [ ] **Step 1: Write the failing test**
 
-Create `tests/integration/routes/refreshTokenCookieIntegrationTest.spec.js`:
+Create `tests/unit/controllers/refreshTokenCookie.test.js` (uses the `fakeRes` from the amendment):
 
 ```javascript
 process.env.NODE_ENV = 'test';
 if (!process.env.JWT_ACCESS_SECRET) { process.env.JWT_ACCESS_SECRET = 'test-access-secret'; }
 if (!process.env.JWT_REFRESH_SECRET) { process.env.JWT_REFRESH_SECRET = 'test-refresh-secret'; }
 
-const request = require('supertest');
-const jwt = require('jsonwebtoken');
-const createTestApp = require('../../helpers/createTestApp');
+const UserController = require('../../../src/controllers/userController');
 
-const app = createTestApp();
-
-// A refresh JWT shaped the way jwtService.generateRefreshToken signs them:
-// { sub, type:'refresh', jti } signed with JWT_REFRESH_SECRET.
-function makeRefreshToken(sub = 'user-1', jti = 'jti-1') {
-  return jwt.sign({ sub, type: 'refresh', jti }, process.env.JWT_REFRESH_SECRET, {
-    algorithm: 'HS256', expiresIn: '7d'
-  });
+function fakeRes() {
+  const res = {
+    statusCode: 200,
+    cookies: [], cleared: [], body: null,
+    status(c) { this.statusCode = c; return this; },
+    cookie(name, val, opts) { this.cookies.push({ name, val, opts }); return this; },
+    clearCookie(name, opts) { this.cleared.push({ name, opts }); return this; },
+    json(payload) { this.body = payload; return this; }
+  };
+  return res;
 }
 
-describe('POST /api/auth/refresh — cookie-based', () => {
+// Minimal authService + userModel doubles for the refresh happy path.
+function makeController() {
+  const authService = {
+    jwtService: {
+      verifyRefreshToken: jest.fn(() => ({ sub: 'user-1', jti: 'old-jti', exp: Math.floor(Date.now() / 1000) + 3600 })),
+      generateAccessToken: jest.fn(() => ({ token: 'new-access', expiresIn: '15m' })),
+      generateRefreshToken: jest.fn(() => ({ token: 'new-refresh', jti: 'new-jti' }))
+    },
+    sessionService: {
+      checkSession: jest.fn().mockResolvedValue(null),
+      updateLastUsed: jest.fn().mockResolvedValue(undefined),
+      revokeSession: jest.fn().mockResolvedValue(undefined)
+    }
+  };
+  const userModel = { getById: jest.fn().mockResolvedValue({ id: 'user-1', email: 'u@e.com', role: 'STUDENT', school_id: null, two_fa_enabled: false }) };
+  const ctrl = new UserController(userModel, authService);
+  ctrl._createSessionRecord = jest.fn().mockResolvedValue(undefined);
+  return ctrl;
+}
+
+describe('UserController.refreshToken — cookie-based', () => {
   test('401 when no refresh cookie is present', async () => {
-    const res = await request(app).post('/api/auth/refresh');
-    expect(res.status).toBe(401);
+    const ctrl = makeController();
+    const res = fakeRes();
+    await ctrl.refreshToken({ cookies: {}, body: {} }, res, jest.fn());
+    expect(res.statusCode).toBe(401);
   });
 
-  test('reads the refresh token from the cookie and never returns one in the body', async () => {
-    const res = await request(app)
-      .post('/api/auth/refresh')
-      .set('Cookie', [`refresh_token=${makeRefreshToken()}`]);
+  test('reads the cookie, sets a rotated cookie, and returns no refresh token in the body', async () => {
+    const ctrl = makeController();
+    const res = fakeRes();
+    await ctrl.refreshToken({ cookies: { refresh_token: 'the-cookie-token' }, body: {} }, res, jest.fn());
 
-    // Either a successful refresh (200) or a user-lookup failure in the mock
-    // DB (401/404) — but in NO case may a refresh token appear in the body.
-    expect(res.body?.data?.refreshToken).toBeUndefined();
-
-    if (res.status === 200) {
-      expect(res.body.data.accessToken).toBeTruthy();
-      const setCookie = res.headers['set-cookie'] || [];
-      expect(setCookie.join(';')).toMatch(/refresh_token=/);
-      expect(setCookie.join(';')).toMatch(/HttpOnly/i);
-    }
+    expect(ctrl.authService.jwtService.verifyRefreshToken).toHaveBeenCalledWith('the-cookie-token');
+    expect(res.body.data.accessToken).toBe('new-access');
+    expect(res.body.data.refreshToken).toBeUndefined();
+    const set = res.cookies.find(c => c.name === 'refresh_token');
+    expect(set).toBeTruthy();
+    expect(set.val).toBe('new-refresh');
+    expect(set.opts).toEqual(expect.objectContaining({ httpOnly: true, sameSite: 'strict', path: '/api/auth' }));
   });
 });
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npx jest tests/integration/routes/refreshTokenCookieIntegrationTest.spec.js`
-Expected: FAIL — current `/refresh` reads `req.body.refreshToken` (returns 400 "Refresh token required", not 401), and on success returns `data.refreshToken` in the body.
+Run: `npx jest tests/unit/controllers/refreshTokenCookie.test.js`
+Expected: FAIL — current `refreshToken` reads `req.body.refreshToken` (so the no-cookie case returns 400, not 401), and on success sets no cookie and returns `data.refreshToken` in the body.
 
 - [ ] **Step 3a: Wire cookie-parser in `src/app.js`**
 
@@ -292,13 +338,13 @@ with:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `npx jest tests/integration/routes/refreshTokenCookieIntegrationTest.spec.js`
+Run: `npx jest tests/unit/controllers/refreshTokenCookie.test.js`
 Expected: PASS (2 tests).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/app.js src/controllers/userController.js tests/integration/routes/refreshTokenCookieIntegrationTest.spec.js
+git add src/app.js src/controllers/userController.js tests/unit/controllers/refreshTokenCookie.test.js
 git commit -m "feat(auth): /refresh reads refresh token from httpOnly cookie (rotates via cookie)"
 ```
 
@@ -309,42 +355,89 @@ git commit -m "feat(auth): /refresh reads refresh token from httpOnly cookie (ro
 **Files:**
 - Modify: `src/controllers/userController.js` — `login` (386-400), `verify2FA` (659-673)
 - Modify: `src/routes/authRoutes.js` — `/2fa/force-verify` (502-516)
-- Test: append to `tests/integration/routes/refreshTokenCookieIntegrationTest.spec.js`
+- Test: append to `tests/unit/controllers/refreshTokenCookie.test.js`
 
 **Interfaces:**
 - Consumes: `setRefreshCookie` (imported in Task 2 for `userController`; import separately in `authRoutes`).
-- Produces: `login` / `verify2FA` / `2fa/force-verify` success responses set a `refresh_token` cookie and omit `data.refreshToken`.
+- Produces: `login` / `verify2FA` success responses set a `refresh_token` cookie and omit `data.refreshToken`. `/2fa/force-verify` also calls `setRefreshCookie` (verified by the Task 1 helper test + manual checklist item 8 — not unit-tested here, as it is an inline route handler needing a full db-sequence mock).
 
 - [ ] **Step 1: Write the failing test**
 
-Append to `tests/integration/routes/refreshTokenCookieIntegrationTest.spec.js`:
+Append to `tests/unit/controllers/refreshTokenCookie.test.js`. Build a controller whose `login` reaches the token-minting branch (active, email-verified, non-2FA user):
 
 ```javascript
-describe('session-minting endpoints set the cookie, not the body', () => {
-  test('login success omits refreshToken from the body and sets the cookie', async () => {
-    // Drive a real login against the test app's seeded user if available.
-    // The assertion holds regardless of credentials: a 200 success body must
-    // never contain data.refreshToken, and a success must Set-Cookie.
-    const res = await request(app)
-      .post('/api/auth/login')
-      .send({ email: 'admin@test.local', password: 'Wrong-on-purpose-1!' });
+describe('UserController.login — sets cookie, omits refresh token from body', () => {
+  function makeLoginController() {
+    const authService = {
+      jwtService: {
+        generateAccessToken: jest.fn(() => ({ token: 'access-1', expiresIn: '15m' })),
+        generateRefreshToken: jest.fn(() => ({ token: 'refresh-1', jti: 'jti-1' }))
+      }
+    };
+    const userModel = {
+      getByEmail: jest.fn().mockResolvedValue({
+        id: 'user-1', email: 'u@e.com', password_hash: 'hash', role: 'STUDENT',
+        school_id: null, first_name: 'U', last_name: 'Ser',
+        account_status: 'ACTIVE', email_verified_at: new Date(),
+        requires_parental_consent: false, parental_consent_status: 'granted',
+        two_fa_enabled: false
+      }),
+      checkPassword: jest.fn().mockResolvedValue(true),
+      updateLastLogin: jest.fn().mockResolvedValue(undefined)
+    };
+    const ctrl = new UserController(userModel, authService);
+    ctrl._createSessionRecord = jest.fn().mockResolvedValue(undefined);
+    return ctrl;
+  }
 
-    // Wrong creds → 401/403; correct seeded creds → 200. Either way:
-    expect(res.body?.data?.refreshToken).toBeUndefined();
-    if (res.status === 200 && res.body?.data?.accessToken) {
-      const setCookie = res.headers['set-cookie'] || [];
-      expect(setCookie.join(';')).toMatch(/refresh_token=/);
-    }
+  test('login sets refresh_token cookie and body has no refreshToken', async () => {
+    const ctrl = makeLoginController();
+    const res = fakeRes();
+    await ctrl.login({ body: { email: 'u@e.com', password: 'pw' } }, res, jest.fn());
+
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.accessToken).toBe('access-1');
+    expect(res.body.data.refreshToken).toBeUndefined();
+    const set = res.cookies.find(c => c.name === 'refresh_token');
+    expect(set.val).toBe('refresh-1');
+    expect(set.opts).toEqual(expect.objectContaining({ httpOnly: true, sameSite: 'strict', path: '/api/auth' }));
+  });
+});
+
+describe('UserController.verify2FA — sets cookie, omits refresh token from body', () => {
+  test('verify2FA sets refresh_token cookie and body has no refreshToken', async () => {
+    const authService = {
+      jwtService: {
+        verifyAccessToken: jest.fn(() => ({ sub: 'user-1', purpose: '2fa_challenge' })),
+        generateAccessToken: jest.fn(() => ({ token: 'access-2', expiresIn: '15m' })),
+        generateRefreshToken: jest.fn(() => ({ token: 'refresh-2', jti: 'jti-2' }))
+      },
+      twoFactorService: { verifyToken: jest.fn(() => true) }
+    };
+    const userModel = {
+      getById: jest.fn().mockResolvedValue({
+        id: 'user-1', email: 'u@e.com', role: 'STUDENT', school_id: null,
+        first_name: 'U', last_name: 'Ser', two_fa_enabled: true, two_fa_secret: 'SECRET'
+      }),
+      updateLastLogin: jest.fn().mockResolvedValue(undefined)
+    };
+    const ctrl = new UserController(userModel, authService);
+    ctrl._createSessionRecord = jest.fn().mockResolvedValue(undefined);
+    const res = fakeRes();
+    await ctrl.verify2FA({ body: { code: '123456' }, headers: { authorization: 'Bearer temp' } }, res, jest.fn());
+
+    expect(res.body.data.accessToken).toBe('access-2');
+    expect(res.body.data.refreshToken).toBeUndefined();
+    const set = res.cookies.find(c => c.name === 'refresh_token');
+    expect(set.val).toBe('refresh-2');
   });
 });
 ```
 
-> **Note for implementer:** if `createTestApp` seeds a known admin/user, replace the email/password above with those real credentials so the `200` branch executes and the `Set-Cookie` assertion runs. Check `tests/helpers/createTestApp.js` and `tests/helpers/mockDb.js` for seeded users. If no user is seeded, the "no refreshToken in body" assertion still guards the regression.
-
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npx jest tests/integration/routes/refreshTokenCookieIntegrationTest.spec.js -t "session-minting"`
-Expected: FAIL if a seeded login reaches 200 (body still has `refreshToken`). If it only hits the 401 branch it will pass trivially — still add the code changes below and rely on Step 4 to confirm no regression.
+Run: `npx jest tests/unit/controllers/refreshTokenCookie.test.js -t "sets cookie"`
+Expected: FAIL — `login`/`verify2FA` currently return `data.refreshToken` and set no cookie.
 
 - [ ] **Step 3a: `login` — `src/controllers/userController.js`**
 
@@ -484,7 +577,7 @@ with:
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `npx jest tests/integration/routes/refreshTokenCookieIntegrationTest.spec.js`
+Run: `npx jest tests/unit/controllers/refreshTokenCookie.test.js`
 Expected: PASS. Also grep to confirm no `refreshToken:` remains in any response body:
 Run: `grep -n "refreshToken: .*Result.token" src/controllers/userController.js src/routes/authRoutes.js`
 Expected: no matches.
@@ -492,7 +585,7 @@ Expected: no matches.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/controllers/userController.js src/routes/authRoutes.js tests/integration/routes/refreshTokenCookieIntegrationTest.spec.js
+git add src/controllers/userController.js src/routes/authRoutes.js tests/unit/controllers/refreshTokenCookie.test.js
 git commit -m "feat(auth): login/verify-2fa/force-verify set refresh cookie, omit token from body"
 ```
 
@@ -502,45 +595,36 @@ git commit -m "feat(auth): login/verify-2fa/force-verify set refresh cookie, omi
 
 **Files:**
 - Modify: `src/controllers/userController.js` — `logout` (415-460)
-- Test: append to `tests/integration/routes/refreshTokenCookieIntegrationTest.spec.js`
+- Test: append to `tests/unit/controllers/refreshTokenCookie.test.js`
 
 **Interfaces:**
 - Consumes: `clearRefreshCookie` (imported in Task 2).
-- Produces: `POST /api/auth/logout` (authenticated) responds with a `Set-Cookie` that expires `refresh_token` at `Path=/api/auth`.
+- Produces: `logout(req, res, next)` calls `res.clearCookie('refresh_token', { path: '/api/auth', ... })` on success.
 
 - [ ] **Step 1: Write the failing test**
 
-Append to the spec:
+Append to `tests/unit/controllers/refreshTokenCookie.test.js`:
 
 ```javascript
-describe('POST /api/auth/logout clears the refresh cookie', () => {
-  function makeAccessToken(sub = 'user-1', jti = 'access-jti-1') {
-    return jwt.sign({ sub, role: 'STUDENT', jti, type: 'access' },
-      process.env.JWT_ACCESS_SECRET, { algorithm: 'HS256', expiresIn: '15m' });
-  }
+describe('UserController.logout clears the refresh cookie', () => {
+  test('logout clears refresh_token with the matching path', async () => {
+    const ctrl = new UserController({}, { jwtService: {} });
+    const res = fakeRes();
+    // req.user carries the access token's jti/exp (set by verifyToken middleware).
+    await ctrl.logout({ user: { id: 'user-1', jti: 'access-jti', exp: Math.floor(Date.now() / 1000) + 900 }, body: {} }, res, jest.fn());
 
-  test('logout emits an expiring refresh_token Set-Cookie', async () => {
-    const res = await request(app)
-      .post('/api/auth/logout')
-      .set('Authorization', `Bearer ${makeAccessToken()}`)
-      .set('Cookie', ['refresh_token=whatever']);
-
-    // Auth may pass (200) or be rejected by mocks; when it reaches the handler
-    // it must clear the cookie.
-    if (res.status === 200) {
-      const setCookie = (res.headers['set-cookie'] || []).join(';');
-      expect(setCookie).toMatch(/refresh_token=/);
-      expect(setCookie).toMatch(/Expires=|Max-Age=0/i);
-      expect(setCookie).toMatch(/Path=\/api\/auth/i);
-    }
+    expect(res.body.success).toBe(true);
+    const cleared = res.cleared.find(c => c.name === 'refresh_token');
+    expect(cleared).toBeTruthy();
+    expect(cleared.opts).toEqual(expect.objectContaining({ path: '/api/auth' }));
   });
 });
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npx jest tests/integration/routes/refreshTokenCookieIntegrationTest.spec.js -t "clears the refresh cookie"`
-Expected: FAIL on the 200 branch (no `Set-Cookie` cleared today). (If auth mock rejects, the branch is skipped — proceed to add code anyway.)
+Run: `npx jest tests/unit/controllers/refreshTokenCookie.test.js -t "logout clears"`
+Expected: FAIL — `logout` does not clear any cookie today.
 
 - [ ] **Step 3: Clear the cookie in `logout`**
 
@@ -567,13 +651,13 @@ with:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `npx jest tests/integration/routes/refreshTokenCookieIntegrationTest.spec.js -t "clears the refresh cookie"`
-Expected: PASS (or skipped 200-branch → run full suite in Step below).
+Run: `npx jest tests/unit/controllers/refreshTokenCookie.test.js -t "logout clears"`
+Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/controllers/userController.js tests/integration/routes/refreshTokenCookieIntegrationTest.spec.js
+git add src/controllers/userController.js tests/unit/controllers/refreshTokenCookie.test.js
 git commit -m "feat(auth): clear refresh cookie on logout"
 ```
 
