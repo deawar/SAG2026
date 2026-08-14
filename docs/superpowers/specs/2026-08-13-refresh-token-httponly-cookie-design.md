@@ -51,6 +51,28 @@ tokens, removing `unsafe-inline` from the CSP, WebSocket auth changes.
 
 A single shared helper builds these attributes so every set/clear site is
 consistent (e.g. `setRefreshCookie(res, token)` / `clearRefreshCookie(res)`).
+`clearRefreshCookie` MUST use the identical `path`/`sameSite`/`secure`
+attributes, or the browser will not delete the cookie.
+
+### `Path=/api/auth` consistency (verified — no existing flow breaks)
+
+The auth router is mounted at `/api/auth` ([app.js:155](../../../src/app.js#L155)),
+and **every** endpoint that sets, reads, or clears the cookie lives under it:
+`/api/auth/login`, `/api/auth/verify-2fa`, `/api/auth/2fa/force-verify`,
+`/api/auth/refresh`, `/api/auth/logout`. Therefore:
+
+- **Set** — login / verify-2fa / 2fa-force-verify / refresh responses are all
+  under `/api/auth`, so the browser stores the cookie.
+- **Sent** — the browser attaches it to `/api/auth/refresh` (which needs it) and
+  `/api/auth/logout` (which clears it); it is *not* sent to any other prefix.
+- **Not sent / not needed elsewhere** — `/api/user`, `/api/auctions`,
+  `/api/bidding`, `/api/payments`, `/api/portfolio`, `/api/admin`,
+  `/api/teacher`, `/api/gallery`, `/api/schools` all authenticate with the
+  Bearer access token and never read the refresh cookie. Scoping the cookie to
+  `/api/auth` changes nothing for them — no existing API or flow breaks.
+
+This scoping is a deliberate least-exposure choice: the refresh token rides
+along only on auth requests, not on every API call.
 
 ## Backend changes
 
