@@ -36,6 +36,73 @@ function makeController() {
   return ctrl;
 }
 
+describe('UserController.login — sets cookie, omits refresh token from body', () => {
+  function makeLoginController() {
+    const authService = {
+      jwtService: {
+        generateAccessToken: jest.fn(() => ({ token: 'access-1', expiresIn: '15m' })),
+        generateRefreshToken: jest.fn(() => ({ token: 'refresh-1', jti: 'jti-1' }))
+      }
+    };
+    const userModel = {
+      getByEmail: jest.fn().mockResolvedValue({
+        id: 'user-1', email: 'u@e.com', password_hash: 'hash', role: 'STUDENT',
+        school_id: null, first_name: 'U', last_name: 'Ser',
+        account_status: 'ACTIVE', email_verified_at: new Date(),
+        requires_parental_consent: false, parental_consent_status: 'granted',
+        two_fa_enabled: false
+      }),
+      checkPassword: jest.fn().mockResolvedValue(true),
+      updateLastLogin: jest.fn().mockResolvedValue(undefined)
+    };
+    const ctrl = new UserController(userModel, authService);
+    ctrl._createSessionRecord = jest.fn().mockResolvedValue(undefined);
+    return ctrl;
+  }
+
+  test('login sets refresh_token cookie and body has no refreshToken', async () => {
+    const ctrl = makeLoginController();
+    const res = fakeRes();
+    await ctrl.login({ body: { email: 'u@e.com', password: 'pw' } }, res, jest.fn());
+
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.accessToken).toBe('access-1');
+    expect(res.body.data.refreshToken).toBeUndefined();
+    const set = res.cookies.find(c => c.name === 'refresh_token');
+    expect(set.val).toBe('refresh-1');
+    expect(set.opts).toEqual(expect.objectContaining({ httpOnly: true, sameSite: 'strict', path: '/api/auth' }));
+  });
+});
+
+describe('UserController.verify2FA — sets cookie, omits refresh token from body', () => {
+  test('verify2FA sets refresh_token cookie and body has no refreshToken', async () => {
+    const authService = {
+      jwtService: {
+        verifyAccessToken: jest.fn(() => ({ sub: 'user-1', purpose: '2fa_challenge' })),
+        generateAccessToken: jest.fn(() => ({ token: 'access-2', expiresIn: '15m' })),
+        generateRefreshToken: jest.fn(() => ({ token: 'refresh-2', jti: 'jti-2' }))
+      },
+      twoFactorService: { verifyToken: jest.fn(() => true) }
+    };
+    const userModel = {
+      getById: jest.fn().mockResolvedValue({
+        id: 'user-1', email: 'u@e.com', role: 'STUDENT', school_id: null,
+        first_name: 'U', last_name: 'Ser', two_fa_enabled: true, two_fa_secret: 'SECRET'
+      }),
+      updateLastLogin: jest.fn().mockResolvedValue(undefined)
+    };
+    const ctrl = new UserController(userModel, authService);
+    ctrl._createSessionRecord = jest.fn().mockResolvedValue(undefined);
+    const res = fakeRes();
+    await ctrl.verify2FA({ body: { code: '123456' }, headers: { authorization: 'Bearer temp' } }, res, jest.fn());
+
+    expect(res.body.data.accessToken).toBe('access-2');
+    expect(res.body.data.refreshToken).toBeUndefined();
+    const set = res.cookies.find(c => c.name === 'refresh_token');
+    expect(set.val).toBe('refresh-2');
+  });
+});
+
 describe('UserController.refreshToken — cookie-based', () => {
   test('401 when no refresh cookie is present', async () => {
     const ctrl = makeController();
