@@ -32,6 +32,7 @@ class APIClient {
     const config = {
       method,
       headers,
+      credentials: 'include',
       timeout: this.timeout
     };
 
@@ -185,8 +186,8 @@ class APIClient {
      * @returns {Promise}
      */
   refreshToken() {
-    const refreshToken = localStorage.getItem('refresh_token');
-    return this.request('POST', '/api/auth/refresh', { body: { refreshToken } });
+    // Refresh token is sent automatically as an httpOnly cookie.
+    return this.request('POST', '/api/auth/refresh');
   }
 
   /**

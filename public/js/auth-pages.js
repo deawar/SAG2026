@@ -80,6 +80,7 @@ class AuthPages {
 
       const response = await fetch('/api/auth/login', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, rememberMe })
       });
@@ -118,7 +119,6 @@ class AuthPages {
         // Store tokens from successful login
         if (data.data?.accessToken) {
           localStorage.setItem('auth_token', data.data.accessToken);
-          if (data.data.refreshToken) {localStorage.setItem('refresh_token', data.data.refreshToken);}
           localStorage.setItem('user', JSON.stringify({
             id: data.data.userId,
             email: data.data.email,
