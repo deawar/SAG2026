@@ -17,6 +17,7 @@ const ValidationUtils = require('../utils/validationUtils');
 // Import services and models
 const { JWTService, TwoFactorService, RBACService, SessionService, AuthenticationService } = require('../services/authenticationService');
 const { UserModel } = require('../models');
+const { setRefreshCookie } = require('../utils/refreshCookie');
 
 /**
  * Factory function to create auth routes with injected database
@@ -499,6 +500,7 @@ module.exports = (db) => {
         }
       } catch (_err) { /* non-fatal */ }
 
+      setRefreshCookie(res, refreshTokenResult.token);
       return res.json({
         success: true,
         message: '2FA setup complete. You are now logged in.',
@@ -510,7 +512,6 @@ module.exports = (db) => {
           role: user.role,
           schoolId: user.school_id || null,
           accessToken: accessTokenResult.token,
-          refreshToken: refreshTokenResult.token,
           expiresIn: accessTokenResult.expiresIn
         }
       });

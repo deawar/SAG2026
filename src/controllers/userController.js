@@ -8,6 +8,7 @@
 const crypto = require('crypto');
 const ValidationUtils = require('../utils/validationUtils');
 const { tokenBlacklist } = require('../services/authenticationService');
+const { setRefreshCookie, clearRefreshCookie } = require('../utils/refreshCookie');
 
 // Per-account 2FA failure tracker (in-memory; resets on restart).
 // Provides account-level lockout independent of IP so rotating IPs cannot
@@ -382,7 +383,8 @@ class UserController {
       // 8b. Session tracking (non-fatal: failure does not block login)
       await this._createSessionRecord(user.id, refreshTokenResult.jti, req);
 
-      // 9. Return tokens (NO sensitive data)
+      // 9. Refresh token → httpOnly cookie; only the access token is returned.
+      setRefreshCookie(res, refreshTokenResult.token);
       return res.json({
         success: true,
         message: 'Login successful',
@@ -394,7 +396,6 @@ class UserController {
           role: user.role,
           schoolId: user.school_id || null,
           accessToken: accessTokenResult.token,
-          refreshToken: refreshTokenResult.token,
           expiresIn: accessTokenResult.expiresIn
         }
       });
@@ -450,6 +451,7 @@ class UserController {
         }
       }
 
+      clearRefreshCookie(res);
       return res.json({
         success: true,
         message: 'Logged out successfully'
@@ -469,10 +471,10 @@ class UserController {
    */
   async refreshToken(req, res, next) {
     try {
-      const { refreshToken } = req.body;
+      const refreshToken = req.cookies?.refresh_token;
 
       if (!refreshToken) {
-        return res.status(400).json({
+        return res.status(401).json({
           success: false,
           message: 'Refresh token required'
         });
@@ -541,13 +543,13 @@ class UserController {
       // 5. Register the new refresh token as a session
       await this._createSessionRecord(user.id, newRefreshTokenResult.jti, req);
 
-      // 6. Return both new tokens
+      // 6. Rotated refresh token → cookie; only the access token is returned.
+      setRefreshCookie(res, newRefreshTokenResult.token);
       return res.json({
         success: true,
         message: 'Token refreshed successfully',
         data: {
           accessToken: accessTokenResult.token,
-          refreshToken: newRefreshTokenResult.token,
           expiresIn: accessTokenResult.expiresIn
         }
       });
@@ -655,13 +657,13 @@ class UserController {
       // 4b. Session tracking
       await this._createSessionRecord(user.id, refreshTokenResult.jti, req);
 
-      // 5. Return tokens with user info for the frontend
+      // 5. Refresh token → httpOnly cookie; return access token + user info.
+      setRefreshCookie(res, refreshTokenResult.token);
       return res.json({
         success: true,
         message: '2FA verification successful',
         data: {
           accessToken: accessTokenResult.token,
-          refreshToken: refreshTokenResult.token,
           expiresIn: accessTokenResult.expiresIn,
           userId: user.id,
           email: user.email,

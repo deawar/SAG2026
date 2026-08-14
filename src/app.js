@@ -14,6 +14,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
+const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 const { apiLimiter, authLimiter, paymentLimiter, bidLimiter } = require('./middleware/rateLimitMiddleware');
@@ -110,6 +111,7 @@ function createApp(db) {
   // (~10.7 MB) plus JSON field overhead without a 413.
   app.use(express.json({ limit: '15mb' }));
   app.use(express.urlencoded({ limit: '15mb', extended: true }));
+  app.use(cookieParser());
 
   // ==========================================================================
   // SECURITY MIDDLEWARE
