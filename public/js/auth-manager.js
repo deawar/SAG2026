@@ -156,10 +156,11 @@ class AuthManager {
 
   /**
      * Refresh authentication token
+     * The refresh token is an httpOnly cookie — the browser sends it automatically.
      * @returns {Promise}
      */
   async refreshAccessToken() {
-    if (!this.refreshToken) {
+    if (!this.token) {
       this.clearAuth();
       return false;
     }
@@ -167,16 +168,11 @@ class AuthManager {
     try {
       const response = await apiClient.refreshToken();
 
-      // Handle both response formats:
-      // New: { success: true, data: { accessToken, expiresIn } }
-      // Old: { token, refresh_token }
+      // Server returns { success: true, data: { accessToken, expiresIn } }
+      // Refresh token lives in an httpOnly cookie handled by the browser — not in the response body.
       const newToken = response.data?.accessToken || response.token;
       if (newToken) {
         this.setToken(newToken);
-        const newRefresh = response.data?.refreshToken || response.refresh_token;
-        if (newRefresh) {
-          this.setRefreshToken(newRefresh);
-        }
         return true;
       }
 
