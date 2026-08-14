@@ -175,7 +175,7 @@ describe('G19 — Concurrent session limiting', () => {
 
       const res = await request(app)
         .post('/api/auth/refresh')
-        .send({ refreshToken });
+        .set('Cookie', [`refresh_token=${refreshToken}`]);
 
       expect(res.status).toBe(401);
       expect(res.body.success).toBe(false);
@@ -197,11 +197,16 @@ describe('G19 — Concurrent session limiting', () => {
 
       const res = await request(app)
         .post('/api/auth/refresh')
-        .send({ refreshToken });
+        .set('Cookie', [`refresh_token=${refreshToken}`]);
 
       // Should succeed and return a new access token
       expect(res.status).toBe(200);
       expect(res.body.data?.accessToken).toBeDefined();
+      // Refresh token must be a cookie, not in the response body
+      expect(res.body.data?.refreshToken).toBeUndefined();
+      expect(res.headers['set-cookie']).toEqual(
+        expect.arrayContaining([expect.stringContaining('refresh_token=')])
+      );
     });
 
     test('issues new access token when no session row exists (legacy token, fail-open)', async () => {
@@ -218,10 +223,15 @@ describe('G19 — Concurrent session limiting', () => {
 
       const res = await request(app)
         .post('/api/auth/refresh')
-        .send({ refreshToken });
+        .set('Cookie', [`refresh_token=${refreshToken}`]);
 
       expect(res.status).toBe(200);
       expect(res.body.data?.accessToken).toBeDefined();
+      // Refresh token must be a cookie, not in the response body
+      expect(res.body.data?.refreshToken).toBeUndefined();
+      expect(res.headers['set-cookie']).toEqual(
+        expect.arrayContaining([expect.stringContaining('refresh_token=')])
+      );
     });
   });
 
