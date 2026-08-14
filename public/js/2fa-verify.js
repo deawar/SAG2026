@@ -77,6 +77,7 @@ class TwoFactorAuthVerify {
       // Call backend to verify 2FA code and complete login
       const response = await fetch('/api/auth/verify-2fa', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${this.tempToken}`
@@ -91,9 +92,6 @@ class TwoFactorAuthVerify {
 
         // Store the real access token
         authManager.setToken(data.data.accessToken);
-        if (data.data.refreshToken) {
-          authManager.setRefreshToken(data.data.refreshToken);
-        }
         authManager.setUser({
           id: this.userId,
           email: data.data.email,

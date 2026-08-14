@@ -7,7 +7,7 @@ class AuthManager {
   constructor() {
     this.user = this.loadUser();
     this.token = localStorage.getItem('auth_token');
-    this.refreshToken = localStorage.getItem('refresh_token');
+    this.refreshToken = null; // refresh token is an httpOnly cookie, not JS-readable
     this.require2FA = localStorage.getItem('2fa_required') === 'true';
 
     // Auto-refresh token before expiry
@@ -156,10 +156,11 @@ class AuthManager {
 
   /**
      * Refresh authentication token
+     * The refresh token is an httpOnly cookie — the browser sends it automatically.
      * @returns {Promise}
      */
   async refreshAccessToken() {
-    if (!this.refreshToken) {
+    if (!this.token) {
       this.clearAuth();
       return false;
     }
@@ -167,16 +168,11 @@ class AuthManager {
     try {
       const response = await apiClient.refreshToken();
 
-      // Handle both response formats:
-      // New: { success: true, data: { accessToken, expiresIn } }
-      // Old: { token, refresh_token }
+      // Server returns { success: true, data: { accessToken, expiresIn } }
+      // Refresh token lives in an httpOnly cookie handled by the browser — not in the response body.
       const newToken = response.data?.accessToken || response.token;
       if (newToken) {
         this.setToken(newToken);
-        const newRefresh = response.data?.refreshToken || response.refresh_token;
-        if (newRefresh) {
-          this.setRefreshToken(newRefresh);
-        }
         return true;
       }
 
@@ -298,12 +294,9 @@ class AuthManager {
      * @param {string} token - Refresh token
      */
   setRefreshToken(token) {
-    this.refreshToken = token;
-    if (token) {
-      localStorage.setItem('refresh_token', token);
-    } else {
-      localStorage.removeItem('refresh_token');
-    }
+    // The refresh token now lives only in an httpOnly cookie set by the server.
+    // Keep it in memory for backward compat; never persist to localStorage.
+    this.refreshToken = token || null;
   }
 
   /**
