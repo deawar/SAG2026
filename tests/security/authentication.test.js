@@ -112,6 +112,36 @@ describe('Authentication & Authorization Security', () => {
 
       expect(response.status).toBe(401);
     });
+
+    test('should reject a limited-purpose 2fa_challenge token (2FA-bypass regression)', async () => {
+      // The temp token /login issues before 2FA carries a role; without a
+      // purpose check it would authenticate as a full user, bypassing 2FA.
+      const challengeToken = jwt.sign(
+        { sub: 'teacher-1', role: 'TEACHER', jti: 'chal-jti', purpose: '2fa_challenge' },
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
+        { algorithm: 'HS256' }
+      );
+
+      const response = await request(app)
+        .get('/api/user/profile')
+        .set('Authorization', `Bearer ${challengeToken}`);
+
+      expect(response.status).toBe(401);
+    });
+
+    test('should reject a limited-purpose 2fa_force_setup token', async () => {
+      const setupToken = jwt.sign(
+        { sub: 'teacher-1', role: 'TEACHER', jti: 'setup-jti', purpose: '2fa_force_setup' },
+        process.env.JWT_ACCESS_SECRET || 'test-secret',
+        { algorithm: 'HS256' }
+      );
+
+      const response = await request(app)
+        .get('/api/user/profile')
+        .set('Authorization', `Bearer ${setupToken}`);
+
+      expect(response.status).toBe(401);
+    });
   });
 
   /**
