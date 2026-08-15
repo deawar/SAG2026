@@ -84,7 +84,7 @@ describe('UserController.verify2FA — sets cookie, omits refresh token from bod
         generateAccessToken: jest.fn(() => ({ token: 'access-2', expiresIn: '15m' })),
         generateRefreshToken: jest.fn(() => ({ token: 'refresh-2', jti: 'jti-2' }))
       },
-      twoFactorService: { verifyToken: jest.fn(() => true) }
+      twoFactorService: { verifyToken: jest.fn(() => true), decryptSecret: jest.fn(s => s) }
     };
     const userModel = {
       getById: jest.fn().mockResolvedValue({
