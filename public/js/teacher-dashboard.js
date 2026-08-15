@@ -11,6 +11,16 @@
  * - View submission status
  */
 
+/**
+ * Greeting word for a local hour (0-23).
+ * 05:00-11:59 morning; 12:00-16:59 afternoon; 17:00-04:59 evening.
+ */
+function pickGreeting(hour) {
+  if (hour >= 5 && hour < 12) { return 'Good morning'; }
+  if (hour >= 12 && hour < 17) { return 'Good afternoon'; }
+  return 'Good evening';
+}
+
 class TeacherDashboard {
   constructor() {
     this.apiClient = globalThis.apiClient;
@@ -615,13 +625,20 @@ class TeacherDashboard {
     }
 
     // Mosaic teacher hero
+    const greetEl = document.getElementById('teacher-greeting');
+    if (greetEl) {
+      greetEl.textContent = pickGreeting(new Date().getHours());
+    }
     const nameEl  = document.getElementById('teacher-name');
     const badgeEl = document.getElementById('teacher-school-badge');
     if (nameEl && this.teacherName) {
       nameEl.textContent = this.teacherName.split(' ')[0];
     }
-    if (badgeEl && this.schoolName) {
-      badgeEl.textContent = this.schoolName;
+    // Show the school when present; otherwise clear the "Loading…" default so
+    // teachers without a school don't see a stuck placeholder.
+    if (badgeEl) {
+      badgeEl.textContent = this.schoolName || '';
+      badgeEl.hidden = !this.schoolName;
     }
   }
 
@@ -1500,3 +1517,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Expose for carousel approve/reject callbacks
   globalThis.teacherDashboard = dashboard;
 });
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { pickGreeting };
+}

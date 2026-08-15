@@ -69,6 +69,13 @@ class UserDashboard {
     const phoneInput = document.querySelector('input[name="phone"]');
     if (phoneInput) {phoneInput.value = this.user.phoneNumber || '';}
 
+    // Read-only school (Account Settings); hidden when the user has no school.
+    applySchoolRow(
+      document.getElementById('profile-school-row'),
+      document.getElementById('profile-school'),
+      this.user.schoolName
+    );
+
     // Update role display
     const roleDisplay = document.querySelector('[data-role-display]');
     if (roleDisplay) {roleDisplay.textContent = (this.user.role || 'User').toUpperCase();}

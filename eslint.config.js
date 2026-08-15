@@ -161,6 +161,7 @@ module.exports = [
         apiClient: 'readonly',
         WebSocketClient: 'readonly',
         websocketClient: 'readonly',
+        applySchoolRow: 'readonly',
         // CDN globals
         QRCode: 'readonly',
         Chart: 'readonly'
@@ -185,7 +186,8 @@ module.exports = [
       'public/js/theme-manager.js',
       'public/js/ui-components.js',
       'public/js/websocket-client.js',
-      'public/js/api-client.js'
+      'public/js/api-client.js',
+      'public/js/school-display.js'
     ],
     rules: {
       'no-redeclare': 'off',
