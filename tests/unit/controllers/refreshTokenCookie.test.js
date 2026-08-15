@@ -46,10 +46,12 @@ describe('UserController.login — sets cookie, omits refresh token from body', 
     };
     const userModel = {
       getByEmail: jest.fn().mockResolvedValue({
+        // Under-13 student: the only role exempt from forced 2FA, so login
+        // issues tokens directly (what this cookie test exercises).
         id: 'user-1', email: 'u@e.com', password_hash: 'hash', role: 'STUDENT',
         school_id: null, first_name: 'U', last_name: 'Ser',
         account_status: 'ACTIVE', email_verified_at: new Date(),
-        requires_parental_consent: false, parental_consent_status: 'granted',
+        requires_parental_consent: true, parental_consent_status: 'granted',
         two_fa_enabled: false
       }),
       checkPassword: jest.fn().mockResolvedValue(true),

@@ -121,7 +121,9 @@ describe('G19 — Concurrent session limiting', () => {
       // _createSessionRecord → SessionService.createSession
       const bcrypt = require('bcrypt');
       const hash = await bcrypt.hash('Password123!', 1);
-      const user = makeUserRow({ password_hash: hash });
+      // Under-13 student: exempt from forced 2FA, so login reaches
+      // _createSessionRecord (this test exercises session eviction on login).
+      const user = makeUserRow({ password_hash: hash, role: 'STUDENT', requires_parental_consent: true, parental_consent_status: 'granted' });
 
       // Mock: getByEmail → user row with password
       // COUNT returns 5 (at limit)
