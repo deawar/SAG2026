@@ -638,7 +638,8 @@ class UserController {
       }
 
       // 3. Verify 2FA code
-      const isValid = this.authService.twoFactorService.verifyToken(user.two_fa_secret, code);
+      const secret = this.authService.twoFactorService.decryptSecret(user.two_fa_secret);
+      const isValid = this.authService.twoFactorService.verifyToken(secret, code);
 
       if (!isValid) {
         const rec = _twoFaFailures.get(userId) || { count: 0, lockedUntil: null };
