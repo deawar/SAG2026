@@ -217,7 +217,13 @@ class AuctionController {
       const result = await auctionService.getAuction(auctionId);
 
       // ===== CRITICAL: Apply visibility filtering =====
-      if (!roleHierarchyUtils.canViewAuction(req.user, result)) {
+      // The auction's owner (e.g. a teacher fetching their own DRAFT to edit)
+      // can always view it, even before it is APPROVED/LIVE — otherwise the
+      // edit-prefill flow 403s on drafts the owner is explicitly allowed to
+      // edit (see updateAuction / canEditAuction). Gallery visibility rules
+      // still apply to everyone else.
+      const isOwner = !!(req.user?.id && result?.createdBy && req.user.id === result.createdBy);
+      if (!isOwner && !roleHierarchyUtils.canViewAuction(req.user, result)) {
         return res.status(403).json({
           success: false,
           message: 'You do not have permission to view this auction'
