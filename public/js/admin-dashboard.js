@@ -1877,6 +1877,13 @@ class AdminDashboard {
         adminNameEl.textContent = displayName;
       }
 
+      // Read-only school for school-admins; hidden for site-admins (no school).
+      applySchoolRow(
+        document.getElementById('admin-school-row'),
+        document.getElementById('admin-school'),
+        data.data?.schoolName
+      );
+
       if (statusText) {
         statusText.textContent = is2FAEnabled
           ? '2FA is currently enabled. Your account is protected.'
