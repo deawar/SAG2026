@@ -78,7 +78,7 @@ CREATE TABLE users (
   school_id UUID REFERENCES schools(id) ON DELETE SET NULL,
   account_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' CHECK (account_status IN ('ACTIVE', 'SUSPENDED', 'LOCKED', 'INACTIVE', 'PENDING', 'PENDING_APPROVAL', 'PENDING_VERIFICATION')),
   two_fa_enabled BOOLEAN DEFAULT FALSE,
-  two_fa_secret VARCHAR(32),
+  two_fa_secret TEXT,
   backup_codes TEXT[], -- JSON array of encrypted backup codes
   last_login TIMESTAMP WITH TIME ZONE,
   failed_login_attempts INT DEFAULT 0,
