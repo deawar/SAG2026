@@ -303,6 +303,10 @@
                     <!-- Profile Information -->
                     <div class="settings-section">
                         <h3>Profile Information</h3>
+                        <div class="form-group" id="profile-school-row" hidden>
+                            <label>School</label>
+                            <p class="form-static" id="profile-school"></p>
+                        </div>
                         <form id="profile-form" data-form="profile" class="settings-form" aria-label="Update profile information">
                             <fieldset>
                                 <legend class="sr-only">Personal Information</legend>
@@ -660,6 +664,7 @@
     <script src="/js/auth-manager.js"></script>
     <script src="/js/ui-components.js"></script>
     <script src="/js/artwork-carousel.js"></script>
+    <script src="/js/school-display.js"></script>
     <script src="/js/user-dashboard.js"></script>
     <script>
       // Initialise gallery carousel when the Gallery tab is first activated
