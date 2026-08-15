@@ -707,6 +707,21 @@ class UserController {
       // Retrieve user profile (exclude sensitive fields)
       const user = await this.userModel.getById(userId, false);
 
+      // Read-only school name for Account Settings display. Non-fatal: any
+      // lookup failure leaves schoolName null so the profile still loads.
+      let schoolName = null;
+      if (user.school_id && this.authService?.db) {
+        try {
+          const schoolResult = await this.authService.db.query(
+            'SELECT name FROM schools WHERE id = $1',
+            [user.school_id]
+          );
+          schoolName = schoolResult.rows[0]?.name || null;
+        } catch (_err) {
+          schoolName = null;
+        }
+      }
+
       return res.json({
         success: true,
         message: 'User profile retrieved successfully',
@@ -718,6 +733,7 @@ class UserController {
           phoneNumber: user.phone_number,
           role: user.role,
           schoolId: user.school_id,
+          schoolName,
           accountStatus: user.account_status,
           twoFactorEnabled: !!user.two_fa_enabled,
           lastLogin: user.last_login,
