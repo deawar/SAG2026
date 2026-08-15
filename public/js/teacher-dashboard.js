@@ -1307,8 +1307,12 @@ class TeacherDashboard {
       if (!a) {return;}
       document.getElementById('auction-title').value       = a.title || '';
       document.getElementById('auction-description').value = a.description || '';
-      if (a.starts_at) {document.getElementById('auction-start').value = a.starts_at.slice(0, 16);}
-      if (a.ends_at)   {document.getElementById('auction-end').value   = a.ends_at.slice(0, 16);}
+      // The API returns camelCase startTime/endTime (ISO strings); tolerate
+      // snake_case too. datetime-local wants "YYYY-MM-DDTHH:mm".
+      const start = a.startTime || a.starts_at;
+      const end   = a.endTime || a.ends_at;
+      if (start) {document.getElementById('auction-start').value = String(start).slice(0, 16);}
+      if (end)   {document.getElementById('auction-end').value   = String(end).slice(0, 16);}
     } catch (err) {
       console.error('Failed to load auction for editing:', err);
     }

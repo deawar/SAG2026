@@ -161,6 +161,7 @@ class AuctionService {
       status: auction.auction_status,
       startTime: auction.starts_at,
       endTime: auction.ends_at,
+      createdBy: auction.created_by_user_id,
       timeRemaining,
       isActive: auction.auction_status === 'LIVE' && endTime > now,
       artworkCount: parseInt(auction.artwork_count),
