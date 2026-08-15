@@ -105,6 +105,16 @@ async function startServer() {
         // Widen image_url to TEXT so base64 data URLs can be stored directly
         // (avoids filesystem permission issues in containerised deployments)
         await db.query('ALTER TABLE artwork ALTER COLUMN image_url TYPE TEXT');
+        // Encrypt the TOTP secret at rest (parity with backup codes).
+        // Widen the column for ciphertext, then encrypt any legacy plaintext
+        // secrets once (idempotent — ciphertext contains ':').
+        await db.query('ALTER TABLE users ALTER COLUMN two_fa_secret TYPE TEXT');
+        const { TwoFactorService } = require('./services/authenticationService');
+        const { encryptLegacyTotpSecrets } = require('./migrations/encryptLegacyTotpSecrets');
+        const encryptedCount = await encryptLegacyTotpSecrets(db, new TwoFactorService({ db }));
+        if (encryptedCount > 0) {
+          console.log(`✅ Encrypted ${encryptedCount} legacy TOTP secret(s)`);
+        }
         // JTI blacklist for token revocation on logout
         await db.query(`
           CREATE TABLE IF NOT EXISTS token_blacklist (
