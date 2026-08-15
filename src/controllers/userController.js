@@ -17,6 +17,20 @@ const _twoFaFailures = new Map(); // userId → { count, lockedUntil }
 const TWO_FA_MAX_ATTEMPTS = 5;
 const TWO_FA_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
 
+/**
+ * Whether an account is REQUIRED to have 2FA.
+ * Required for every role EXCEPT students under 13 (identified by
+ * requires_parental_consent), who are COPPA/parental-consent gated and may not
+ * have an authenticator device. Voluntary 2FA still applies to exempt users who
+ * choose to enable it — this only governs whether setup is forced.
+ * @param {{ role: string, requires_parental_consent?: boolean }} user
+ * @returns {boolean}
+ */
+function requiresTwoFactor(user) {
+  const isUnder13Student = user.role === 'STUDENT' && user.requires_parental_consent === true;
+  return !isUnder13Student;
+}
+
 class UserController {
   constructor(userModel, authenticationService) {
     this.userModel = userModel;
@@ -324,9 +338,10 @@ class UserController {
         });
       }
 
-      // 6a. Staff 2FA enforcement: admins and teachers without 2FA must set it up before accessing the app
-      const adminRoles = ['SITE_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'];
-      if (adminRoles.includes(user.role) && !user.two_fa_enabled) {
+      // 6a. 2FA enforcement: required for ALL accounts except under-13 students
+      //     (COPPA/parental-consent gated; may lack an authenticator device).
+      //     Users without 2FA are routed to the forced-setup flow before login.
+      if (requiresTwoFactor(user) && !user.two_fa_enabled) {
         const setupToken = this.authService.jwtService.generateAccessToken(user.id, {
           email: user.email,
           role: user.role,
@@ -337,7 +352,7 @@ class UserController {
 
         return res.status(200).json({
           success: true,
-          message: '2FA setup required for staff accounts',
+          message: '2FA setup required',
           data: {
             requiresTwoFactorSetup: true,
             setupToken: setupToken.token,
@@ -882,4 +897,5 @@ class UserController {
   }
 }
 
+UserController.requiresTwoFactor = requiresTwoFactor;
 module.exports = UserController;

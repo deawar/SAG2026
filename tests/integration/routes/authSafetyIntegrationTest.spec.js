@@ -355,8 +355,10 @@ describe('Access token carries schoolId (fix/schoolid-in-jwt)', () => {
         account_status: 'ACTIVE',
         email_verified_at: new Date('2026-01-01'),
         two_fa_enabled: false,
-        requires_parental_consent: false,
-        parental_consent_status: 'not_required',
+        // Under-13 student: exempt from forced 2FA, so login issues an access
+        // token directly (this test asserts schoolId is in that token).
+        requires_parental_consent: true,
+        parental_consent_status: 'granted',
         school_id: 'school-42',
         created_at: new Date()
       }],
