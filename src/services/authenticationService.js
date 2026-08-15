@@ -335,7 +335,17 @@ class TwoFactorService {
 
   /** Decrypt a stored TOTP secret; pass legacy plaintext values through unchanged. */
   decryptSecret(stored) {
-    return this.isEncrypted(stored) ? this._decryptData(stored) : stored;
+    if (!this.isEncrypted(stored)) {
+      return stored;
+    }
+    try {
+      return this._decryptData(stored);
+    } catch {
+      // Decrypt failure (e.g. key mismatch): degrade to the stored value so the
+      // read path never 500s — verifyToken just returns false and the user gets
+      // the normal invalid-code response. Matches the spec's error-handling contract.
+      return stored;
+    }
   }
 
   _encryptData(data) {
