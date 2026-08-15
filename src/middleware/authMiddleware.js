@@ -53,6 +53,19 @@ class AuthMiddleware {
         });
       }
 
+      // 5b. Reject limited-purpose tokens. The pre-authentication tokens issued
+      //     by /login (purpose '2fa_challenge' / '2fa_force_setup') carry a role
+      //     and would otherwise pass as a full Bearer token, bypassing 2FA.
+      //     Full-session access tokens never set `purpose`; they are consumed
+      //     only by /verify-2fa and /2fa/force-verify, which parse them directly
+      //     and do not use this middleware.
+      if (decoded.purpose) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token: limited-purpose token cannot be used for access'
+        });
+      }
+
       // 6. Validate required claims (userId can be in 'sub' or direct property)
       const userId = decoded.sub || decoded.userId;
       if (!userId) {
@@ -152,7 +165,9 @@ class AuthMiddleware {
         algorithms: ['HS256']
       });
 
-      if (decoded.type !== 'refresh') {
+      // Reject limited-purpose pre-auth tokens (2fa_challenge / 2fa_force_setup)
+      // here too — they must never populate req.user, even on optional routes.
+      if (decoded.type !== 'refresh' && !decoded.purpose) {
         const userId = decoded.sub || decoded.userId;
         if (userId && decoded.role && !await tokenBlacklist.isRevoked(decoded.jti)) {
           req.user = {
