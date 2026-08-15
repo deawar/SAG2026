@@ -256,7 +256,7 @@ class TwoFactorService {
     await this.db.query(
       `UPDATE users SET two_fa_enabled = TRUE, two_fa_secret = $1, backup_codes = $2, updated_at = CURRENT_TIMESTAMP
        WHERE id = $3`,
-      [secret, [encrypted], userId]
+      [this.encryptSecret(secret), [encrypted], userId]
     );
   }
 
@@ -321,6 +321,21 @@ class TwoFactorService {
       codes.push(crypto.randomBytes(4).toString('hex').toUpperCase());
     }
     return codes;
+  }
+
+  /** True iff the value is an encrypted blob ("iv:cipher"); base32 secrets have no ":". */
+  isEncrypted(value) {
+    return typeof value === 'string' && value.includes(':');
+  }
+
+  /** Encrypt a TOTP secret for storage (same scheme as backup codes). */
+  encryptSecret(secret) {
+    return this._encryptData(secret);
+  }
+
+  /** Decrypt a stored TOTP secret; pass legacy plaintext values through unchanged. */
+  decryptSecret(stored) {
+    return this.isEncrypted(stored) ? this._decryptData(stored) : stored;
   }
 
   _encryptData(data) {
