@@ -28,6 +28,14 @@ describe('TwoFactorService secret crypto', () => {
     expect(svc.decryptSecret('JBSWY3DPEHPK3PXP')).toBe('JBSWY3DPEHPK3PXP');
   });
 
+  test('decryptSecret degrades to the stored value when decryption throws (no 500)', () => {
+    const svc = makeService();
+    // Has a ":" so isEncrypted() is true, but is not valid ciphertext → _decryptData throws.
+    const malformed = 'deadbeef:notvalidhex';
+    expect(() => svc.decryptSecret(malformed)).not.toThrow();
+    expect(svc.decryptSecret(malformed)).toBe(malformed);
+  });
+
   test('confirmSetup persists an ENCRYPTED two_fa_secret', async () => {
     const db = { query: jest.fn().mockResolvedValue({ rows: [] }) };
     const svc = makeService(db);
