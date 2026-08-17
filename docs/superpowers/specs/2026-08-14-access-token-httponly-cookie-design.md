@@ -121,15 +121,25 @@ claim checks are unchanged. `optionalVerifyToken`: same source; still populates
 ```
 requireCsrfHeader(req, res, next):
   if method in {GET, HEAD, OPTIONS}: next()          // safe methods
+  else if !req.cookies?.access_token: next()          // no ambient credential → nothing to protect
   else if req.get('X-Requested-With') present: next()
   else: 403 { success:false, message:'CSRF check failed' }
 ```
 
+The `!access_token cookie → next()` clause is the key scoping: CSRF only
+matters when the browser auto-attaches an ambient credential. A forged
+cross-site request necessarily carries the cookie (that is the whole point of
+the attack) and so hits the header check and is blocked; a request with no
+cookie is unauthenticated and 401s at the auth middleware regardless. This also
+means credential-less mutations (register, login, forgot/reset-password) never
+need the header.
+
 Mounted on the `/api` router **before** route handlers. **Exemptions:**
-machine-to-machine callers that cannot send the header — the **Stripe webhook**
-route (already signature-verified) and any other server-to-server webhook. Those
-routes are registered so the CSRF middleware does not apply (mounted before the
-guard, or explicitly skipped by path).
+machine-to-machine callers that cannot send the header — the **Stripe/PayPal
+webhook** route `POST /api/payments/webhooks/payment` (already
+signature-verified) and any other server-to-server webhook. Those requests
+never carry the `access_token` cookie, so the scoping clause above already
+exempts them; no path allow-list is required.
 
 ### 6. Global client fetch wrapper — `public/js/fetch-guard.js`
 
