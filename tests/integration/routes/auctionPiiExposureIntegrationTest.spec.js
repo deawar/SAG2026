@@ -19,6 +19,7 @@ const jwt = require('jsonwebtoken');
 const createApp = require('../../../src/app');
 const mockDb = require('../../helpers/mockDb');
 const { pool: mockPool } = require('../../../src/models/index');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 
@@ -106,7 +107,7 @@ describe('Auction bids list PII', () => {
 
     const res = await request(app)
       .get('/api/auctions/auc-1/bids')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -142,7 +143,7 @@ describe('Auction bids list PII', () => {
 
     const res = await request(app)
       .get('/api/auctions/auc-1/bids')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -203,7 +204,7 @@ describe('Public artwork PII', () => {
 
     const res = await request(app)
       .get('/api/auctions/auc-1/artwork')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -248,7 +249,7 @@ describe('Auction winner PII', () => {
 
     const res = await request(app)
       .get('/api/auctions/auction-1/winner')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -275,7 +276,7 @@ describe('Auction winner PII', () => {
 
     const res = await request(app)
       .get('/api/auctions/auction-1/winner')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.winners.length).toBeGreaterThan(0);
@@ -303,7 +304,7 @@ describe('Auction winner PII', () => {
 
     const res = await request(app)
       .get('/api/auctions/auction-1/winner')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.winners.length).toBeGreaterThan(0);
@@ -324,7 +325,7 @@ describe('Auction winner PII', () => {
 
     const res = await request(app)
       .get('/api/auctions/auction-1/winner')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -372,7 +373,7 @@ describe('Bidding winner endpoint PII (GET /api/bidding/auction/:id/winner)', ()
 
     const res = await request(app)
       .get('/api/bidding/auction/auction-42/winner')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -399,7 +400,7 @@ describe('Bidding winner endpoint PII (GET /api/bidding/auction/:id/winner)', ()
 
     const res = await request(app)
       .get('/api/bidding/auction/auction-42/winner')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.data.hasWinner).toBe(true);
@@ -422,7 +423,7 @@ describe('Bidding winner endpoint PII (GET /api/bidding/auction/:id/winner)', ()
 
     const res = await request(app)
       .get('/api/bidding/auction/auction-42/winner')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.data.winner.name).toBe('Tom Chen');

@@ -18,6 +18,7 @@ const jwt = require('jsonwebtoken');
 const createApp = require('../../../src/app');
 const mockDb = require('../../helpers/mockDb');
 const { pool: mockPool } = require('../../../src/models/index');
+const { authCookie } = require('../../helpers/authCookie');
 const tok = (p) => jwt.sign(p, process.env.JWT_ACCESS_SECRET, { algorithm: 'HS256' });
 
 const HOST_SCHOOL = 'school-host';
@@ -51,7 +52,7 @@ describe('Gallery comments — submit & read', () => {
       .mockResolvedValueOnce({ rows: [{ id: COMMENT_ID, status: 'PENDING', created_at: 't' }], rowCount: 1 }) // createComment
       .mockResolvedValueOnce({ rows: [], rowCount: 1 });                                                     // audit SUBMITTED
     const res = await request(app).post(`/api/gallery/items/${ITEM_ID}/comments`)
-      .set('Authorization', `Bearer ${sameStudentTok}`).send({ body: 'Great colors!' });
+      .set(authCookie(sameStudentTok)).send({ body: 'Great colors!' });
     expect(res.status).toBe(201);
     expect(res.body.comment).toEqual({ id: COMMENT_ID, status: 'PENDING' });
   });
@@ -65,7 +66,7 @@ describe('Gallery comments — submit & read', () => {
       .mockResolvedValueOnce({ rows: [{ id: COMMENT_ID, status: 'PENDING', created_at: 't' }], rowCount: 1 }) // createComment
       .mockResolvedValueOnce({ rows: [], rowCount: 1 });                                                     // audit SUBMITTED
     const res = await request(app).post(`/api/gallery/items/${ITEM_ID}/comments`)
-      .set('Authorization', `Bearer ${extStudentTok}`).send({ body: 'So cool' });
+      .set(authCookie(extStudentTok)).send({ body: 'So cool' });
     expect(res.status).toBe(201);
   });
 
@@ -77,7 +78,7 @@ describe('Gallery comments — submit & read', () => {
       .mockResolvedValueOnce({ rows: [], rowCount: 1 })   // audit CROSS_SCHOOL_VIEW
       .mockResolvedValueOnce({ rows: [], rowCount: 1 });  // audit SECURITY GALLERY_COMMENT_DENIED
     const res = await request(app).post(`/api/gallery/items/${ITEM_ID}/comments`)
-      .set('Authorization', `Bearer ${extStudentTok}`).send({ body: 'hello' });
+      .set(authCookie(extStudentTok)).send({ body: 'hello' });
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('GRADE_MISMATCH');
   });
@@ -89,7 +90,7 @@ describe('Gallery comments — submit & read', () => {
       .mockResolvedValueOnce({ rows: [], rowCount: 0 })   // getViewerGrantAccess → no row
       .mockResolvedValueOnce({ rows: [], rowCount: 1 });  // audit SECURITY GALLERY_ACCESS_DENIED
     const res = await request(app).post(`/api/gallery/items/${ITEM_ID}/comments`)
-      .set('Authorization', `Bearer ${extStudentTok}`).send({ body: 'hello' });
+      .set(authCookie(extStudentTok)).send({ body: 'hello' });
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('GALLERY_ACCESS_DENIED');
   });
@@ -99,7 +100,7 @@ describe('Gallery comments — submit & read', () => {
       .mockResolvedValueOnce({ rows: [liveItem()], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ id: 'teach-host', role: 'TEACHER', school_id: HOST_SCHOOL, grade_level: null }], rowCount: 1 });
     const res = await request(app).post(`/api/gallery/items/${ITEM_ID}/comments`)
-      .set('Authorization', `Bearer ${hostTeacherTok}`).send({ body: 'nice work' });
+      .set(authCookie(hostTeacherTok)).send({ body: 'nice work' });
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('STUDENTS_ONLY');
   });
@@ -109,7 +110,7 @@ describe('Gallery comments — submit & read', () => {
       .mockResolvedValueOnce({ rows: [liveItem({ gallery_comments_allowed: false })], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ id: 'stud-same', role: 'STUDENT', school_id: HOST_SCHOOL, grade_level: null }], rowCount: 1 });
     const res = await request(app).post(`/api/gallery/items/${ITEM_ID}/comments`)
-      .set('Authorization', `Bearer ${sameStudentTok}`).send({ body: 'hi' });
+      .set(authCookie(sameStudentTok)).send({ body: 'hi' });
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('COMMENTS_DISABLED');
   });
@@ -117,7 +118,7 @@ describe('Gallery comments — submit & read', () => {
   test('item not in gallery → 404 ITEM_NOT_IN_GALLERY', async () => {
     mockPool.query.mockResolvedValueOnce({ rows: [], rowCount: 0 }); // getCommentableItem → none
     const res = await request(app).post(`/api/gallery/items/${ITEM_ID}/comments`)
-      .set('Authorization', `Bearer ${sameStudentTok}`).send({ body: 'hi' });
+      .set(authCookie(sameStudentTok)).send({ body: 'hi' });
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('ITEM_NOT_IN_GALLERY');
   });
@@ -127,7 +128,7 @@ describe('Gallery comments — submit & read', () => {
       .mockResolvedValueOnce({ rows: [liveItem()], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ id: 'stud-same', role: 'STUDENT', school_id: HOST_SCHOOL, grade_level: null }], rowCount: 1 });
     const res = await request(app).post(`/api/gallery/items/${ITEM_ID}/comments`)
-      .set('Authorization', `Bearer ${sameStudentTok}`).send({ body: '   ' });
+      .set(authCookie(sameStudentTok)).send({ body: '   ' });
     expect(res.status).toBe(400);
     expect(res.body.error).toBe('INVALID_BODY');
   });
@@ -138,7 +139,7 @@ describe('Gallery comments — submit & read', () => {
       .mockResolvedValueOnce({ rows: [{ id: 'stud-same', role: 'STUDENT', school_id: HOST_SCHOOL, grade_level: null }], rowCount: 1 }) // resolveViewer
       .mockResolvedValueOnce({ rows: [{ id: COMMENT_ID, body: 'Great colors!', createdAt: 't', authorFirstName: 'Ana' }], rowCount: 1 }); // listApprovedForItem
     const res = await request(app).get(`/api/gallery/items/${ITEM_ID}/comments`)
-      .set('Authorization', `Bearer ${sameStudentTok}`);
+      .set(authCookie(sameStudentTok));
     expect(res.status).toBe(200);
     expect(res.body.comments).toEqual([{ id: COMMENT_ID, body: 'Great colors!', createdAt: 't', authorFirstName: 'Ana' }]);
     const listCall = mockPool.query.mock.calls[2][0];
@@ -160,7 +161,7 @@ describe('Gallery comments — host moderation', () => {
       .mockResolvedValueOnce({ rows: [{ id: 'teach-host', role: 'TEACHER', school_id: HOST_SCHOOL, grade_level: null }], rowCount: 1 }) // resolveViewer
       .mockResolvedValueOnce({ rows: [{ id: COMMENT_ID, body: 'hi', createdAt: 't', portfolioItemId: ITEM_ID, itemTitle: 'Sunset', authorFirstName: 'Ana', authorOrigin: 'SAME_SCHOOL' }], rowCount: 1 }); // listPendingForSchool
     const res = await request(app).get('/api/gallery/comments/pending')
-      .set('Authorization', `Bearer ${hostTeacherTok}`);
+      .set(authCookie(hostTeacherTok));
     expect(res.status).toBe(200);
     expect(res.body.comments).toHaveLength(1);
     expect(mockPool.query.mock.calls[1][1]).toEqual([HOST_SCHOOL]);
@@ -168,7 +169,7 @@ describe('Gallery comments — host moderation', () => {
 
   test('STUDENT hits pending queue → 403 (role gate)', async () => {
     const res = await request(app).get('/api/gallery/comments/pending')
-      .set('Authorization', `Bearer ${sameStudentTok}`);
+      .set(authCookie(sameStudentTok));
     expect(res.status).toBe(403);
   });
 
@@ -178,7 +179,7 @@ describe('Gallery comments — host moderation', () => {
       .mockResolvedValueOnce({ rows: [{ id: COMMENT_ID, status: 'APPROVED' }], rowCount: 1 })  // moderateComment
       .mockResolvedValueOnce({ rows: [], rowCount: 1 });                                        // audit APPROVED
     const res = await request(app).post(`/api/gallery/comments/${COMMENT_ID}/approve`)
-      .set('Authorization', `Bearer ${hostTeacherTok}`);
+      .set(authCookie(hostTeacherTok));
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('APPROVED');
     const modCall = mockPool.query.mock.calls[1];
@@ -191,7 +192,7 @@ describe('Gallery comments — host moderation', () => {
       .mockResolvedValueOnce({ rows: [{ id: COMMENT_ID, status: 'REJECTED' }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [], rowCount: 1 });
     const res = await request(app).post(`/api/gallery/comments/${COMMENT_ID}/reject`)
-      .set('Authorization', `Bearer ${hostTeacherTok}`);
+      .set(authCookie(hostTeacherTok));
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('REJECTED');
   });
@@ -202,7 +203,7 @@ describe('Gallery comments — host moderation', () => {
       .mockResolvedValueOnce({ rows: [{ id: 'teach-guest', role: 'TEACHER', school_id: EXT_SCHOOL, grade_level: null }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [], rowCount: 0 }); // moderateComment → no row
     const res = await request(app).post(`/api/gallery/comments/${COMMENT_ID}/approve`)
-      .set('Authorization', `Bearer ${guestTok}`);
+      .set(authCookie(guestTok));
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('COMMENT_NOT_FOUND');
   });

@@ -36,6 +36,7 @@ const jwt = require('jsonwebtoken');
 const createApp = require('../../../src/app');
 const mockDb = require('../../helpers/mockDb');
 const { pool: mockPool } = require('../../../src/models/index');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 function makeToken(payload) {
@@ -92,7 +93,7 @@ describe('Admin-created staff accounts (POST /api/admin/users)', () => {
 
     const res = await request(app)
       .post('/api/admin/users')
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({
         firstName: 'Pat',
         lastName: 'Teacher',
@@ -130,7 +131,7 @@ describe('Admin-created staff accounts (POST /api/admin/users)', () => {
 
     const res = await request(app)
       .post('/api/admin/users')
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({
         firstName: 'Pat',
         lastName: 'Teacher',
@@ -156,7 +157,7 @@ describe('Admin-created staff accounts (POST /api/admin/users)', () => {
 
     const res = await request(app)
       .post('/api/admin/users')
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({
         firstName: 'Sam',
         lastName: 'Boss',
@@ -182,7 +183,7 @@ describe('Admin-created staff accounts (POST /api/admin/users)', () => {
 
     const res = await request(app)
       .post('/api/admin/users')
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({
         firstName: 'Pat',
         lastName: 'Teacher',
@@ -207,7 +208,7 @@ describe('Admin-created staff accounts (POST /api/admin/users)', () => {
 
     const res = await request(app)
       .post('/api/admin/users')
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({
         firstName: 'Kid',
         lastName: 'Student',
@@ -233,7 +234,7 @@ describe('Admin-created staff accounts (POST /api/admin/users)', () => {
 
     const res = await request(app)
       .post('/api/admin/users')
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({
         firstName: 'Pat',
         lastName: 'Teacher',
@@ -255,7 +256,7 @@ describe('Admin-created staff accounts (POST /api/admin/users)', () => {
 
     const res = await request(app)
       .post('/api/admin/users')
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({
         firstName: 'Pat',
         lastName: 'Teacher',
@@ -276,7 +277,7 @@ describe('Admin-created staff accounts (POST /api/admin/users)', () => {
 
     const res = await request(app)
       .post('/api/admin/users')
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({
         firstName: 'Pat',
         lastName: 'Teacher',

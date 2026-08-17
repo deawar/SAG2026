@@ -21,6 +21,7 @@ const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const createTestApp = require('../../helpers/createTestApp');
 const mockDb = require('../../helpers/mockDb');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 
@@ -233,7 +234,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .get('/api/admin/users')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(403);
       expect(res.body.error).toBe('admin_2fa_required');
@@ -249,7 +250,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .get('/api/admin/users')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(403);
       expect(res.body.error).toBe('admin_2fa_required');
@@ -268,7 +269,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .get('/api/admin/users')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       // Should NOT be blocked by requireAdmin2fa (may be 200 or downstream error)
       expect(res.status).not.toBe(403);
@@ -280,7 +281,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .get('/api/auth')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).not.toBe(403);
     });
@@ -295,7 +296,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .post('/api/auth/2fa/disable')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(403);
       expect(res.body.error).toBe('admin_2fa_mandatory');
@@ -306,7 +307,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .post('/api/auth/2fa/disable')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(403);
       expect(res.body.error).toBe('admin_2fa_mandatory');
@@ -317,7 +318,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .post('/api/auth/2fa/disable')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(403);
       expect(res.body.error).toBe('admin_2fa_mandatory');
@@ -332,7 +333,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .post('/api/auth/2fa/disable')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);

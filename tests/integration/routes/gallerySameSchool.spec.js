@@ -10,6 +10,7 @@ const jwt = require('jsonwebtoken');
 const createApp = require('../../../src/app');
 const mockDb = require('../../helpers/mockDb');
 const { pool: mockPool } = require('../../../src/models/index');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 const tok = (p) => jwt.sign(p, SECRET, { algorithm: 'HS256' });
@@ -40,7 +41,7 @@ describe('Gallery same-school interactions', () => {
       ],
       rowCount: 1
     });
-    const res = await request(app).get(`/api/gallery/${SCHOOL_ID}`).set('Authorization', `Bearer ${studentToken}`);
+    const res = await request(app).get(`/api/gallery/${SCHOOL_ID}`).set(authCookie(studentToken));
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.schoolId).toBe(SCHOOL_ID);
@@ -58,7 +59,7 @@ describe('Gallery same-school interactions', () => {
 
     const res = await request(app)
       .patch('/api/gallery/items/pi-1/share')
-      .set('Authorization', `Bearer ${studentToken}`)
+      .set(authCookie(studentToken))
       .send({ sharedToGallery: true });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -74,7 +75,7 @@ describe('Gallery same-school interactions', () => {
 
     const res = await request(app)
       .post('/api/gallery/roster')
-      .set('Authorization', `Bearer ${teacherToken}`)
+      .set(authCookie(teacherToken))
       .send({ studentUserId: 'stu-x' });
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('CROSS_SCHOOL_DENIED');
@@ -90,7 +91,7 @@ describe('Gallery same-school interactions', () => {
 
     const res = await request(app)
       .delete('/api/gallery/roster/stu-2')
-      .set('Authorization', `Bearer ${teacherToken}`);
+      .set(authCookie(teacherToken));
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('CROSS_SCHOOL_DENIED');
   });

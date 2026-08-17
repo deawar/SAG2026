@@ -10,33 +10,16 @@ const { pool } = require('../models/index');
 class AuthMiddleware {
   /**
    * Verify JWT token
-   * Security: Validates Bearer prefix, signature (HS256), claims, expiry
+   * Security: Validates httpOnly cookie, signature (HS256), claims, expiry
    */
   async verifyToken(req, res, next) {
     try {
-      // 1. Extract Authorization header
-      const authHeader = req.headers.authorization;
-      if (!authHeader) {
-        return res.status(401).json({
-          success: false,
-          message: 'Authorization header required'
-        });
-      }
-
-      // 2. Validate Bearer prefix
-      if (!authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid Authorization header format'
-        });
-      }
-
-      // 3. Extract token
-      const token = authHeader.substring(7);
+      // 1. Extract the access token from the httpOnly cookie (hard cut — no Bearer).
+      const token = req.cookies?.access_token;
       if (!token) {
         return res.status(401).json({
           success: false,
-          message: 'No token provided'
+          message: 'Authentication required'
         });
       }
 
@@ -150,12 +133,7 @@ class AuthMiddleware {
    * but does NOT reject unauthenticated requests (used for public routes).
    */
   async optionalVerifyToken(req, res, next) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return next();
-    }
-
-    const token = authHeader.substring(7);
+    const token = req.cookies?.access_token;
     if (!token) {
       return next();
     }

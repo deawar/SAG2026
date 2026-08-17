@@ -36,6 +36,7 @@ const { v4: uuidv4 } = require('uuid');
 const createTestApp = require('../../helpers/createTestApp');
 const mockDb = require('../../helpers/mockDb');
 const { pool: mockPool } = require('../../../src/models/index');
+const { authCookie } = require('../../helpers/authCookie');
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
@@ -261,7 +262,7 @@ describe('G19 — Concurrent session limiting', () => {
 
       const res = await request(app)
         .get('/api/user/sessions')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -294,7 +295,7 @@ describe('G19 — Concurrent session limiting', () => {
 
       const res = await request(app)
         .delete('/api/user/sessions')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authCookie(token))
         .send({});
 
       expect(res.status).toBe(200);
@@ -314,7 +315,7 @@ describe('G19 — Concurrent session limiting', () => {
 
       const res = await request(app)
         .delete('/api/user/sessions')
-        .set('Authorization', `Bearer ${token}`)
+        .set(authCookie(token))
         .send({ currentRefreshToken: refreshToken });
 
       expect(res.status).toBe(200);
@@ -341,7 +342,7 @@ describe('G19 — Concurrent session limiting', () => {
 
       const res = await request(app)
         .delete(`/api/user/sessions/${sessionId}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -358,7 +359,7 @@ describe('G19 — Concurrent session limiting', () => {
 
       const res = await request(app)
         .delete(`/api/user/sessions/${sessionId}`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(404);
       expect(res.body.success).toBe(false);
@@ -389,7 +390,7 @@ describe('G19 — Concurrent session limiting', () => {
 
       const res = await request(app)
         .delete(`/api/admin/users/${targetUserId}/sessions`)
-        .set('Authorization', `Bearer ${adminToken}`);
+        .set(authCookie(adminToken));
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -402,7 +403,7 @@ describe('G19 — Concurrent session limiting', () => {
 
       const res = await request(app)
         .delete(`/api/admin/users/${targetUserId}/sessions`)
-        .set('Authorization', `Bearer ${userToken}`);
+        .set(authCookie(userToken));
 
       expect(res.status).toBe(403);
     });
@@ -426,7 +427,7 @@ describe('G19 — Concurrent session limiting', () => {
 
       const res = await request(app)
         .delete(`/api/admin/users/${targetUserId}/sessions`)
-        .set('Authorization', `Bearer ${adminTokenNo2fa}`);
+        .set(authCookie(adminTokenNo2fa));
 
       expect(res.status).toBe(403);
       expect(res.body.error).toBe('admin_2fa_required');

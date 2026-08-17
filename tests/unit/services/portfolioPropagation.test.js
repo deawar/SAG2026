@@ -15,6 +15,7 @@ const jwt = require('jsonwebtoken');
 const createApp = require('../../../src/app');
 const mockDb = require('../../helpers/mockDb');
 const { pool: mockPool } = require('../../../src/models/index');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 
@@ -51,7 +52,7 @@ describe('Teacher approve sets pricing and propagates IN_AUCTION', () => {
 
     const res = await request(app)
       .put('/api/teacher/submissions/art-1/approve')
-      .set('Authorization', `Bearer ${teacherToken()}`)
+      .set(authCookie(teacherToken()))
       .send({ startingBid: 25, reserve: 50 });
 
     expect(res.status).toBe(200);
@@ -64,7 +65,7 @@ describe('Teacher approve sets pricing and propagates IN_AUCTION', () => {
     // No DB write should occur beyond _resolveSchoolId (if any), validation is before query
     const res = await request(app)
       .put('/api/teacher/submissions/art-1/approve')
-      .set('Authorization', `Bearer ${teacherToken()}`)
+      .set(authCookie(teacherToken()))
       .send({ startingBid: -5 });
 
     expect(res.status).toBe(400);
@@ -94,7 +95,7 @@ describe('Teacher reject propagates REJECTED to linked portfolio item', () => {
 
     const res = await request(app)
       .put('/api/teacher/submissions/art-1/reject')
-      .set('Authorization', `Bearer ${teacherToken()}`)
+      .set(authCookie(teacherToken()))
       .send({ reason: 'blurry' });
 
     expect(res.status).toBe(200);
