@@ -6,6 +6,7 @@
  */
 
 const request = require('supertest');
+const { authCookie } = require('../../helpers/authCookie');
 
 // Requires a running PostgreSQL instance — skip when no DB credentials are configured
 const runDbTests = process.env.RUN_DB_TESTS === 'true';
@@ -48,7 +49,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
     test('should queue and track email notification', async () => {
       const response = await request(app)
         .post('/notifications')
-        .set('Authorization', `Bearer ${validToken}`)
+        .set(authCookie(validToken))
         .send({
           type: 'outbid-alert',
           channel: 'email',
@@ -83,7 +84,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
     test('should handle email template rendering errors gracefully', async () => {
       const response = await request(app)
         .post('/notifications')
-        .set('Authorization', `Bearer ${validToken}`)
+        .set(authCookie(validToken))
         .send({
           type: 'unknown-type',
           channel: 'email',
@@ -106,7 +107,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
 
       const response = await request(app)
         .post('/notifications')
-        .set('Authorization', `Bearer ${validToken}`)
+        .set(authCookie(validToken))
         .send({
           type: 'outbid-alert',
           channel: 'email',
@@ -125,7 +126,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
     test('should retrieve user notification preferences', async () => {
       const response = await request(app)
         .get('/notifications/preferences')
-        .set('Authorization', `Bearer ${validToken}`);
+        .set(authCookie(validToken));
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -137,7 +138,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
     test('should update notification preferences', async () => {
       const response = await request(app)
         .put('/notifications/preferences')
-        .set('Authorization', `Bearer ${validToken}`)
+        .set(authCookie(validToken))
         .send({
           email_outbid: false,
           email_auction_ending: true,
@@ -154,7 +155,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
     test('should reject invalid preference field', async () => {
       const response = await request(app)
         .put('/notifications/preferences')
-        .set('Authorization', `Bearer ${validToken}`)
+        .set(authCookie(validToken))
         .send({
           invalid_field: true
         });
@@ -166,7 +167,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
     test('should reject non-boolean preference values', async () => {
       const response = await request(app)
         .put('/notifications/preferences')
-        .set('Authorization', `Bearer ${validToken}`)
+        .set(authCookie(validToken))
         .send({
           email_outbid: 'yes' // should be boolean
         });
@@ -194,7 +195,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
     test('should retrieve notification history', async () => {
       const response = await request(app)
         .get('/notifications')
-        .set('Authorization', `Bearer ${validToken}`);
+        .set(authCookie(validToken));
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -205,7 +206,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
     test('should support pagination', async () => {
       const response = await request(app)
         .get('/notifications?limit=2&offset=0')
-        .set('Authorization', `Bearer ${validToken}`);
+        .set(authCookie(validToken));
 
       expect(response.status).toBe(200);
       expect(response.body.pagination.limit).toBe(2);
@@ -215,7 +216,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
     test('should limit maximum per-page results', async () => {
       const response = await request(app)
         .get('/notifications?limit=300')
-        .set('Authorization', `Bearer ${validToken}`);
+        .set(authCookie(validToken));
 
       expect(response.body.pagination.limit).toBeLessThanOrEqual(200);
     });
@@ -274,7 +275,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
     test('should require valid token for notification endpoints', async () => {
       const response = await request(app)
         .get('/notifications')
-        .set('Authorization', 'Bearer invalid-token');
+        .set(authCookie('invalid-token'));
 
       expect(response.status).toBe(401);
     });
@@ -302,7 +303,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
       // Try to access with other user's token
       const response = await request(app)
         .get('/notifications')
-        .set('Authorization', `Bearer ${otherUserToken}`);
+        .set(authCookie(otherUserToken));
 
       // Should get empty or only their own notifications
       const otherUserNotifications = response.body.data.filter(n => n.user_id !== otherUserId);
@@ -330,7 +331,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
       test(`should queue ${type} notification`, async () => {
         const response = await request(app)
           .post('/notifications')
-          .set('Authorization', `Bearer ${validToken}`)
+          .set(authCookie(validToken))
           .send({
             type,
             channel: 'email',
@@ -358,7 +359,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
       // Attempt to queue notification
       const response = await request(app)
         .post('/notifications')
-        .set('Authorization', `Bearer ${validToken}`)
+        .set(authCookie(validToken))
         .send({
           type: 'test',
           channel: 'email',
@@ -380,7 +381,7 @@ const runDbTests = process.env.RUN_DB_TESTS === 'true';
 
       const response = await request(app)
         .post('/notifications')
-        .set('Authorization', 'Bearer invalid-format')
+        .set(authCookie('invalid-format'))
         .send({
           type: 'test',
           channel: 'email',

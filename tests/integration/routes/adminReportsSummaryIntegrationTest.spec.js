@@ -20,6 +20,7 @@ const jwt = require('jsonwebtoken');
 const createApp = require('../../../src/app');
 const mockDb = require('../../helpers/mockDb');
 const { pool: mockPool } = require('../../../src/models/index');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 
@@ -53,7 +54,7 @@ describe('GET /api/admin/reports', () => {
     const token = makeToken({ userId: 'user-1', role: 'BIDDER', schoolId: null });
     const res = await request(app)
       .get('/api/admin/reports')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
     expect(res.status).toBe(403);
   });
 
@@ -74,7 +75,7 @@ describe('GET /api/admin/reports', () => {
 
     const res = await request(app)
       .get('/api/admin/reports')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -97,7 +98,7 @@ describe('GET /api/admin/reports', () => {
 
     await request(app)
       .get('/api/admin/reports')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     const countCall = mockPool.query.mock.calls.find(
       ([sql]) => sql && sql.includes('compliance_reports')
@@ -118,7 +119,7 @@ describe('GET /api/admin/reports', () => {
 
     const res = await request(app)
       .get('/api/admin/reports')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
 
@@ -139,7 +140,7 @@ describe('GET /api/admin/reports', () => {
 
     const res = await request(app)
       .get('/api/admin/reports')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     const { reports } = res.body;
     for (const key of ['gdpr', 'coppa', 'ferpa', 'ccpa']) {

@@ -44,6 +44,7 @@ const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const createTestApp = require('../../helpers/createTestApp');
 const mockDb = require('../../helpers/mockDb');
+const { authCookie } = require('../../helpers/authCookie');
 
 const {
   notifyOutbid,
@@ -306,7 +307,7 @@ describe('G13 — Teacher route does not block on email', () => {
 
     const res = await request(app)
       .put(`/api/teacher/submissions/${artworkId}/approve`)
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -324,7 +325,7 @@ describe('G13 — Teacher route does not block on email', () => {
 
     const res = await request(app)
       .put(`/api/teacher/submissions/${artworkId}/reject`)
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({ reason: 'Does not meet guidelines' });
 
     expect(res.status).toBe(200);

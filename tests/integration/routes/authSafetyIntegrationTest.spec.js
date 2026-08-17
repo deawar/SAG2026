@@ -18,6 +18,7 @@ if (!process.env.JWT_REFRESH_SECRET) { process.env.JWT_REFRESH_SECRET = 'test-re
 const request = require('supertest');
 const createTestApp = require('../../helpers/createTestApp');
 const mockDb = require('../../helpers/mockDb');
+const { authCookie } = require('../../helpers/authCookie');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -224,7 +225,7 @@ describe('TEACHER mandatory 2FA enforcement (Task 9)', () => {
 
     const res = await request(app)
       .post('/api/auth/2fa/disable')
-      .set('Authorization', `Bearer ${teacherToken}`);
+      .set(authCookie(teacherToken));
 
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('admin_2fa_mandatory');

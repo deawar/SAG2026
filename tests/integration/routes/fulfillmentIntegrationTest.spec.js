@@ -45,6 +45,7 @@ const { v4: uuidv4 } = require('uuid');
 const createTestApp  = require('../../helpers/createTestApp');
 const mockDb         = require('../../helpers/mockDb');
 const { notifyArtworkShipped, EmailProvider } = require('../../../src/services/notificationService');
+const { authCookie } = require('../../helpers/authCookie');
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
 
@@ -98,7 +99,7 @@ describe('G14 — PATCH /api/admin/wins/:id/fulfillment', () => {
 
     const res = await request(app)
       .patch(`/api/admin/wins/${bidId}/fulfillment`)
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({ shipped: true, trackingCarrier: 'UPS', trackingNumber: '1Z999AA10123456784' });
 
     expect(res.status).toBe(200);
@@ -115,7 +116,7 @@ describe('G14 — PATCH /api/admin/wins/:id/fulfillment', () => {
 
     const res = await request(app)
       .patch(`/api/admin/wins/${uuidv4()}/fulfillment`)
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({ shipped: true });
 
     expect(res.status).toBe(404);
@@ -131,7 +132,7 @@ describe('G14 — PATCH /api/admin/wins/:id/fulfillment', () => {
 
     const res = await request(app)
       .patch(`/api/admin/wins/${uuidv4()}/fulfillment`)
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({ shipped: true });
 
     expect(res.status).toBe(403);
@@ -149,7 +150,7 @@ describe('G14 — PATCH /api/admin/wins/:id/fulfillment', () => {
 
     const res = await request(app)
       .patch(`/api/admin/wins/${bid.id}/fulfillment`)
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({ shipped: true });
 
     expect(res.status).toBe(403);
@@ -165,7 +166,7 @@ describe('G14 — PATCH /api/admin/wins/:id/fulfillment', () => {
 
     const res = await request(app)
       .patch(`/api/admin/wins/${uuidv4()}/fulfillment`)
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({ shipped: true });
 
     expect(res.status).toBe(403);
@@ -183,7 +184,7 @@ describe('G14 — PATCH /api/admin/wins/:id/fulfillment', () => {
 
     const res = await request(app)
       .patch(`/api/admin/wins/${bid.id}/fulfillment`)
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({});
 
     expect(res.status).toBe(400);
@@ -221,7 +222,7 @@ describe('G14 — GET /api/admin/wins', () => {
 
     const res = await request(app)
       .get('/api/admin/wins')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -264,7 +265,7 @@ describe('G14 — GET /api/user/wins', () => {
 
     const res = await request(app)
       .get('/api/user/wins')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -294,7 +295,7 @@ describe('G14 — GET /api/user/wins', () => {
 
     const res = await request(app)
       .get('/api/user/wins')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.wins[0].shipped).toBe(false);

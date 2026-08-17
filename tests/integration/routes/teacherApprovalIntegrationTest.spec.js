@@ -26,6 +26,7 @@ const jwt = require('jsonwebtoken');
 const createApp = require('../../../src/app');
 const mockDb = require('../../helpers/mockDb');
 const { pool: mockPool } = require('../../../src/models/index');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 function makeToken(payload) {
@@ -201,7 +202,7 @@ describe('Teacher approval gate', () => {
 
     const res = await request(app)
       .post('/api/admin/users/teacher-1/approve-teacher')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -226,7 +227,7 @@ describe('Teacher approval gate', () => {
 
     const res = await request(app)
       .post('/api/admin/users/teacher-1/approve-teacher')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('CROSS_SCHOOL_ACCESS_DENIED');
@@ -251,7 +252,7 @@ describe('Teacher approval gate', () => {
 
     const res = await request(app)
       .post('/api/admin/users/teacher-1/approve-teacher')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.result.account_status).toBe('ACTIVE');
@@ -273,7 +274,7 @@ describe('Teacher approval gate', () => {
 
     const res = await request(app)
       .post('/api/admin/users/student-1/approve-teacher')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(400);
   });
@@ -294,7 +295,7 @@ describe('Teacher approval gate', () => {
 
     const res = await request(app)
       .post('/api/admin/users/teacher-1/approve-teacher')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(400);
   });
@@ -311,7 +312,7 @@ describe('Teacher approval gate', () => {
 
     const res = await request(app)
       .post('/api/admin/users/teacher-1/approve-teacher')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(403);
   });
@@ -332,7 +333,7 @@ describe('Teacher approval gate', () => {
 
     const res = await request(app)
       .post('/api/admin/users/nonexistent/approve-teacher')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(404);
   });
