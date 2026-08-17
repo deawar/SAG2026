@@ -18,7 +18,7 @@ if (!process.env.JWT_REFRESH_SECRET) { process.env.JWT_REFRESH_SECRET = 'test-re
 const request = require('supertest');
 const createTestApp = require('../../helpers/createTestApp');
 const mockDb = require('../../helpers/mockDb');
-const { authCookie } = require('../../helpers/authCookie');
+const { authCookie, extractAccessCookie } = require('../../helpers/authCookie');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -371,9 +371,10 @@ describe('Access token carries schoolId (fix/schoolid-in-jwt)', () => {
       .send({ email: 'student-jwt@example.com', password });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.accessToken).toBeDefined();
+    const accessToken = extractAccessCookie(res);
+    expect(accessToken).toBeTruthy();
 
-    const decoded = jwt.verify(res.body.data.accessToken, process.env.JWT_ACCESS_SECRET, { algorithms: ['HS256'] });
+    const decoded = jwt.verify(accessToken, process.env.JWT_ACCESS_SECRET, { algorithms: ['HS256'] });
     expect(decoded.schoolId).toBe('school-42');
   });
 });

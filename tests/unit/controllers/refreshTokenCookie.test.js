@@ -68,7 +68,9 @@ describe('UserController.login — sets cookie, omits refresh token from body', 
     await ctrl.login({ body: { email: 'u@e.com', password: 'pw' } }, res, jest.fn());
 
     expect(res.body.success).toBe(true);
-    expect(res.body.data.accessToken).toBe('access-1');
+    expect(res.body.data.accessToken).toBeUndefined();
+    const accessCookie = res.cookies.find(c => c.name === 'access_token');
+    expect(accessCookie.val).toBe('access-1');
     expect(res.body.data.refreshToken).toBeUndefined();
     const set = res.cookies.find(c => c.name === 'refresh_token');
     expect(set.val).toBe('refresh-1');
@@ -98,7 +100,9 @@ describe('UserController.verify2FA — sets cookie, omits refresh token from bod
     const res = fakeRes();
     await ctrl.verify2FA({ body: { code: '123456' }, headers: { authorization: 'Bearer temp' } }, res, jest.fn());
 
-    expect(res.body.data.accessToken).toBe('access-2');
+    expect(res.body.data.accessToken).toBeUndefined();
+    const accessCookie = res.cookies.find(c => c.name === 'access_token');
+    expect(accessCookie.val).toBe('access-2');
     expect(res.body.data.refreshToken).toBeUndefined();
     const set = res.cookies.find(c => c.name === 'refresh_token');
     expect(set.val).toBe('refresh-2');
@@ -119,7 +123,9 @@ describe('UserController.refreshToken — cookie-based', () => {
     await ctrl.refreshToken({ cookies: { refresh_token: 'the-cookie-token' }, body: {} }, res, jest.fn());
 
     expect(ctrl.authService.jwtService.verifyRefreshToken).toHaveBeenCalledWith('the-cookie-token');
-    expect(res.body.data.accessToken).toBe('new-access');
+    expect(res.body.data.accessToken).toBeUndefined();
+    const accessCookie = res.cookies.find(c => c.name === 'access_token');
+    expect(accessCookie.val).toBe('new-access');
     expect(res.body.data.refreshToken).toBeUndefined();
     const set = res.cookies.find(c => c.name === 'refresh_token');
     expect(set).toBeTruthy();
