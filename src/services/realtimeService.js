@@ -22,27 +22,20 @@ class RealtimeService {
   initializeWebSocketServer(server) {
     this.wss = new WebSocket.Server({ server, path: '/ws' });
 
-    this.wss.on('connection', (ws) => {
+    this.wss.on('connection', (ws, req) => {
       console.log('New WebSocket connection');
-
-      // Handle incoming messages
+      const cookieHeader = req?.headers?.cookie || '';
+      const token = cookieHeader.split(';').map(s => s.trim())
+        .find(s => s.startsWith('access_token='))?.slice('access_token='.length);
+      if (token) {
+        this._authenticateFromToken(ws, token).catch((err) =>
+          console.warn('[realtimeService] handshake auth failed:', err.message));
+      }
       ws.on('message', (message) => this._handleMessage(ws, message));
-
-      // Handle disconnection
       ws.on('close', () => this._handleDisconnect(ws));
-
-      // Handle errors
-      ws.on('error', (error) => {
-        console.error('WebSocket error:', error.message);
-      });
-
-      // Send welcome message
-      ws.send(JSON.stringify({
-        type: 'connection',
-        status: 'connected',
-        timestamp: new Date(),
-        message: 'Welcome to Silent Auction Gallery real-time updates'
-      }));
+      ws.on('error', (error) => console.error('WebSocket error:', error.message));
+      ws.send(JSON.stringify({ type: 'connection', status: 'connected', timestamp: new Date(),
+        message: 'Welcome to Silent Auction Gallery real-time updates' }));
     });
 
     console.log('WebSocket server initialized');
@@ -93,24 +86,26 @@ class RealtimeService {
   }
 
   /**
-   * Handle authentication message
-   * Accepts { type: 'authenticate', payload: { token } } from websocket-client.js
+   * Authenticate a WebSocket connection from a token string.
+   * Called at connection time with the token parsed from the access_token
+   * httpOnly cookie on the upgrade request.
    * @private
    */
-  async _handleAuthenticate(ws, data) {
-    const token = data.payload?.token || data.token;
-
-    if (!token) {
-      ws.send(JSON.stringify({
-        type: 'error',
-        message: 'Authentication token required'
-      }));
-      return;
-    }
-
+  async _authenticateFromToken(ws, token) {
     let userId, userRole, userSchoolId, jti;
     try {
       const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET, { algorithms: ['HS256'] });
+
+      // Reject limited-purpose tokens (e.g. password-reset, email-verify) and
+      // refresh tokens — only full-session access tokens may authenticate a socket.
+      if (decoded.purpose || decoded.type === 'refresh') {
+        ws.send(JSON.stringify({
+          type: 'error',
+          message: 'Invalid or expired authentication token'
+        }));
+        return;
+      }
+
       userId = decoded.sub;
       userRole = decoded.role;
       userSchoolId = decoded.schoolId ?? decoded.school_id ?? null;
@@ -172,6 +167,22 @@ class RealtimeService {
     }));
 
     console.log(`User ${userId} authenticated via WebSocket`);
+  }
+
+  /**
+   * Handle authentication message (no-op ack under the cookie-auth model).
+   * The socket is authenticated at connection time from the httpOnly
+   * access_token cookie on the upgrade request. A client authenticate frame
+   * is accepted only as a re-ack; any supplied token is ignored.
+   * @private
+   */
+  async _handleAuthenticate(ws) {
+    // The socket is authenticated at connection time from the httpOnly
+    // access_token cookie on the upgrade request. A client authenticate frame
+    // is accepted only as a re-ack; any supplied token is ignored.
+    if (ws.userId) {
+      ws.send(JSON.stringify({ type: 'authenticated', userId: ws.userId, timestamp: new Date() }));
+    }
   }
 
   /**
@@ -471,4 +482,6 @@ class RealtimeService {
   }
 }
 
-module.exports = new RealtimeService();
+const singleton = new RealtimeService();
+module.exports = singleton;
+module.exports.RealtimeService = RealtimeService;

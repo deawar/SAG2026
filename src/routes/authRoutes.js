@@ -18,6 +18,8 @@ const ValidationUtils = require('../utils/validationUtils');
 const { JWTService, TwoFactorService, RBACService, SessionService, AuthenticationService } = require('../services/authenticationService');
 const { UserModel } = require('../models');
 const { setRefreshCookie } = require('../utils/refreshCookie');
+const { setAccessCookie } = require('../utils/accessCookie');
+const { clearTwofaCookie } = require('../utils/twofaCookie');
 
 /**
  * Factory function to create auth routes with injected database
@@ -370,14 +372,14 @@ module.exports = (db) => {
   /**
  * POST /api/auth/2fa/force-setup
  * Begin mandatory 2FA setup for admin accounts.
- * Auth: setupToken in request body (purpose: '2fa_force_setup')
+ * Auth: twofa_token httpOnly cookie (purpose: '2fa_force_setup') — set by the login response.
  *
- * Body: { setupToken: string }
+ * Body: {} (no token in body; cookie is read automatically)
  * Response: 200 { secret, qrCode (data URL), backupCodes, manualEntryKey }
  */
   router.post('/2fa/force-setup', async (req, res, next) => {
     try {
-      const { setupToken } = req.body;
+      const setupToken = req.cookies?.twofa_token;
       if (!setupToken) {
         return res.status(400).json({ success: false, message: 'setupToken required' });
       }
@@ -421,15 +423,16 @@ module.exports = (db) => {
 
   /**
  * POST /api/auth/2fa/force-verify
- * Confirm mandatory 2FA setup: verify TOTP code, persist 2FA, issue full session tokens.
- * Auth: setupToken in request body (purpose: '2fa_force_setup')
+ * Confirm mandatory 2FA setup: verify TOTP code, persist 2FA, issue full session cookies.
+ * Auth: twofa_token httpOnly cookie (purpose: '2fa_force_setup') — read automatically.
  *
- * Body: { setupToken, secret, code, backupCodes }
- * Response: 200 with accessToken + refreshToken (same shape as /login success)
+ * Body: { secret, code } (no setupToken in body; backup codes generated server-side)
+ * Response: 200 — access token + refresh token set as httpOnly cookies; body contains user info + expiresIn
  */
   router.post('/2fa/force-verify', loginLimiter, async (req, res, next) => {
     try {
-      const { setupToken, secret, code } = req.body;
+      const setupToken = req.cookies?.twofa_token;
+      const { secret, code } = req.body;
 
       if (!setupToken || !secret || !code) {
         return res.status(400).json({ success: false, message: 'setupToken, secret, and code are required' });
@@ -501,6 +504,8 @@ module.exports = (db) => {
       } catch (_err) { /* non-fatal */ }
 
       setRefreshCookie(res, refreshTokenResult.token);
+      setAccessCookie(res, accessTokenResult.token);
+      clearTwofaCookie(res);
       return res.json({
         success: true,
         message: '2FA setup complete. You are now logged in.',
@@ -511,7 +516,6 @@ module.exports = (db) => {
           lastName: user.last_name || '',
           role: user.role,
           schoolId: user.school_id || null,
-          accessToken: accessTokenResult.token,
           expiresIn: accessTokenResult.expiresIn
         }
       });

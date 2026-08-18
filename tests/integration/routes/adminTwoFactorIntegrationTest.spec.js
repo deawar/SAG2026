@@ -21,6 +21,7 @@ const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const createTestApp = require('../../helpers/createTestApp');
 const mockDb = require('../../helpers/mockDb');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 
@@ -59,7 +60,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
   // Login — admin without 2FA
   // ---------------------------------------------------------------------------
   describe('POST /api/auth/login — admin without 2FA', () => {
-    test('returns requiresTwoFactorSetup and setupToken (not an access token)', async () => {
+    test('returns requiresTwoFactorSetup and sets twofa_token cookie (not an access token)', async () => {
       const bcrypt = require('bcrypt');
       const hash = await bcrypt.hash('Password123!', 1);
       const user = makeUserRow({ role: 'SITE_ADMIN', two_fa_enabled: false, password_hash: hash });
@@ -73,8 +74,11 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data.requiresTwoFactorSetup).toBe(true);
-      expect(res.body.data.setupToken).toBeDefined();
+      // setupToken is now in the twofa_token cookie, not the body
+      expect(res.body.data.setupToken).toBeUndefined();
       expect(res.body.data.accessToken).toBeUndefined();
+      const twofaCookie = res.headers['set-cookie']?.find(c => c.startsWith('twofa_token='));
+      expect(twofaCookie).toBeDefined();
     });
 
     test('SCHOOL_ADMIN without 2FA also gets requiresTwoFactorSetup', async () => {
@@ -92,7 +96,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
       expect(res.body.data.requiresTwoFactorSetup).toBe(true);
     });
 
-    test('setupToken encodes purpose=2fa_force_setup and twoFaEnabled=false', async () => {
+    test('twofa_token cookie encodes purpose=2fa_force_setup and twoFaEnabled=false', async () => {
       const bcrypt = require('bcrypt');
       const hash = await bcrypt.hash('Password123!', 1);
       const user = makeUserRow({ role: 'SITE_ADMIN', two_fa_enabled: false, password_hash: hash });
@@ -103,7 +107,11 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
         .post('/api/auth/login')
         .send({ email: 'admin@example.com', password: 'Password123!' });
 
-      const decoded = jwt.verify(res.body.data.setupToken, SECRET);
+      // Extract token value from the twofa_token Set-Cookie header
+      const twofaCookieHeader = res.headers['set-cookie']?.find(c => c.startsWith('twofa_token='));
+      expect(twofaCookieHeader).toBeDefined();
+      const tokenValue = twofaCookieHeader.split(';')[0].replace('twofa_token=', '');
+      const decoded = jwt.verify(tokenValue, SECRET);
       expect(decoded.purpose).toBe('2fa_force_setup');
       expect(decoded.twoFaEnabled).toBe(false);
     });
@@ -127,8 +135,11 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data.requiresTwoFactorSetup).toBe(true);
-      expect(res.body.data.setupToken).toBeDefined();
+      // setupToken is now in the twofa_token cookie, not the body
+      expect(res.body.data.setupToken).toBeUndefined();
       expect(res.body.data.accessToken).toBeUndefined();
+      const twofaCookie = res.headers['set-cookie']?.find(c => c.startsWith('twofa_token='));
+      expect(twofaCookie).toBeDefined();
     });
   });
 
@@ -136,7 +147,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
   // POST /api/auth/2fa/force-setup
   // ---------------------------------------------------------------------------
   describe('POST /api/auth/2fa/force-setup', () => {
-    test('returns TOTP secret and QR code for a valid setupToken', async () => {
+    test('returns TOTP secret and QR code for a valid setupToken cookie', async () => {
       const setupToken = makeToken({
         sub: 'user-1',
         role: 'SITE_ADMIN',
@@ -150,7 +161,8 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .post('/api/auth/2fa/force-setup')
-        .send({ setupToken });
+        .set('Cookie', 'twofa_token=' + setupToken)
+        .send({});
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -159,7 +171,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
       expect(Array.isArray(res.body.data.backupCodes)).toBe(true);
     });
 
-    test('rejects when no setupToken is provided', async () => {
+    test('rejects when no twofa_token cookie is provided', async () => {
       const res = await request(app)
         .post('/api/auth/2fa/force-setup')
         .send({});
@@ -167,7 +179,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
       expect(res.status).toBe(400);
     });
 
-    test('rejects a token with wrong purpose', async () => {
+    test('rejects a cookie token with wrong purpose', async () => {
       const badToken = makeToken({
         sub: 'user-1',
         role: 'SITE_ADMIN',
@@ -176,12 +188,13 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .post('/api/auth/2fa/force-setup')
-        .send({ setupToken: badToken });
+        .set('Cookie', 'twofa_token=' + badToken)
+        .send({});
 
       expect(res.status).toBe(401);
     });
 
-    test('rejects an expired setupToken', async () => {
+    test('rejects an expired twofa_token cookie', async () => {
       const expiredToken = makeToken({
         sub: 'user-1',
         role: 'SITE_ADMIN',
@@ -190,7 +203,8 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .post('/api/auth/2fa/force-setup')
-        .send({ setupToken: expiredToken });
+        .set('Cookie', 'twofa_token=' + expiredToken)
+        .send({});
 
       expect(res.status).toBe(401);
     });
@@ -200,20 +214,22 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
   // POST /api/auth/2fa/force-verify
   // ---------------------------------------------------------------------------
   describe('POST /api/auth/2fa/force-verify', () => {
-    test('rejects when setupToken, secret, or code is missing', async () => {
+    test('rejects when twofa_token cookie, secret, or code is missing', async () => {
+      // No twofa_token cookie — setupToken comes from cookie now
       const res = await request(app)
         .post('/api/auth/2fa/force-verify')
-        .send({ secret: 'abc', code: '123456' }); // no setupToken
+        .send({ secret: 'abc', code: '123456' }); // no cookie
 
       expect(res.status).toBe(400);
     });
 
-    test('rejects a token with wrong purpose', async () => {
+    test('rejects a twofa_token cookie with wrong purpose', async () => {
       const badToken = makeToken({ sub: 'user-1', role: 'SITE_ADMIN', purpose: 'other' });
 
       const res = await request(app)
         .post('/api/auth/2fa/force-verify')
-        .send({ setupToken: badToken, secret: 'JBSWY3DPEHPK3PXP', code: '000000' });
+        .set('Cookie', 'twofa_token=' + badToken)
+        .send({ secret: 'JBSWY3DPEHPK3PXP', code: '000000' });
 
       expect(res.status).toBe(401);
     });
@@ -233,7 +249,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .get('/api/admin/users')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(403);
       expect(res.body.error).toBe('admin_2fa_required');
@@ -249,7 +265,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .get('/api/admin/users')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(403);
       expect(res.body.error).toBe('admin_2fa_required');
@@ -268,7 +284,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .get('/api/admin/users')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       // Should NOT be blocked by requireAdmin2fa (may be 200 or downstream error)
       expect(res.status).not.toBe(403);
@@ -280,7 +296,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .get('/api/auth')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).not.toBe(403);
     });
@@ -295,7 +311,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .post('/api/auth/2fa/disable')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(403);
       expect(res.body.error).toBe('admin_2fa_mandatory');
@@ -306,7 +322,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .post('/api/auth/2fa/disable')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(403);
       expect(res.body.error).toBe('admin_2fa_mandatory');
@@ -317,7 +333,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .post('/api/auth/2fa/disable')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(403);
       expect(res.body.error).toBe('admin_2fa_mandatory');
@@ -332,7 +348,7 @@ describe('G17 — Mandatory 2FA for admin accounts', () => {
 
       const res = await request(app)
         .post('/api/auth/2fa/disable')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);

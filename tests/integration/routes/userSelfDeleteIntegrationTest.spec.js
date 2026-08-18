@@ -11,6 +11,7 @@ const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const createTestApp = require('../../helpers/createTestApp');
 const mockDb = require('../../helpers/mockDb');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 
@@ -33,7 +34,7 @@ describe('DELETE /api/user', () => {
   test('returns 401 with an invalid token', async () => {
     const res = await request(app)
       .delete('/api/user')
-      .set('Authorization', 'Bearer not.a.valid.token');
+      .set(authCookie('not.a.valid.token'));
     expect(res.status).toBe(401);
   });
 
@@ -52,7 +53,7 @@ describe('DELETE /api/user', () => {
 
     const res = await request(app)
       .delete('/api/user')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
@@ -69,7 +70,7 @@ describe('DELETE /api/user', () => {
 
     await request(app)
       .delete('/api/user')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     const updateCall = mockDb.query.mock.calls.find(
       ([sql]) => sql && sql.includes('UPDATE users') && sql.includes('deleted_at')
@@ -98,7 +99,7 @@ describe('DELETE /api/user', () => {
 
     await request(app)
       .delete('/api/user')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     const sessionRevoke = mockDb.query.mock.calls.find(
       ([sql]) => sql && sql.includes('UPDATE user_sessions') && sql.includes('revoked_at')
@@ -118,7 +119,7 @@ describe('DELETE /api/user', () => {
 
     await request(app)
       .delete('/api/user')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     const auditCall = mockDb.query.mock.calls.find(
       ([sql]) => sql && sql.includes('INSERT INTO audit_logs')
@@ -139,7 +140,7 @@ describe('DELETE /api/user', () => {
 
     const res = await request(app)
       .delete('/api/user')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(404);
   });

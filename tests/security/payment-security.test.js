@@ -18,6 +18,7 @@
 require('dotenv').config();
 const request = require('supertest');
 const createTestApp = require('../helpers/createTestApp');
+const { authCookie } = require('../helpers/authCookie');
 const app = createTestApp();
 
 describe('Payment Security & PCI-DSS Compliance', () => {
@@ -30,7 +31,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should never accept raw card data in requests', async () => {
       const response = await request(app)
         .post('/api/payments/process')
-        .set('Authorization', 'Bearer fake_token')
+        .set(authCookie('fake_token'))
         .send({
           auctionId: 'auction123',
           amount: 100,
@@ -46,7 +47,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should require tokenized payment method', async () => {
       const response = await request(app)
         .post('/api/payments/process')
-        .set('Authorization', 'Bearer fake_token')
+        .set(authCookie('fake_token'))
         .send({
           auctionId: 'auction123',
           amount: 100
@@ -59,7 +60,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should accept only valid payment tokens', async () => {
       const response = await request(app)
         .post('/api/payments/process')
-        .set('Authorization', 'Bearer fake_token')
+        .set(authCookie('fake_token'))
         .send({
           auctionId: 'auction123',
           amount: 100,
@@ -73,7 +74,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should never expose payment tokens in responses', async () => {
       const response = await request(app)
         .post('/api/payments/process')
-        .set('Authorization', 'Bearer fake_token')
+        .set(authCookie('fake_token'))
         .send({
           auctionId: 'auction123',
           amount: 100,
@@ -89,7 +90,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should not log raw payment data in error messages', async () => {
       const response = await request(app)
         .post('/api/payments/process')
-        .set('Authorization', 'Bearer fake_token')
+        .set(authCookie('fake_token'))
         .send({
           auctionId: 'auction123',
           amount: 100
@@ -111,7 +112,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
       // Non-winner attempting to pay
       const response = await request(app)
         .post('/api/payments/process')
-        .set('Authorization', 'Bearer bidder_token')
+        .set(authCookie('bidder_token'))
         .send({
           auctionId: 'auction123',
           amount: 100,
@@ -125,7 +126,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should validate amount matches winning bid', async () => {
       const response = await request(app)
         .post('/api/payments/process')
-        .set('Authorization', 'Bearer winner_token')
+        .set(authCookie('winner_token'))
         .send({
           auctionId: 'auction123',
           amount: 50,  // Bid was 100
@@ -141,7 +142,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
 
       const response1 = await request(app)
         .post('/api/payments/process')
-        .set('Authorization', 'Bearer winner_token')
+        .set(authCookie('winner_token'))
         .set('Idempotency-Key', idempotencyKey)
         .send({
           auctionId: 'auction123',
@@ -152,7 +153,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
       // Second identical request should return same result (not charge twice)
       const response2 = await request(app)
         .post('/api/payments/process')
-        .set('Authorization', 'Bearer winner_token')
+        .set(authCookie('winner_token'))
         .set('Idempotency-Key', idempotencyKey)
         .send({
           auctionId: 'auction123',
@@ -192,7 +193,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
       for (let i = 0; i < 6; i++) {
         const response = await request(app)
           .post('/api/payments/process')
-          .set('Authorization', `Bearer ${userId}`)
+          .set(authCookie(userId))
           .send({
             auctionId: `auction${i}`,
             amount: 100,
@@ -209,7 +210,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should detect duplicate card usage patterns', async () => {
       const response = await request(app)
         .post('/api/payments/process')
-        .set('Authorization', 'Bearer user_token')
+        .set(authCookie('user_token'))
         .send({
           auctionId: 'auction123',
           amount: 100,
@@ -224,7 +225,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should flag geographic mismatch alerts', async () => {
       const response = await request(app)
         .post('/api/payments/process')
-        .set('Authorization', 'Bearer user_token')
+        .set(authCookie('user_token'))
         .send({
           auctionId: 'auction123',
           amount: 100,
@@ -243,7 +244,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should require verification for high-value transactions', async () => {
       const response = await request(app)
         .post('/api/payments/process')
-        .set('Authorization', 'Bearer user_token')
+        .set(authCookie('user_token'))
         .send({
           auctionId: 'auction_expensive',
           amount: 50000,  // Very high
@@ -267,7 +268,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should require SCHOOL_ADMIN or SITE_ADMIN for refunds', async () => {
       const response = await request(app)
         .post('/api/payments/transaction123/refund')
-        .set('Authorization', 'Bearer student_token')
+        .set(authCookie('student_token'))
         .send({
           reason: 'Customer request',
           amount: 100
@@ -280,7 +281,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should not allow refund after 48-hour window', async () => {
       const response = await request(app)
         .post('/api/payments/old_transaction_id/refund')
-        .set('Authorization', 'Bearer admin_token')
+        .set(authCookie('admin_token'))
         .send({
           reason: 'Customer request',
           amount: 100
@@ -294,7 +295,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
       // Refunds should be logged with admin who approved it
       const response = await request(app)
         .post('/api/payments/transaction123/refund')
-        .set('Authorization', 'Bearer admin_token')
+        .set(authCookie('admin_token'))
         .send({
           reason: 'Fraud detected',
           amount: 100
@@ -361,7 +362,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should allow users to export their payment data', async () => {
       const response = await request(app)
         .get('/api/users/me/export')
-        .set('Authorization', 'Bearer user_token');
+        .set(authCookie('user_token'));
 
       // Should return user data in standard format
       expect([200, 404, 401]).toContain(response.status);
@@ -373,7 +374,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should implement right to be forgotten (data deletion)', async () => {
       const response = await request(app)
         .delete('/api/users/me')
-        .set('Authorization', 'Bearer user_token')
+        .set(authCookie('user_token'))
         .send({
           confirmDelete: true,
           password: 'userPassword123!'
@@ -386,7 +387,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should maintain audit logs for compliance', async () => {
       const response = await request(app)
         .get('/api/admin/audit-logs')
-        .set('Authorization', 'Bearer admin_token')
+        .set(authCookie('admin_token'))
         .query({ userId: 'specific_user_id', limit: 100 });
 
       // Admin should be able to view audit trail
@@ -397,7 +398,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
       // Verify old payment records are archived/deleted
       const response = await request(app)
         .get('/api/admin/payments')
-        .set('Authorization', 'Bearer admin_token')
+        .set(authCookie('admin_token'))
         .query({ startDate: '2020-01-01', endDate: '2020-02-01' });
 
       // Should handle historical queries appropriately
@@ -414,7 +415,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should prevent transaction modification after completion', async () => {
       const response = await request(app)
         .put('/api/payments/completed_transaction_id')
-        .set('Authorization', 'Bearer admin_token')
+        .set(authCookie('admin_token'))
         .send({
           amount: 200,  // Attempt to change amount
           status: 'refunded'
@@ -427,7 +428,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should maintain immutable transaction log', async () => {
       const response = await request(app)
         .get('/api/payments/transaction_id/history')
-        .set('Authorization', 'Bearer admin_token');
+        .set(authCookie('admin_token'));
 
       // Should return complete immutable history
       expect([200, 400, 401, 404]).toContain(response.status);
@@ -446,7 +447,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should not expose gateway credentials in responses', async () => {
       const response = await request(app)
         .post('/api/payments/process')
-        .set('Authorization', 'Bearer user_token')
+        .set(authCookie('user_token'))
         .send({
           auctionId: 'auction123',
           amount: 100,
@@ -461,7 +462,7 @@ describe('Payment Security & PCI-DSS Compliance', () => {
     test('should support multiple payment gateways securely', async () => {
       const response = await request(app)
         .post('/api/payments/process')
-        .set('Authorization', 'Bearer user_token')
+        .set(authCookie('user_token'))
         .send({
           auctionId: 'auction123',
           amount: 100,

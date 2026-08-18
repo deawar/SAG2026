@@ -21,6 +21,7 @@ const jwt = require('jsonwebtoken');
 const createApp = require('../../../src/app');
 const mockDb = require('../../helpers/mockDb');
 const { pool: mockPool } = require('../../../src/models/index');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 
@@ -80,7 +81,7 @@ describe('Auction Routes Integration Tests', () => {
 
       const res = await request(app)
         .get(`/api/auctions/${AUCTION_ID}/bids`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -106,7 +107,7 @@ describe('Auction Routes Integration Tests', () => {
 
       const res = await request(app)
         .get(`/api/auctions/${AUCTION_ID}/bids`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(403);
     });
@@ -118,7 +119,7 @@ describe('Auction Routes Integration Tests', () => {
 
       const res = await request(app)
         .get('/api/auctions/nonexistent-id/bids')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(404);
     });
@@ -132,7 +133,7 @@ describe('Auction Routes Integration Tests', () => {
 
       const res = await request(app)
         .get(`/api/auctions/${AUCTION_ID}/bids`)
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect(res.status).toBe(200);
       expect(res.body.bids).toEqual([]);

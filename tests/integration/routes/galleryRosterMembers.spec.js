@@ -17,6 +17,7 @@ const jwt = require('jsonwebtoken');
 const createApp = require('../../../src/app');
 const mockDb = require('../../helpers/mockDb');
 const { pool: mockPool } = require('../../../src/models/index');
+const { authCookie } = require('../../helpers/authCookie');
 const tok = (p) => jwt.sign(p, process.env.JWT_ACCESS_SECRET, { algorithm: 'HS256' });
 
 const HOST_SCHOOL = 'school-host';
@@ -40,7 +41,7 @@ describe('Gallery roster + grant member listings (Plan D enablers)', () => {
       .mockResolvedValueOnce({ rows: [{ id: 'teach-host', role: 'TEACHER', school_id: HOST_SCHOOL, grade_level: null }], rowCount: 1 }) // resolveViewer
       .mockResolvedValueOnce({ rows: [{ studentUserId: 'stud-1', firstName: 'Ana', lastName: 'Lee', gradeLevel: '10' }], rowCount: 1 }); // listRoster
     const res = await request(app).get('/api/gallery/roster')
-      .set('Authorization', `Bearer ${hostTeacherTok}`);
+      .set(authCookie(hostTeacherTok));
     expect(res.status).toBe(200);
     expect(res.body.roster).toEqual([{ studentUserId: 'stud-1', firstName: 'Ana', lastName: 'Lee', gradeLevel: '10' }]);
     expect(mockPool.query.mock.calls[1][1]).toEqual([HOST_SCHOOL]);
@@ -48,7 +49,7 @@ describe('Gallery roster + grant member listings (Plan D enablers)', () => {
 
   test('STUDENT GET /api/gallery/roster → 403', async () => {
     const res = await request(app).get('/api/gallery/roster')
-      .set('Authorization', `Bearer ${studentTok}`);
+      .set(authCookie(studentTok));
     expect(res.status).toBe(403);
   });
 
@@ -58,7 +59,7 @@ describe('Gallery roster + grant member listings (Plan D enablers)', () => {
       .mockResolvedValueOnce({ rows: [{ id: GRANT_ID, host_school_id: HOST_SCHOOL, invited_school_id: 'school-ext', invited_teacher_user_id: 'teach-inv', status: 'ACCEPTED' }], rowCount: 1 }) // getGrantForRevoker
       .mockResolvedValueOnce({ rows: [{ studentUserId: 'stud-9' }], rowCount: 1 }); // listMembers
     const res = await request(app).get(`/api/gallery/grants/${GRANT_ID}/members`)
-      .set('Authorization', `Bearer ${invTeacherTok}`);
+      .set(authCookie(invTeacherTok));
     expect(res.status).toBe(200);
     expect(res.body.members).toEqual([{ studentUserId: 'stud-9' }]);
   });
@@ -68,7 +69,7 @@ describe('Gallery roster + grant member listings (Plan D enablers)', () => {
       .mockResolvedValueOnce({ rows: [{ id: 'teach-host', role: 'TEACHER', school_id: HOST_SCHOOL, grade_level: null }], rowCount: 1 })
       .mockResolvedValueOnce({ rows: [{ id: GRANT_ID, host_school_id: HOST_SCHOOL, invited_school_id: 'school-ext', invited_teacher_user_id: 'teach-inv', status: 'ACCEPTED' }], rowCount: 1 });
     const res = await request(app).get(`/api/gallery/grants/${GRANT_ID}/members`)
-      .set('Authorization', `Bearer ${hostTeacherTok}`);
+      .set(authCookie(hostTeacherTok));
     expect(res.status).toBe(403);
   });
 });

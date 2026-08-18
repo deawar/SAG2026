@@ -16,6 +16,7 @@
 const request = require('supertest');
 const createTestApp = require('../helpers/createTestApp');
 const jwt = require('jsonwebtoken');
+const { authCookie } = require('../helpers/authCookie');
 const app = createTestApp();
 
 describe('SECTION 11: Security Tests - OWASP Top 10', () => {
@@ -71,7 +72,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
       const maliciousQuery = "' UNION SELECT * FROM users--";
       const response = await request(app)
         .get('/api/auctions')
-        .set('Authorization', `Bearer ${validToken}`)
+        .set(authCookie(validToken))
         .query({ filter: maliciousQuery });
 
       // Should sanitize or reject
@@ -82,7 +83,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
       const maliciousData = '; DROP TABLE users;--';
       const response = await request(app)
         .post('/api/auctions')
-        .set('Authorization', `Bearer ${adminToken}`)
+        .set(authCookie(adminToken))
         .send({
           title: maliciousData,
           description: 'Test'
@@ -114,7 +115,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
       const xssPayload = '<script>alert("xss")</script>';
       const response = await request(app)
         .post('/api/auctions')
-        .set('Authorization', `Bearer ${adminToken}`)
+        .set(authCookie(adminToken))
         .send({
           title: xssPayload,
           description: 'Test Auction'
@@ -130,7 +131,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
       const xssPayload = '<script>alert("xss")</script>';
       const response = await request(app)
         .get('/api/auctions')
-        .set('Authorization', `Bearer ${validToken}`)
+        .set(authCookie(validToken))
         .query({ search: xssPayload });
 
       // Should not execute script
@@ -141,7 +142,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
       // Send request that will error with user input
       const response = await request(app)
         .get('/api/auctions/invalid-id-<script>')
-        .set('Authorization', `Bearer ${validToken}`);
+        .set(authCookie(validToken));
 
       // Error response should not contain executable scripts
       if (response.text) {
@@ -167,7 +168,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
     test('should reject invalid JWT token format', async () => {
       const response = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', 'Bearer invalid-token-format');
+        .set(authCookie('invalid-token-format'));
 
       expect(response.status).toBe(401);
     });
@@ -181,7 +182,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
 
       const response = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', `Bearer ${expiredToken}`);
+        .set(authCookie(expiredToken));
 
       expect(response.status).toBe(401);
     });
@@ -191,7 +192,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
 
       const response = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', `Bearer ${tamperedToken}`);
+        .set(authCookie(tamperedToken));
 
       expect(response.status).toBe(401);
     });
@@ -214,7 +215,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
 
       const response = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', `Bearer ${refreshToken}`);
+        .set(authCookie(refreshToken));
 
       expect(response.status).toBe(401);
     });
@@ -234,7 +235,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
 
       const response = await request(app)
         .post('/api/auctions')
-        .set('Authorization', `Bearer ${studentToken}`)
+        .set(authCookie(studentToken))
         .send({
           title: 'Unauthorized Auction',
           description: 'Should fail'
@@ -301,7 +302,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
     test('should not expose raw card data in responses', async () => {
       const response = await request(app)
         .post('/api/payments')
-        .set('Authorization', `Bearer ${validToken}`)
+        .set(authCookie(validToken))
         .send({
           amount: 99.99,
           cardNumber: '4111111111111111' // Should never be accepted
@@ -317,7 +318,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
 
       const response1 = await request(app)
         .post('/api/payments')
-        .set('Authorization', `Bearer ${validToken}`)
+        .set(authCookie(validToken))
         .set('Idempotency-Key', idempotencyKey)
         .send({
           amount: 99.99,
@@ -327,7 +328,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
       // Send same request again with same idempotency key
       const response2 = await request(app)
         .post('/api/payments')
-        .set('Authorization', `Bearer ${validToken}`)
+        .set(authCookie(validToken))
         .set('Idempotency-Key', idempotencyKey)
         .send({
           amount: 99.99,
@@ -350,7 +351,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
       // Use a mockDb-backed route so real postgres connection details are never exposed
       const response = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', `Bearer ${validToken}`);
+        .set(authCookie(validToken));
 
       // Error should not expose DB details
       expect(response.text).not.toMatch(/password|host|database|postgres/i);
@@ -396,7 +397,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
     test('should enforce maximum string lengths', async () => {
       const response = await request(app)
         .post('/api/auctions')
-        .set('Authorization', `Bearer ${adminToken}`)
+        .set(authCookie(adminToken))
         .send({
           title: 'A'.repeat(10000), // Excessively long
           description: 'B'.repeat(10000)
@@ -426,7 +427,7 @@ describe('SECTION 11: Security Tests - OWASP Top 10', () => {
 
       const response = await request(app)
         .post('/api/auctions')
-        .set('Authorization', `Bearer ${adminToken}`)
+        .set(authCookie(adminToken))
         .send({
           title: maliciousInput,
           description: maliciousInput

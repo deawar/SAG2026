@@ -11,6 +11,7 @@ const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const createTestApp = require('../../helpers/createTestApp');
 const mockDb = require('../../helpers/mockDb');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 
@@ -33,7 +34,7 @@ describe('POST /api/auth/2fa/disable', () => {
   test('returns 401 with an invalid token (wrong code)', async () => {
     const res = await request(app)
       .post('/api/auth/2fa/disable')
-      .set('Authorization', 'Bearer invalid.jwt.token');
+      .set(authCookie('invalid.jwt.token'));
     expect(res.status).toBe(401);
   });
 
@@ -49,7 +50,7 @@ describe('POST /api/auth/2fa/disable', () => {
 
     const res = await request(app)
       .post('/api/auth/2fa/disable')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
@@ -60,7 +61,7 @@ describe('POST /api/auth/2fa/disable', () => {
 
     const res = await request(app)
       .post('/api/auth/2fa/disable')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('admin_2fa_mandatory');
@@ -76,7 +77,7 @@ describe('POST /api/auth/2fa/disable', () => {
 
     await request(app)
       .post('/api/auth/2fa/disable')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     const updateCall = mockDb.query.mock.calls.find(
       ([sql]) => sql && sql.includes('UPDATE users') && sql.includes('two_fa_enabled')
@@ -97,7 +98,7 @@ describe('POST /api/auth/2fa/disable', () => {
 
     await request(app)
       .post('/api/auth/2fa/disable')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     const auditCall = mockDb.query.mock.calls.find(
       ([sql]) => sql && sql.includes('INSERT INTO audit_logs')

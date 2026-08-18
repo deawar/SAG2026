@@ -23,11 +23,10 @@ class AdminDashboard {
      * Check if user has admin access
      */
   checkAdminAccess() {
-    const token = localStorage.getItem('auth_token');
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     const userRole = user.role;
 
-    if (!token || !['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(userRole)) {
+    if (!window.authManager || !window.authManager.isAuthenticated() || !['SITE_ADMIN', 'SCHOOL_ADMIN'].includes(userRole)) {
       window.location.href = userRole === 'TEACHER'
         ? '/teacher-dashboard.html'
         : '/user-dashboard.html';

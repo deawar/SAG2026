@@ -30,6 +30,7 @@ const createApp = require('../../../src/app');
 const mockDb = require('../../helpers/mockDb');
 const { pool: mockPool } = require('../../../src/models/index');
 const TeacherController = require('../../../src/controllers/teacherController');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 function makeToken(payload) {
@@ -65,7 +66,7 @@ describe('Teacher add individual student (POST /api/teacher/students)', () => {
 
     const res = await request(app)
       .post('/api/teacher/students')
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({ name: 'Jordan Lee', email: 'Jordan@Example.com' });
 
     expect(res.status).toBe(201);
@@ -82,7 +83,7 @@ describe('Teacher add individual student (POST /api/teacher/students)', () => {
 
     const res = await request(app)
       .post('/api/teacher/students')
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({ name: 'Jordan Lee', email: 'jordan@example.com' });
 
     expect(res.status).toBe(409);
@@ -97,7 +98,7 @@ describe('Teacher add individual student (POST /api/teacher/students)', () => {
 
     const res = await request(app)
       .post('/api/teacher/students')
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({ name: 'Jordan Lee', email: 'jordan@example.com' });
 
     expect(res.status).toBe(409);
@@ -108,7 +109,7 @@ describe('Teacher add individual student (POST /api/teacher/students)', () => {
     const token = makeToken(TEACHER);
     const res = await request(app)
       .post('/api/teacher/students')
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({ name: 'Jordan Lee', email: 'not-an-email' });
 
     expect(res.status).toBe(400);
@@ -119,7 +120,7 @@ describe('Teacher add individual student (POST /api/teacher/students)', () => {
     const token = makeToken(TEACHER);
     const res = await request(app)
       .post('/api/teacher/students')
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({ name: '   ', email: 'jordan@example.com' });
 
     expect(res.status).toBe(400);
@@ -130,7 +131,7 @@ describe('Teacher add individual student (POST /api/teacher/students)', () => {
     const token = makeToken({ userId: 'student-1', role: 'STUDENT', twoFaEnabled: false });
     const res = await request(app)
       .post('/api/teacher/students')
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({ name: 'Jordan Lee', email: 'jordan@example.com' });
 
     expect(res.status).toBe(403);
@@ -148,7 +149,7 @@ describe('Teacher add individual student (POST /api/teacher/students)', () => {
 
     const res = await request(app)
       .post('/api/teacher/students')
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({ name: 'Jordan Lee', email: 'jordan@example.com' });
 
     expect(res.status).toBe(201);

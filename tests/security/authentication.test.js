@@ -19,6 +19,7 @@ require('dotenv').config();
 const request = require('supertest');
 const createTestApp = require('../helpers/createTestApp');
 const jwt = require('jsonwebtoken');
+const { authCookie } = require('../helpers/authCookie');
 const app = createTestApp();
 
 describe('Authentication & Authorization Security', () => {
@@ -37,7 +38,7 @@ describe('Authentication & Authorization Security', () => {
 
       const response = await request(app)
         .get('/api/auctions/active/list')
-        .set('Authorization', `Bearer ${malformedToken}`);
+        .set(authCookie(malformedToken));
 
       expect(response.status).toBe(401);
       expect(response.body.success).toBe(false);
@@ -52,7 +53,7 @@ describe('Authentication & Authorization Security', () => {
 
       const response = await request(app)
         .get('/api/auctions/active/list')
-        .set('Authorization', `Bearer ${tokenWithoutUserId}`);
+        .set(authCookie(tokenWithoutUserId));
 
       // Should reject token without userId claim
       expect(response.status).toBe(401);
@@ -68,7 +69,7 @@ describe('Authentication & Authorization Security', () => {
 
       const response = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       // Valid token: auth passes, user not found in mockDb → 404
       expect([401, 403, 404, 500]).toContain(response.status);
@@ -85,30 +86,25 @@ describe('Authentication & Authorization Security', () => {
 
       const response = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', `Bearer ${futureToken}`);
+        .set(authCookie(futureToken));
 
       expect([400, 401, 404]).toContain(response.status);
     });
 
-    test('should require Bearer prefix in Authorization header', async () => {
-      const token = jwt.sign(
-        { userId: '123', role: 'STUDENT' },
-        process.env.JWT_ACCESS_SECRET || 'test-secret',
-        { algorithm: 'HS256' }
-      );
-
+    test('should require cookie auth (no cookie → 401)', async () => {
+      // Previously tested missing 'Bearer ' prefix; with cookie-only auth,
+      // any request without the access_token cookie returns 401.
       const response = await request(app)
-        .get('/api/user/profile')
-        .set('Authorization', token); // Missing 'Bearer ' prefix
+        .get('/api/user/profile'); // No cookie sent
 
       expect(response.status).toBe(401);
     });
 
     test('should reject token with null algorithm', async () => {
-      // Attempt to create a token with no algorithm (None algorithm attack)
+      // Attempt to use a "none algorithm" token in the cookie (None algorithm attack)
       const response = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', 'Bearer eyJhbGciOiJub25lIiwi.eyJzdWIiOiJ1c2VyMTIzIn0.');
+        .set(authCookie('eyJhbGciOiJub25lIiwi.eyJzdWIiOiJ1c2VyMTIzIn0.'));
 
       expect(response.status).toBe(401);
     });
@@ -124,7 +120,7 @@ describe('Authentication & Authorization Security', () => {
 
       const response = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', `Bearer ${challengeToken}`);
+        .set(authCookie(challengeToken));
 
       expect(response.status).toBe(401);
     });
@@ -138,7 +134,7 @@ describe('Authentication & Authorization Security', () => {
 
       const response = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', `Bearer ${setupToken}`);
+        .set(authCookie(setupToken));
 
       expect(response.status).toBe(401);
     });
@@ -159,7 +155,7 @@ describe('Authentication & Authorization Security', () => {
 
       const response = await request(app)
         .get('/api/admin/users')
-        .set('Authorization', `Bearer ${studentToken}`);
+        .set(authCookie(studentToken));
 
       expect([403, 401, 500]).toContain(response.status);
     });
@@ -173,7 +169,7 @@ describe('Authentication & Authorization Security', () => {
 
       const response = await request(app)
         .get('/api/admin/users')
-        .set('Authorization', `Bearer ${bidderToken}`);
+        .set(authCookie(bidderToken));
 
       expect([403, 401, 500]).toContain(response.status);
     });
@@ -188,7 +184,7 @@ describe('Authentication & Authorization Security', () => {
       // Teacher trying to access a SITE_ADMIN/SCHOOL_ADMIN-only endpoint
       const response = await request(app)
         .get('/api/admin/users')
-        .set('Authorization', `Bearer ${teacherToken}`);
+        .set(authCookie(teacherToken));
 
       expect([403, 401, 500]).toContain(response.status);
     });
@@ -202,7 +198,7 @@ describe('Authentication & Authorization Security', () => {
 
       const response = await request(app)
         .put('/api/user/profile')
-        .set('Authorization', `Bearer ${studentToken}`)
+        .set(authCookie(studentToken))
         .send({
           email: 'newemail@example.com',
           role: 'SITE_ADMIN'  // Attempting privilege escalation — ignored by controller
@@ -222,7 +218,7 @@ describe('Authentication & Authorization Security', () => {
       // Teacher accessing a protected route; mockDb returns no user → 404
       const response = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', `Bearer ${teacherToken}`);
+        .set(authCookie(teacherToken));
 
       // Auth passes but user not found in mockDb
       expect([403, 404, 401]).toContain(response.status);
@@ -245,7 +241,7 @@ describe('Authentication & Authorization Security', () => {
       // First logout
       const logoutResponse = await request(app)
         .post('/api/auth/logout')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect([200, 401, 500]).toContain(logoutResponse.status);
 
@@ -253,7 +249,7 @@ describe('Authentication & Authorization Security', () => {
       // mockDb user lookup returns 404)
       const reuseResponse = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', `Bearer ${token}`);
+        .set(authCookie(token));
 
       expect([401, 404]).toContain(reuseResponse.status);
     });
@@ -274,7 +270,7 @@ describe('Authentication & Authorization Security', () => {
       // Test that oldest sessions are invalidated
       const oldSessionResponse = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', `Bearer ${sessionTokens[0]}`);
+        .set(authCookie(sessionTokens[0]));
 
       // In test env: token passes auth, user not found in mockDb → 404
       expect([401, 403, 404]).toContain(oldSessionResponse.status);
@@ -307,7 +303,7 @@ describe('Authentication & Authorization Security', () => {
 
       const response = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', `Bearer ${expiredToken}`);
+        .set(authCookie(expiredToken));
 
       expect(response.status).toBe(401);
     });
@@ -387,7 +383,7 @@ describe('Authentication & Authorization Security', () => {
 
       const response = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', `Bearer ${refreshToken}`);
+        .set(authCookie(refreshToken));
 
       // Using refresh token as access token should fail
       expect(response.status).toBe(401);
@@ -412,7 +408,7 @@ describe('Authentication & Authorization Security', () => {
 
       const response = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', `Bearer ${oldAccessToken}`);
+        .set(authCookie(oldAccessToken));
 
       expect([401, 404]).toContain(response.status);
     });

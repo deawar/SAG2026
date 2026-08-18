@@ -97,7 +97,7 @@ function createApp(db) {
       }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     credentials: true
   };
   app.use(cors(corsOptions));
@@ -112,6 +112,10 @@ function createApp(db) {
   app.use(express.json({ limit: '15mb' }));
   app.use(express.urlencoded({ limit: '15mb', extended: true }));
   app.use(cookieParser());
+
+  // CSRF: block cookie-authenticated mutations that lack the SPA's custom header.
+  const { requireCsrfHeader } = require('./middleware/csrfMiddleware');
+  app.use('/api', requireCsrfHeader);
 
   // ==========================================================================
   // SECURITY MIDDLEWARE

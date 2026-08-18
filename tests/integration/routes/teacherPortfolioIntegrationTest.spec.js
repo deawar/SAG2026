@@ -15,6 +15,7 @@ const jwt = require('jsonwebtoken');
 const createApp = require('../../../src/app');
 const mockDb = require('../../helpers/mockDb');
 const { pool: mockPool } = require('../../../src/models/index');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 
@@ -32,7 +33,7 @@ describe('Teacher portfolio viewing', () => {
       rows: [{ student_id: 'stu-1', first_name: 'Ava', last_name: 'Reed', in_progress: '3', completed: '2', in_auction: '1' }],
       rowCount: 1
     });
-    const res = await request(app).get('/api/teacher/portfolios').set('Authorization', `Bearer ${teacherToken()}`);
+    const res = await request(app).get('/api/teacher/portfolios').set(authCookie(teacherToken()));
     expect(res.status).toBe(200);
     expect(res.body.students[0]).toMatchObject({ studentId: 'stu-1', inProgress: 3, completed: 2, inAuction: 1 });
   });
@@ -41,14 +42,14 @@ describe('Teacher portfolio viewing', () => {
     mockPool.query
       .mockResolvedValueOnce({ rows: [{ ok: 1 }], rowCount: 1 }) // scope check: registration_tokens match
       .mockResolvedValueOnce({ rows: [{ id: 'pi-1', title: 'Sunset', image_url: null, portfolio_status: 'COMPLETED', submission_state: 'IN_AUCTION', created_at: new Date() }], rowCount: 1 });
-    const res = await request(app).get('/api/teacher/portfolios/stu-1').set('Authorization', `Bearer ${teacherToken()}`);
+    const res = await request(app).get('/api/teacher/portfolios/stu-1').set(authCookie(teacherToken()));
     expect(res.status).toBe(200);
     expect(res.body.items).toHaveLength(1);
   });
 
   test('a different teacher (not the inviter) gets 403', async () => {
     mockPool.query.mockResolvedValueOnce({ rows: [], rowCount: 0 }); // scope check fails
-    const res = await request(app).get('/api/teacher/portfolios/stu-1').set('Authorization', `Bearer ${otherTeacherToken()}`);
+    const res = await request(app).get('/api/teacher/portfolios/stu-1').set(authCookie(otherTeacherToken()));
     expect(res.status).toBe(403);
   });
 
@@ -57,7 +58,7 @@ describe('Teacher portfolio viewing', () => {
       .mockResolvedValueOnce({ rows: [{ school_id: 'school-1' }], rowCount: 1 }) // (1) authMiddleware hydrates the ADMIN's own school -> req.user.schoolId='school-1'
       .mockResolvedValueOnce({ rows: [{ school_id: 'school-1' }], rowCount: 1 }) // (2) controller: SELECT school_id FROM users WHERE id=studentId (the viewed student)
       .mockResolvedValueOnce({ rows: [], rowCount: 0 });                         // (3) controller: items query (empty is fine)
-    const res = await request(app).get('/api/teacher/portfolios/stu-1').set('Authorization', `Bearer ${schoolAdminToken()}`);
+    const res = await request(app).get('/api/teacher/portfolios/stu-1').set(authCookie(schoolAdminToken()));
     expect(res.status).toBe(200);
   });
 
@@ -65,7 +66,7 @@ describe('Teacher portfolio viewing', () => {
     mockPool.query
       .mockResolvedValueOnce({ rows: [{ school_id: 'school-2' }], rowCount: 1 }) // (1) authMiddleware hydrates the ADMIN's OWN school -> req.user.schoolId='school-2'
       .mockResolvedValueOnce({ rows: [{ school_id: 'school-1' }], rowCount: 1 }); // (2) controller: viewed student's school = school-1 (mismatch -> 403, no items query)
-    const res = await request(app).get('/api/teacher/portfolios/stu-1').set('Authorization', `Bearer ${otherSchoolAdminToken()}`);
+    const res = await request(app).get('/api/teacher/portfolios/stu-1').set(authCookie(otherSchoolAdminToken()));
     expect(res.status).toBe(403);
   });
 
@@ -78,7 +79,7 @@ describe('Teacher portfolio viewing', () => {
         moderation_status: 'VISIBLE', moderation_reason: null, moderated_at: null,
         comment_count: '3', unread_count: '2'
       }], rowCount: 1 });
-    const res = await request(app).get('/api/teacher/portfolios/stu-1').set('Authorization', `Bearer ${teacherToken()}`);
+    const res = await request(app).get('/api/teacher/portfolios/stu-1').set(authCookie(teacherToken()));
     expect(res.status).toBe(200);
     expect(res.body.items[0]).toMatchObject({ commentCount: 3, unreadCount: 2 });
   });
@@ -95,7 +96,7 @@ describe('Teacher portfolio viewing', () => {
         moderated_by_name: 'Ada Admin',
         comment_count: '0', unread_count: '0'
       }], rowCount: 1 }); // (3) items query — REMOVED piece returned to admin
-    const res = await request(app).get('/api/teacher/portfolios/stu-1').set('Authorization', `Bearer ${schoolAdminToken()}`);
+    const res = await request(app).get('/api/teacher/portfolios/stu-1').set(authCookie(schoolAdminToken()));
     expect(res.status).toBe(200);
     expect(res.body.items).toHaveLength(1);
     expect(res.body.items[0]).toMatchObject({
@@ -110,7 +111,7 @@ describe('Teacher portfolio viewing', () => {
     mockPool.query
       .mockResolvedValueOnce({ rows: [{ ok: 1 }], rowCount: 1 }) // (1) scope check
       .mockResolvedValueOnce({ rows: [], rowCount: 0 });           // (2) items query returns empty (REMOVED filtered out)
-    const res = await request(app).get('/api/teacher/portfolios/stu-1').set('Authorization', `Bearer ${teacherToken()}`);
+    const res = await request(app).get('/api/teacher/portfolios/stu-1').set(authCookie(teacherToken()));
     expect(res.status).toBe(200);
     expect(res.body.items).toHaveLength(0);
     // Verify the SQL used the VISIBLE filter
@@ -135,7 +136,7 @@ describe('Portfolio moderation — remove / restore', () => {
       .mockResolvedValueOnce({ rows: [{ id: 'pi-1', submission_state: 'COMPLETED' }], rowCount: 1 }) // UPDATE portfolio_items -> REMOVED RETURNING
       .mockResolvedValueOnce({ rows: [], rowCount: 1 });           // audit
     const res = await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/remove')
-      .set('Authorization', `Bearer ${teacherToken()}`).send({ reason: 'Contains personal info' });
+      .set(authCookie(teacherToken())).send({ reason: 'Contains personal info' });
     expect(res.status).toBe(200);
     const upd = mockPool.query.mock.calls.find(c => /UPDATE portfolio_items[\s\S]*REMOVED/i.test(c[0]));
     expect(upd[1]).toEqual(expect.arrayContaining(['Contains personal info']));
@@ -148,20 +149,20 @@ describe('Portfolio moderation — remove / restore', () => {
   test('remove requires a reason (400)', async () => {
     mockPool.query.mockResolvedValueOnce({ rows: [{ ok: 1 }], rowCount: 1 }); // unused — 400 returns before any query
     const res = await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/remove')
-      .set('Authorization', `Bearer ${teacherToken()}`).send({ reason: '  ' });
+      .set(authCookie(teacherToken())).send({ reason: '  ' });
     expect(res.status).toBe(400);
   });
 
   test('remove rejects a reason longer than 500 chars (400)', async () => {
     const res = await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/remove')
-      .set('Authorization', `Bearer ${teacherToken()}`).send({ reason: 'x'.repeat(501) });
+      .set(authCookie(teacherToken())).send({ reason: 'x'.repeat(501) });
     expect(res.status).toBe(400);
   });
 
   test('a non-inviting teacher cannot remove a piece (403)', async () => {
     mockPool.query.mockResolvedValueOnce({ rows: [], rowCount: 0 }); // inviter check: no match
     const res = await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/remove')
-      .set('Authorization', `Bearer ${teacherToken()}`).send({ reason: 'test' });
+      .set(authCookie(teacherToken())).send({ reason: 'test' });
     expect(res.status).toBe(403);
   });
 
@@ -170,13 +171,13 @@ describe('Portfolio moderation — remove / restore', () => {
       .mockResolvedValueOnce({ rows: [{ school_id: 'school-1' }], rowCount: 1 }) // (auth) admin's own school hydration
       .mockResolvedValueOnce({ rows: [{ school_id: 'school-2' }], rowCount: 1 }); // student's school (mismatch -> false)
     const res = await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/remove')
-      .set('Authorization', `Bearer ${adminToken()}`).send({ reason: 'test' });
+      .set(authCookie(adminToken())).send({ reason: 'test' });
     expect(res.status).toBe(403);
   });
 
   test('a teacher cannot restore — 403 (admin only)', async () => {
     const res = await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/restore')
-      .set('Authorization', `Bearer ${teacherToken()}`).send();
+      .set(authCookie(teacherToken())).send();
     expect(res.status).toBe(403);
   });
 
@@ -187,7 +188,7 @@ describe('Portfolio moderation — remove / restore', () => {
       .mockResolvedValueOnce({ rows: [{ id: 'pi-1' }], rowCount: 1 })            // UPDATE -> VISIBLE
       .mockResolvedValueOnce({ rows: [], rowCount: 1 });                         // audit
     const res = await request(app).post('/api/teacher/portfolios/stu-1/items/pi-1/restore')
-      .set('Authorization', `Bearer ${adminToken()}`).send();
+      .set(authCookie(adminToken())).send();
     expect(res.status).toBe(200);
   });
 });

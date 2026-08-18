@@ -21,6 +21,7 @@
 require('dotenv').config();
 const request = require('supertest');
 const createTestApp = require('../helpers/createTestApp');
+const { authCookie } = require('../helpers/authCookie');
 const app = createTestApp();
 
 describe('Security Audit - OWASP Top 10', () => {
@@ -58,7 +59,7 @@ describe('Security Audit - OWASP Top 10', () => {
     test('should prevent SQL injection in query parameters', async () => {
       const response = await request(app)
         .get("/api/auctions?search=test' OR '1'='1")
-        .set('Authorization', 'Bearer invalid_token');
+        .set(authCookie('invalid_token'));
 
       // Should handle safely without exposing DB structure
       expect(response.status).toBeGreaterThanOrEqual(400);
@@ -110,7 +111,7 @@ describe('Security Audit - OWASP Top 10', () => {
 
       const response = await request(app)
         .post('/api/auctions')
-        .set('Authorization', 'Bearer fake_token')
+        .set(authCookie('fake_token'))
         .send({
           title: maliciousTitle,
           description: 'Test'
@@ -123,7 +124,7 @@ describe('Security Audit - OWASP Top 10', () => {
     test('should prevent XSS in JSON responses', async () => {
       const response = await request(app)
         .get('/api/auctions')
-        .set('Authorization', 'Bearer fake_token');
+        .set(authCookie('fake_token'));
 
       // Check for proper Content-Type header
       expect(response.headers['content-type']).toMatch(/json/);
@@ -136,7 +137,7 @@ describe('Security Audit - OWASP Top 10', () => {
     test('should sanitize user input in search fields', async () => {
       const response = await request(app)
         .get('/api/auctions?search=<script>alert(1)</script>')
-        .set('Authorization', 'Bearer fake_token');
+        .set(authCookie('fake_token'));
 
       expect(response.status).toBeGreaterThanOrEqual(400);
     });
@@ -144,7 +145,7 @@ describe('Security Audit - OWASP Top 10', () => {
     test('should prevent reflected XSS via redirect', async () => {
       const response = await request(app)
         .get('/api/redirect?url=javascript:alert(1)')
-        .set('Authorization', 'Bearer fake_token');
+        .set(authCookie('fake_token'));
 
       // Should not redirect to javascript protocol (header may be absent on 404)
       expect(response.headers.location || '').not.toMatch(/javascript:/i);
@@ -209,7 +210,7 @@ describe('Security Audit - OWASP Top 10', () => {
     test('should reject invalid JWT token format', async () => {
       const response = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', 'Bearer invalid.token.format');
+        .set(authCookie('invalid.token.format'));
 
       expect(response.status).toBe(401);
     });
@@ -220,7 +221,7 @@ describe('Security Audit - OWASP Top 10', () => {
 
       const response = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', `Bearer ${expiredToken}`);
+        .set(authCookie(expiredToken));
 
       expect(response.status).toBe(401);
     });
@@ -228,7 +229,7 @@ describe('Security Audit - OWASP Top 10', () => {
     test('should reject tampered JWT signatures', async () => {
       const response = await request(app)
         .get('/api/user/profile')
-        .set('Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.tampered');
+        .set(authCookie('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.tampered'));
 
       expect(response.status).toBe(401);
     });
@@ -253,7 +254,7 @@ describe('Security Audit - OWASP Top 10', () => {
 
       const response = await request(app)
         .post('/api/admin/users')
-        .set('Authorization', `Bearer ${studentToken}`)
+        .set(authCookie(studentToken))
         .send({ email: 'newuser@example.com' });
 
       expect([401, 403, 404]).toContain(response.status);
@@ -275,7 +276,7 @@ describe('Security Audit - OWASP Top 10', () => {
     test('should validate resource ownership before modification', async () => {
       const response = await request(app)
         .put('/api/user/profile')
-        .set('Authorization', 'Bearer fake_token')
+        .set(authCookie('fake_token'))
         .send({ email: 'newemail@example.com' });
 
       // Should require valid auth — fake_token is rejected with 401
@@ -349,7 +350,7 @@ describe('Security Audit - OWASP Top 10', () => {
     test('should enforce school-level data isolation', async () => {
       const response = await request(app)
         .get('/api/auctions/foreign-school-auction-id')
-        .set('Authorization', 'Bearer fake_token');
+        .set(authCookie('fake_token'));
 
       // Should not access auctions from different schools
       expect([401, 403, 404]).toContain(response.status);
@@ -358,7 +359,7 @@ describe('Security Audit - OWASP Top 10', () => {
     test('should not allow cross-tenant data access', async () => {
       const response = await request(app)
         .get('/api/users/different-school-user-id')
-        .set('Authorization', 'Bearer teacher_token');
+        .set(authCookie('teacher_token'));
 
       // Teachers should only see their school's users
       expect([401, 403, 404]).toContain(response.status);
@@ -367,7 +368,7 @@ describe('Security Audit - OWASP Top 10', () => {
     test('should validate payment permission before refund', async () => {
       const response = await request(app)
         .post('/api/payments/transaction-id/refund')
-        .set('Authorization', 'Bearer student_token')
+        .set(authCookie('student_token'))
         .send({ reason: 'Refund request' });
 
       // Students shouldn't refund payments
@@ -477,7 +478,7 @@ describe('Security Audit - OWASP Top 10', () => {
 
       const response = await request(app)
         .post('/api/auctions')
-        .set('Authorization', 'Bearer fake_token')
+        .set(authCookie('fake_token'))
         .send({ description: largePayload });
 
       expect(response.status).toBe(413); // Payload Too Large
