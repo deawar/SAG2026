@@ -10,6 +10,7 @@ const ValidationUtils = require('../utils/validationUtils');
 const { tokenBlacklist } = require('../services/authenticationService');
 const { setRefreshCookie, clearRefreshCookie } = require('../utils/refreshCookie');
 const { setAccessCookie, clearAccessCookie } = require('../utils/accessCookie');
+const { setTwofaCookie, clearTwofaCookie } = require('../utils/twofaCookie');
 
 // Per-account 2FA failure tracker (in-memory; resets on restart).
 // Provides account-level lockout independent of IP so rotating IPs cannot
@@ -351,12 +352,12 @@ class UserController {
           twoFaEnabled: false
         });
 
+        setTwofaCookie(res, setupToken.token);
         return res.status(200).json({
           success: true,
           message: '2FA setup required',
           data: {
             requiresTwoFactorSetup: true,
-            setupToken: setupToken.token,
             userId: user.id
           }
         });
@@ -372,12 +373,12 @@ class UserController {
           purpose: '2fa_challenge'
         });
 
+        setTwofaCookie(res, tempToken.token);
         return res.status(200).json({
           success: true,
           message: '2FA verification required',
           data: {
             requiresMfa: true,
-            tempToken: tempToken.token,
             userId: user.id
           }
         });
@@ -469,6 +470,7 @@ class UserController {
 
       clearRefreshCookie(res);
       clearAccessCookie(res);
+      clearTwofaCookie(res);
       return res.json({
         success: true,
         message: 'Logged out successfully'
@@ -593,9 +595,8 @@ class UserController {
     try {
       const { code } = req.body;
 
-      // Extract the temp token from the Authorization header
-      const authHeader = req.headers.authorization;
-      const tempToken = authHeader && authHeader.split(' ')[1];
+      // Extract the temp token from the twofa_token cookie
+      const tempToken = req.cookies?.twofa_token;
 
       if (!tempToken || !code) {
         return res.status(400).json({
@@ -678,6 +679,7 @@ class UserController {
       // 5. Refresh token + access token → cookies; return user info without tokens in body.
       setRefreshCookie(res, refreshTokenResult.token);
       setAccessCookie(res, accessTokenResult.token);
+      clearTwofaCookie(res);
       return res.json({
         success: true,
         message: '2FA verification successful',

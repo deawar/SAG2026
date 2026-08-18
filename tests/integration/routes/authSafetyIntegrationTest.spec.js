@@ -210,8 +210,11 @@ describe('TEACHER mandatory 2FA enforcement (Task 9)', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.requiresTwoFactorSetup).toBe(true);
-    expect(res.body.data.setupToken).toBeDefined();
+    // setupToken is now in the twofa_token cookie, not the body
+    expect(res.body.data.setupToken).toBeUndefined();
     expect(res.body.data.accessToken).toBeUndefined();
+    const twofaCookie = res.headers['set-cookie']?.find(c => c.startsWith('twofa_token='));
+    expect(twofaCookie).toBeDefined();
   });
 
   test('TEACHER calling disable-2FA endpoint receives 403 (cannot disable mandatory 2FA)', async () => {
