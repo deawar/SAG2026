@@ -95,6 +95,17 @@ class RealtimeService {
     let userId, userRole, userSchoolId, jti;
     try {
       const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET, { algorithms: ['HS256'] });
+
+      // Reject limited-purpose tokens (e.g. password-reset, email-verify) and
+      // refresh tokens — only full-session access tokens may authenticate a socket.
+      if (decoded.purpose || decoded.type === 'refresh') {
+        ws.send(JSON.stringify({
+          type: 'error',
+          message: 'Invalid or expired authentication token'
+        }));
+        return;
+      }
+
       userId = decoded.sub;
       userRole = decoded.role;
       userSchoolId = decoded.schoolId ?? decoded.school_id ?? null;

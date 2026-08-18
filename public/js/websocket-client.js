@@ -401,12 +401,20 @@ class WebSocketClient {
 window.websocketClient = new WebSocketClient();
 
 // Auto-connect if user is authenticated, but only on pages that use real-time features
-// Skip auto-connect on admin dashboard since it doesn't need WebSocket
-const isAdminPage = window.location.pathname.includes('admin-dashboard');
-if (window.authManager?.isAuthenticated() && !isAdminPage) {
-  window.websocketClient.connect().catch(() => {
-    // Silently handle - WebSocket is optional, app works without it
-  });
+// Skip auto-connect on admin dashboard since it doesn't need WebSocket.
+// Deferred to DOMContentLoaded so auth-manager.js is guaranteed to have run first.
+function autoConnectIfAuthenticated() {
+  const isAdminPage = window.location.pathname.includes('admin-dashboard');
+  if (window.authManager && window.authManager.isAuthenticated() && !isAdminPage) {
+    window.websocketClient.connect().catch(() => {
+      // Silently handle - WebSocket is optional, app works without it
+    });
+  }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', autoConnectIfAuthenticated);
+} else {
+  autoConnectIfAuthenticated();
 }
 
 // Export for module systems
