@@ -71,8 +71,12 @@ describe('checkLoginStatus()', () => {
     mockLocalStorage.clear();
   });
 
+  afterEach(() => {
+    delete globalThis.authManager;
+  });
+
   test('5 — keeps form hidden when auction status is ENDED', () => {
-    mockLocalStorage.setItem('auth_token', 'tok');
+    globalThis.authManager = { isAuthenticated: () => true };
     const inst = makeInstance({
       auction: { status: 'ENDED', endTime: new Date(Date.now() + 60_000).toISOString() }
     });
@@ -81,7 +85,7 @@ describe('checkLoginStatus()', () => {
   });
 
   test('6 — keeps form hidden when end time is in the past', () => {
-    mockLocalStorage.setItem('auth_token', 'tok');
+    globalThis.authManager = { isAuthenticated: () => true };
     const inst = makeInstance({
       auction: { status: 'LIVE', endTime: new Date(Date.now() - 1000).toISOString() }
     });
@@ -90,7 +94,7 @@ describe('checkLoginStatus()', () => {
   });
 
   test('7 — shows form when LIVE and end time is in the future', () => {
-    mockLocalStorage.setItem('auth_token', 'tok');
+    globalThis.authManager = { isAuthenticated: () => true };
     const inst = makeInstance({
       auction: { status: 'LIVE', endTime: new Date(Date.now() + 60_000).toISOString() }
     });
