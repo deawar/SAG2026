@@ -23,12 +23,6 @@ class APIClient {
       ...options.headers
     };
 
-    // Add authorization token if available
-    const token = this.getToken();
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-
     const config = {
       method,
       headers,
@@ -118,26 +112,6 @@ class APIClient {
     return error;
   }
 
-  /**
-     * Get stored authentication token
-     * @returns {string|null} JWT token
-     */
-  getToken() {
-    return localStorage.getItem('auth_token');
-  }
-
-  /**
-     * Set authentication token
-     * @param {string} token - JWT token
-     */
-  setToken(token) {
-    if (token) {
-      localStorage.setItem('auth_token', token);
-    } else {
-      localStorage.removeItem('auth_token');
-    }
-  }
-
   // ===== Authentication Endpoints =====
 
   /**
@@ -177,7 +151,6 @@ class APIClient {
      * @returns {Promise}
      */
   logout() {
-    this.setToken(null);
     return this.request('POST', '/api/auth/logout');
   }
 
@@ -527,23 +500,13 @@ class APIClient {
      * @returns {boolean}
      */
   isAuthenticated() {
-    return !!this.getToken();
-  }
-
-  /**
-     * Get authentication header
-     * @returns {object}
-     */
-  getAuthHeaders() {
-    const token = this.getToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    return !!(window.authManager?.isAuthenticated());
   }
 
   /**
      * Clear all stored data
      */
   clearStorage() {
-    localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
     localStorage.removeItem('2fa_required');
   }
