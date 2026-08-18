@@ -162,4 +162,32 @@ describe('WebSocket cookie auth', () => {
     expect(ws.userId).toBeUndefined();
     expect(ws.sent.some(m => m.type === 'error')).toBe(true);
   });
+
+  // ── Fix 3: claim parity — limited-purpose and refresh tokens must not authenticate a socket ──
+
+  test('purpose token (e.g. password-reset) is rejected by _authenticateFromToken', async () => {
+    const svc = new RealtimeService();
+    const ws = mkWs();
+    const token = jwt.sign(
+      { sub: 'u3', role: 'STUDENT', purpose: 'password-reset' },
+      process.env.JWT_ACCESS_SECRET,
+      { algorithm: 'HS256', expiresIn: '15m' }
+    );
+    await svc._authenticateFromToken(ws, token);
+    expect(ws.userId).toBeUndefined();
+    expect(ws.sent.some(m => m.type === 'error')).toBe(true);
+  });
+
+  test('refresh token (type:refresh) is rejected by _authenticateFromToken', async () => {
+    const svc = new RealtimeService();
+    const ws = mkWs();
+    const token = jwt.sign(
+      { sub: 'u4', role: 'STUDENT', type: 'refresh' },
+      process.env.JWT_ACCESS_SECRET,
+      { algorithm: 'HS256', expiresIn: '7d' }
+    );
+    await svc._authenticateFromToken(ws, token);
+    expect(ws.userId).toBeUndefined();
+    expect(ws.sent.some(m => m.type === 'error')).toBe(true);
+  });
 });

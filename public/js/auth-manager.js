@@ -142,13 +142,20 @@ class AuthManager {
     try {
       const response = await apiClient.verify2FA(code);
 
-      if (response.token) {
-        this._setAuthExpiry(response.expiresIn);
-        this.setUser(response.user);
+      if (response.success && response.data) {
+        this._setAuthExpiry(response.data.expiresIn);
+        this.setUser({
+          id: response.data.userId,
+          email: response.data.email,
+          firstName: response.data.firstName || '',
+          lastName: response.data.lastName || '',
+          role: response.data.role,
+          schoolId: response.data.schoolId || null
+        });
         this.require2FA = false;
         localStorage.removeItem('2fa_required');
         localStorage.removeItem('2fa_token');
-        return { success: true, user: response.user };
+        return { success: true, user: this.user };
       }
 
       return { success: false, error: response.message };
