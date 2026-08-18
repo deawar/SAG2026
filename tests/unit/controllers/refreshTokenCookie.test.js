@@ -98,7 +98,7 @@ describe('UserController.verify2FA — sets cookie, omits refresh token from bod
     const ctrl = new UserController(userModel, authService);
     ctrl._createSessionRecord = jest.fn().mockResolvedValue(undefined);
     const res = fakeRes();
-    await ctrl.verify2FA({ body: { code: '123456' }, headers: { authorization: 'Bearer temp' } }, res, jest.fn());
+    await ctrl.verify2FA({ body: { code: '123456' }, cookies: { twofa_token: 'temp' }, headers: {} }, res, jest.fn());
 
     expect(res.body.data.accessToken).toBeUndefined();
     const accessCookie = res.cookies.find(c => c.name === 'access_token');

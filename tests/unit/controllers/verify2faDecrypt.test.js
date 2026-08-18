@@ -9,6 +9,7 @@ function fakeRes() {
     statusCode: 200, body: null,
     status(c) { this.statusCode = c; return this; },
     cookie() { return this; },
+    clearCookie() { return this; },
     json(p) { this.body = p; return this; }
   };
 }
@@ -40,9 +41,15 @@ function setup(storedSecret) {
 }
 
 async function callVerify(ctrl) {
+  const jwt = require('jsonwebtoken');
+  const tempToken = jwt.sign(
+    { sub: 'user-1', purpose: '2fa_challenge' },
+    process.env.JWT_ACCESS_SECRET,
+    { algorithm: 'HS256' }
+  );
   const res = fakeRes();
   await ctrl.verify2FA(
-    { body: { code: '123456' }, headers: { authorization: 'Bearer temp' } },
+    { body: { code: '123456' }, cookies: { twofa_token: tempToken }, headers: {} },
     res, jest.fn()
   );
   return res;

@@ -18,6 +18,8 @@ const ValidationUtils = require('../utils/validationUtils');
 const { JWTService, TwoFactorService, RBACService, SessionService, AuthenticationService } = require('../services/authenticationService');
 const { UserModel } = require('../models');
 const { setRefreshCookie } = require('../utils/refreshCookie');
+const { setAccessCookie, clearAccessCookie } = require('../utils/accessCookie');
+const { clearTwofaCookie } = require('../utils/twofaCookie');
 
 /**
  * Factory function to create auth routes with injected database
@@ -377,7 +379,7 @@ module.exports = (db) => {
  */
   router.post('/2fa/force-setup', async (req, res, next) => {
     try {
-      const { setupToken } = req.body;
+      const setupToken = req.cookies?.twofa_token;
       if (!setupToken) {
         return res.status(400).json({ success: false, message: 'setupToken required' });
       }
@@ -429,7 +431,8 @@ module.exports = (db) => {
  */
   router.post('/2fa/force-verify', loginLimiter, async (req, res, next) => {
     try {
-      const { setupToken, secret, code } = req.body;
+      const setupToken = req.cookies?.twofa_token;
+      const { secret, code } = req.body;
 
       if (!setupToken || !secret || !code) {
         return res.status(400).json({ success: false, message: 'setupToken, secret, and code are required' });
@@ -501,6 +504,8 @@ module.exports = (db) => {
       } catch (_err) { /* non-fatal */ }
 
       setRefreshCookie(res, refreshTokenResult.token);
+      setAccessCookie(res, accessTokenResult.token);
+      clearTwofaCookie(res);
       return res.json({
         success: true,
         message: '2FA setup complete. You are now logged in.',
@@ -511,7 +516,6 @@ module.exports = (db) => {
           lastName: user.last_name || '',
           role: user.role,
           schoolId: user.school_id || null,
-          accessToken: accessTokenResult.token,
           expiresIn: accessTokenResult.expiresIn
         }
       });
