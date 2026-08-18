@@ -113,6 +113,10 @@ function createApp(db) {
   app.use(express.urlencoded({ limit: '15mb', extended: true }));
   app.use(cookieParser());
 
+  // CSRF: block cookie-authenticated mutations that lack the SPA's custom header.
+  const { requireCsrfHeader } = require('./middleware/csrfMiddleware');
+  app.use('/api', requireCsrfHeader);
+
   // ==========================================================================
   // SECURITY MIDDLEWARE
   // Order matters: logger → sanitiser → idempotency → rate limiting
