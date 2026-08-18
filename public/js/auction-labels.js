@@ -20,29 +20,22 @@ class AuctionLabels {
   }
 
   checkAuth() {
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
+    if (!window.authManager || !window.authManager.isAuthenticated()) {
       const returnTo = encodeURIComponent(globalThis.location.pathname + globalThis.location.search);
       globalThis.location.assign(`/login.html?returnTo=${returnTo}`);
       return false;
     }
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const allowed = ['TEACHER', 'SCHOOL_ADMIN', 'SITE_ADMIN'];
-      if (!allowed.includes(payload.role)) {
-        globalThis.location.assign('/auctions.html');
-        return false;
-      }
-    } catch {
-      globalThis.location.assign('/login.html');
+    const user = window.authManager.getUser?.() ?? null;
+    const allowed = ['TEACHER', 'SCHOOL_ADMIN', 'SITE_ADMIN'];
+    if (!user || !allowed.includes(user.role)) {
+      globalThis.location.assign('/auctions.html');
       return false;
     }
     return true;
   }
 
   async loadData() {
-    const token = localStorage.getItem('auth_token');
-    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const headers = {};
 
     try {
       const [auctionRes, artworkRes] = await Promise.all([

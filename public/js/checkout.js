@@ -7,10 +7,6 @@
   'use strict';
 
   // ── Auth guard ──────────────────────────────────────────────────────────────
-  function getToken() {
-    return localStorage.getItem('auth_token');
-  }
-
   function redirectToLogin() {
     window.location.href = `/login.html?redirect=${encodeURIComponent(window.location.href)}`;
   }
@@ -86,10 +82,9 @@
   }
 
   // ── Pre-fill shipping address from profile ──────────────────────────────────
-  async function prefillAddress(token) {
+  async function prefillAddress() {
     try {
       const res = await fetch('/api/user/profile', {
-        headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) { return; }
       const data = await res.json();
@@ -104,8 +99,7 @@
 
   // ── Main ─────────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', async () => {
-    const token = getToken();
-    if (!token) { return redirectToLogin(); }
+    if (!window.authManager || !window.authManager.isAuthenticated()) { return redirectToLogin(); }
 
     // Parse auctionId from ?auctionId=<id>
     const params = new URLSearchParams(window.location.search);
@@ -119,7 +113,6 @@
     let win;
     try {
       const res = await fetch(`/api/user/wins/${encodeURIComponent(auctionId)}`, {
-        headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -133,7 +126,7 @@
     }
 
     const totalAmount = renderOrderSummary(win);
-    await prefillAddress(token);
+    await prefillAddress();
 
     // ── 2. Init Stripe Elements ───────────────────────────────────────────────
     let stripe = null;
@@ -215,7 +208,6 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
           },
           body: JSON.stringify({
             auctionId,

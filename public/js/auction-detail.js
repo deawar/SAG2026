@@ -46,13 +46,11 @@ class AuctionDetail {
      * bid form is hidden and an auth-wall banner is shown instead.
      */
   async loadAuction() {
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
+    if (!window.authManager || !window.authManager.isAuthenticated()) {
       return this._loadPublicPreview();
     }
     try {
       const response = await fetch(`/api/auctions/${this.auctionId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
 
@@ -316,8 +314,7 @@ class AuctionDetail {
      * Check if user is logged in
      */
   checkLoginStatus() {
-    const token = localStorage.getItem('auth_token');
-    this.isUserLoggedIn = !!token;
+    this.isUserLoggedIn = !!(window.authManager && window.authManager.isAuthenticated());
 
     const authRequired = document.getElementById('auth-required');
     const biddingForm = document.getElementById('bidding-form-container');
