@@ -6,14 +6,14 @@
  * Authorization header (no bearer token exists anymore). Cross-origin requests
  * (e.g. Stripe.js) pass through untouched. Load this BEFORE any other script.
  */
-(function () {
+(function() {
   if (typeof window === 'undefined' || !window.fetch) { return; }
   const nativeFetch = window.fetch.bind(window);
   function sameOrigin(url) {
     try { return new URL(url, window.location.href).origin === window.location.origin; }
     catch (_e) { return false; }
   }
-  window.fetch = function (input, init) {
+  window.fetch = function(input, init) {
     const url = typeof input === 'string' ? input : (input && input.url);
     if (!sameOrigin(url)) { return nativeFetch(input, init); }
     const opts = init ? { ...init } : {};
