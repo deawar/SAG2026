@@ -62,7 +62,8 @@ class AuthManager {
 
       // Handle successful registration response from server
       if (response.success && response.data) {
-        const { accessToken, refreshToken, expiresIn, ...userInfo } = response.data;
+        // accessToken and refreshToken are httpOnly cookies — not in JS-visible data.
+        const { expiresIn, ...userInfo } = response.data;
 
         // Store expiry hint and user data
         this._setAuthExpiry(expiresIn);
