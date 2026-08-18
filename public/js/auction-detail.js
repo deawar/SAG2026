@@ -828,11 +828,8 @@ class AuctionDetail {
       this.websocket.addEventListener('open', () => {
         console.log('WebSocket connected');
         this._wsReconnectCount = 0;
-        // Authenticate with JWT token
-        const token = localStorage.getItem('auth_token');
-        if (token) {
-          this.websocket.send(JSON.stringify({ type: 'authenticate', payload: { token } }));
-        }
+        // Authentication is handled via the httpOnly access-token cookie at the
+        // handshake level — no explicit authenticate message needed.
       });
 
       this.websocket.addEventListener('message', (event) => {

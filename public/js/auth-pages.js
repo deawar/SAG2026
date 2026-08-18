@@ -102,8 +102,8 @@ class AuthPages {
       }
 
       // Check if admin must complete mandatory 2FA setup before accessing the app
+      // The twofa_token httpOnly cookie carries the setup token — no client storage needed.
       if (data.data?.requiresTwoFactorSetup) {
-        sessionStorage.setItem('force_2fa_setup_token', data.data.setupToken || '');
         sessionStorage.setItem('force_2fa_user_id', data.data.userId || '');
         window.location.href = '/force-2fa-setup.html';
         return;

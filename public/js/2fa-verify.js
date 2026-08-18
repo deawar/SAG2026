@@ -5,7 +5,6 @@
 
 class TwoFactorAuthVerify {
   constructor() {
-    this.tempToken = null;
     this.userId = null;
   }
 
@@ -13,11 +12,11 @@ class TwoFactorAuthVerify {
      * Initialize 2FA verification
      */
   async init() {
-    // Check if we have a temp token in localStorage (set after login with 2FA enabled)
-    this.tempToken = localStorage.getItem('2fa_token');
+    // The twofa_token httpOnly cookie carries the pre-auth token (sent automatically).
+    // We still keep userId in localStorage for the success handler.
     this.userId = localStorage.getItem('2fa_user_id');
 
-    if (!this.tempToken || !this.userId) {
+    if (!this.userId) {
       // Redirect to home if no 2FA verification needed
       window.location.href = '/';
       return;
@@ -74,13 +73,13 @@ class TwoFactorAuthVerify {
     const loader = UIComponents.showLoading('Verifying code...');
 
     try {
-      // Call backend to verify 2FA code and complete login
+      // Call backend to verify 2FA code and complete login.
+      // The twofa_token cookie authenticates; fetch-guard adds the CSRF header.
       const response = await fetch('/api/auth/verify-2fa', {
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.tempToken}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ code })
       });
@@ -90,8 +89,9 @@ class TwoFactorAuthVerify {
       if (response.ok && data.success) {
         UIComponents.hideLoading(loader);
 
-        // Store the real access token
-        authManager.setToken(data.data.accessToken);
+        // Access token is an httpOnly cookie — no JS token storage needed.
+        // Record expiry hint and user identity so auth-manager can gate refreshes.
+        authManager._setAuthExpiry(data.data.expiresIn);
         authManager.setUser({
           id: this.userId,
           email: data.data.email,
