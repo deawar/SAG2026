@@ -572,15 +572,18 @@ class AuthPages {
         return;
       }
 
-      // Store tokens so 2FA setup page can authenticate immediately
-      if (data.data?.accessToken) {
-        authManager.setToken(data.data.accessToken);
-        authManager.setRefreshToken(data.data.refreshToken);
+      // Persist the session hint + user so the 2FA setup page can authenticate
+      // immediately. The access/refresh tokens ride httpOnly cookies set by the
+      // server; JS holds only the non-sensitive expiry hint and user object.
+      if (data.data?.userId) {
         authManager.setUser({
           id: data.data.userId,
           email: data.data.email,
           role: data.data.role
         });
+        if (data.data.expiresIn) {
+          authManager._setAuthExpiry(data.data.expiresIn);
+        }
       }
 
       UIComponents.showModalAlert({

@@ -15,7 +15,7 @@ class TwoFactorAuthSetup {
      */
   async init() {
     // Redirect if not authenticated
-    if (!authManager.getToken()) {
+    if (!authManager.isAuthenticated()) {
       window.location.href = '/';
       return;
     }
@@ -105,9 +105,7 @@ class TwoFactorAuthSetup {
     const loader = UIComponents.showLoading('Generating QR code...');
 
     try {
-      const response = await apiClient.request('POST', '/api/auth/2fa/setup', {
-        headers: { 'Authorization': `Bearer ${authManager.getToken()}` }
-      });
+      const response = await apiClient.request('POST', '/api/auth/2fa/setup');
 
       if (response.success && response.data) {
         this.currentSecret = response.data.secret;
@@ -186,8 +184,7 @@ class TwoFactorAuthSetup {
           secret: this.currentSecret,
           code,
           backupCodes: this.currentBackupCodes
-        },
-        headers: { 'Authorization': `Bearer ${authManager.getToken()}` }
+        }
       });
 
       if (response.success) {

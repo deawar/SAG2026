@@ -1058,11 +1058,10 @@ class UIComponents {
         const displayName = [firstName, lastName].filter(Boolean).join(' ') || user.email;
         userName.textContent = displayName;
 
-        // If only email is available (stale localStorage), fetch live profile
-        if (!firstName && !lastName && authManager.getToken()) {
-          fetch('/api/user/profile', {
-            headers: { 'Authorization': `Bearer ${authManager.getToken()}` }
-          }).then(r => r.ok ? r.json() : null).then(data => {
+        // If only email is available (stale localStorage), fetch live profile.
+        // The httpOnly access-token cookie authenticates the request automatically.
+        if (!firstName && !lastName && authManager.isAuthenticated()) {
+          fetch('/api/user/profile').then(r => r.ok ? r.json() : null).then(data => {
             if (!data?.data) {return;}
             const fn = data.data.firstName || '';
             const ln = data.data.lastName || '';
