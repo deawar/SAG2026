@@ -1,13 +1,19 @@
 'use strict';
 
 /**
- * Unit tests for realtimeService authorization features added in Task 8:
+ * Unit tests for realtimeService authorization features:
  *  - canSubscribe(user, channel) pure authorization check
  *  - broadcastBidUpdate payload must NOT contain a bidder field
- *  - revoked token is rejected at authenticate
+ *  - _authenticateFromToken: valid token sets ws.userId + sends authenticated frame
+ *  - _authenticateFromToken: revoked token is rejected
+ *  - _handleAuthenticate: no longer trusts a payload token (cookie-auth model)
  */
 
-const realtimeService = require('../../../src/services/realtimeService');
+const realtimeServiceModule = require('../../../src/services/realtimeService');
+const RealtimeService = realtimeServiceModule.RealtimeService;
+const realtimeService = realtimeServiceModule;
+const jwt = require('jsonwebtoken');
+process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'test-access-secret';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // canSubscribe — pure authorization logic
@@ -89,72 +95,71 @@ describe('realtimeService.broadcastBidUpdate payload shape', () => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Blacklist check at authenticate — revoked token is rejected
+// Helper: minimal fake WS (matches brief's mkWs pattern)
 // ──────────────────────────────────────────────────────────────────────────────
-describe('realtimeService._handleAuthenticate blacklist check', () => {
+function mkWs() {
+  return { sent: [], send(m) { this.sent.push(JSON.parse(m)); }, on() {} };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// WebSocket cookie auth — _authenticateFromToken
+// ──────────────────────────────────────────────────────────────────────────────
+describe('WebSocket cookie auth', () => {
   afterEach(() => jest.restoreAllMocks());
 
-  test('revoked token (isRevoked returns true) is rejected without authenticating', async () => {
-    const jwt = require('jsonwebtoken');
-    // Use the secret already set by tests/setup.env.js — no hardcoded credential
-    const secret = process.env.JWT_ACCESS_SECRET;
+  test('_authenticateFromToken sets ws.userId for a valid token', async () => {
+    const svc = new RealtimeService();
+    const ws = mkWs();
+    const token = jwt.sign({ sub: 'u1', role: 'STUDENT' }, process.env.JWT_ACCESS_SECRET, { algorithm: 'HS256' });
+    await svc._authenticateFromToken(ws, token);
+    expect(ws.userId).toBe('u1');
+    expect(ws.sent.some(m => m.type === 'authenticated')).toBe(true);
+  });
 
-    // Generate a valid token
-    const jti = 'test-jti-revoked';
+  test('authenticate message no longer trusts a payload token', async () => {
+    const svc = new RealtimeService();
+    const ws = mkWs();
+    const token = jwt.sign({ sub: 'u2', role: 'STUDENT' }, process.env.JWT_ACCESS_SECRET, { algorithm: 'HS256' });
+    await svc._handleAuthenticate(ws, { type: 'authenticate', payload: { token } });
+    expect(ws.userId).toBeUndefined(); // payload token ignored
+  });
+
+  test('revoked token is rejected by _authenticateFromToken', async () => {
+    const svc = new RealtimeService();
+    const ws = mkWs();
+    const secret = process.env.JWT_ACCESS_SECRET;
+    const jti = 'test-jti-revoked-cookie';
     const token = jwt.sign(
-      { sub: 'user-revoked', jti, role: 'BIDDER', email: 'x@x.com' },
+      { sub: 'user-revoked', jti, role: 'BIDDER' },
       secret,
       { algorithm: 'HS256', expiresIn: '15m' }
     );
 
-    // Spy on the blacklist so isRevoked returns true for this jti
     const authService = require('../../../src/services/authenticationService');
     jest.spyOn(authService.tokenBlacklist, 'isRevoked').mockResolvedValue(true);
 
-    const sent = [];
-    const fakeWs = {
-      userId: undefined,
-      send: (msg) => sent.push(JSON.parse(msg))
-    };
+    await svc._authenticateFromToken(ws, token);
 
-    // Call the private method via the singleton
-    await realtimeService._handleAuthenticate(fakeWs, { token });
-
-    expect(fakeWs.userId).toBeUndefined();
-    expect(sent.length).toBeGreaterThan(0);
-    expect(sent[0].type).toBe('error');
-    expect(sent[0].message).toMatch(/revoked/i);
+    expect(ws.userId).toBeUndefined();
+    expect(ws.sent.some(m => m.type === 'error')).toBe(true);
+    const errorFrame = ws.sent.find(m => m.type === 'error');
+    expect(errorFrame.message).toMatch(/revoked/i);
   });
 
-  test('non-revoked token (isRevoked returns false) authenticates successfully', async () => {
-    const jwt = require('jsonwebtoken');
-    // Use the secret already set by tests/setup.env.js — no hardcoded credential
+  test('expired token is rejected by _authenticateFromToken', async () => {
+    const svc = new RealtimeService();
+    const ws = mkWs();
     const secret = process.env.JWT_ACCESS_SECRET;
-
-    const jti = 'test-jti-valid';
+    // Sign with 0 second expiry so it is already expired
     const token = jwt.sign(
-      { sub: 'user-valid', jti, role: 'BIDDER', email: 'y@y.com' },
+      { sub: 'user-expired', role: 'BIDDER' },
       secret,
-      { algorithm: 'HS256', expiresIn: '15m' }
+      { algorithm: 'HS256', expiresIn: 0 }
     );
 
-    const authService = require('../../../src/services/authenticationService');
-    jest.spyOn(authService.tokenBlacklist, 'isRevoked').mockResolvedValue(false);
+    await svc._authenticateFromToken(ws, token);
 
-    const sent = [];
-    const fakeWs = {
-      userId: undefined,
-      send: (msg) => sent.push(JSON.parse(msg))
-    };
-
-    await realtimeService._handleAuthenticate(fakeWs, { token });
-
-    // Clean up singleton state
-    realtimeService.clients.delete('user-valid');
-    realtimeService.subscriptions.delete('user-valid');
-
-    expect(fakeWs.userId).toBe('user-valid');
-    expect(sent.length).toBeGreaterThan(0);
-    expect(sent[0].type).toBe('authenticated');
+    expect(ws.userId).toBeUndefined();
+    expect(ws.sent.some(m => m.type === 'error')).toBe(true);
   });
 });
