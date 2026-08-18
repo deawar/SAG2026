@@ -9,9 +9,9 @@
 const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
 
 function requireCsrfHeader(req, res, next) {
-  if (SAFE_METHODS.includes(req.method)) return next();
-  if (!req.cookies || !req.cookies.access_token) return next();
-  if (req.get('X-Requested-With')) return next();
+  if (SAFE_METHODS.includes(req.method)) { return next(); }
+  if (!req.cookies || !req.cookies.access_token) { return next(); }
+  if (req.get('X-Requested-With')) { return next(); }
   return res.status(403).json({ success: false, message: 'CSRF check failed' });
 }
 

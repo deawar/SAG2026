@@ -36,7 +36,7 @@ describe('logout clears the access_token cookie', () => {
     jest.spyOn(tokenBlacklist, 'revoke').mockResolvedValue();
     const ctrl = new UserController({}, { jwtService: {} });
     const res = fakeRes();
-    await ctrl.logout({ user: { id: 'u1', jti: 'a1', exp: Math.floor(Date.now()/1000)+900 }, body: {} }, res, jest.fn());
+    await ctrl.logout({ user: { id: 'u1', jti: 'a1', exp: Math.floor(Date.now() / 1000) + 900 }, body: {} }, res, jest.fn());
     expect(res.cleared.find(c => c.n === 'access_token')).toBeTruthy();
     tokenBlacklist.revoke.mockRestore();
   });
