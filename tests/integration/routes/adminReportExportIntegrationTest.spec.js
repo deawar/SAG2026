@@ -25,6 +25,7 @@ const jwt = require('jsonwebtoken');
 const createApp = require('../../../src/app');
 const mockDb = require('../../helpers/mockDb');
 const { pool: mockPool } = require('../../../src/models/index');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 function makeToken(payload) { return jwt.sign(payload, SECRET, { algorithm: 'HS256' }); }
@@ -61,7 +62,7 @@ describe('Admin report CSV export', () => {
 
     const res = await request(app)
       .get('/api/admin/reports/performance/export')
-      .set('Authorization', `Bearer ${siteAdminToken()}`);
+      .set(authCookie(siteAdminToken()));
 
     expect(res.status).toBe(200);
 
@@ -83,7 +84,7 @@ describe('Admin report CSV export', () => {
 
     const res = await request(app)
       .get('/api/admin/reports/compliance/export')
-      .set('Authorization', `Bearer ${siteAdminToken()}`);
+      .set(authCookie(siteAdminToken()));
 
     expect(res.status).toBe(200);
 
@@ -107,7 +108,7 @@ describe('Admin report CSV export', () => {
 
       const res = await request(app)
         .get(`/api/admin/reports/${type}/export`)
-        .set('Authorization', `Bearer ${siteAdminToken()}`);
+        .set(authCookie(siteAdminToken()));
 
       expect(res.status).toBe(200);
       expect(res.headers['content-type']).toMatch(/text\/csv/);

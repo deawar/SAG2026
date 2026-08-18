@@ -6,6 +6,7 @@ const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const createTestApp = require('../../helpers/createTestApp');
 const mockDb = require('../../helpers/mockDb');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 function studentToken(id = 'stu-1') { return jwt.sign({ userId: id, role: 'STUDENT', schoolId: 'school-1', twoFaEnabled: true }, SECRET, { algorithm: 'HS256' }); }
@@ -23,7 +24,7 @@ describe('Portfolio comments — list + create', () => {
       .mockResolvedValueOnce({ rows: [PIECE], rowCount: 1 })                 // load piece (resolveAccess)
       .mockResolvedValueOnce({ rows: [{ id: 'c-1', body: 'Nice work', author_user_id: 'tea-1', author_role: 'TEACHER', created_at: new Date(), first_name: 'Ada', last_name: 'Lee' }], rowCount: 1 }) // comments
       .mockResolvedValueOnce({ rows: [], rowCount: 1 });                     // upsert read
-    const res = await request(app).get('/api/portfolio-comments/item/pi-1').set('Authorization', `Bearer ${studentToken()}`);
+    const res = await request(app).get('/api/portfolio-comments/item/pi-1').set(authCookie(studentToken()));
     expect(res.status).toBe(200);
     expect(res.body.comments[0]).toMatchObject({ id: 'c-1', authorName: 'Ada Lee', authorRole: 'TEACHER', isOwnByViewer: false });
     const upsert = mockDb.query.mock.calls.find(c => /portfolio_comment_reads/.test(c[0]));
@@ -36,7 +37,7 @@ describe('Portfolio comments — list + create', () => {
       .mockResolvedValueOnce({ rows: [{ ok: 1 }], rowCount: 1 })             // registration_tokens inviter check
       .mockResolvedValueOnce({ rows: [{ id: 'c-9', body: 'Add more contrast', author_role: 'TEACHER', created_at: new Date() }], rowCount: 1 }); // insert
     const res = await request(app).post('/api/portfolio-comments/item/pi-1')
-      .set('Authorization', `Bearer ${teacherToken()}`).send({ body: 'Add more contrast' });
+      .set(authCookie(teacherToken())).send({ body: 'Add more contrast' });
     expect(res.status).toBe(201);
     const insert = mockDb.query.mock.calls.find(c => /INSERT INTO portfolio_comments/.test(c[0]));
     expect(insert[1]).toEqual(expect.arrayContaining(['pi-1', 'school-1', 'tea-1', 'TEACHER']));
@@ -47,7 +48,7 @@ describe('Portfolio comments — list + create', () => {
       .mockResolvedValueOnce({ rows: [PIECE], rowCount: 1 })                 // load piece (owner short-circuits access)
       .mockResolvedValueOnce({ rows: [{ id: 'c-11', body: 'Question about the medium?', author_role: 'STUDENT', created_at: new Date() }], rowCount: 1 }); // insert comment
     const res = await request(app).post('/api/portfolio-comments/item/pi-1')
-      .set('Authorization', `Bearer ${studentToken()}`).send({ body: 'Question about the medium?' });
+      .set(authCookie(studentToken())).send({ body: 'Question about the medium?' });
     expect(res.status).toBe(201);
     const audit = mockDb.query.mock.calls.find(c => /INSERT INTO audit_logs/i.test(c[0]));
     expect(audit).toBeTruthy();
@@ -62,20 +63,20 @@ describe('Portfolio comments — list + create', () => {
       .mockResolvedValueOnce({ rows: [PIECE], rowCount: 1 })                 // load piece
       .mockResolvedValueOnce({ rows: [], rowCount: 0 });                     // inviter check fails
     const res = await request(app).post('/api/portfolio-comments/item/pi-1')
-      .set('Authorization', `Bearer ${otherTeacherToken()}`).send({ body: 'hi' });
+      .set(authCookie(otherTeacherToken())).send({ body: 'hi' });
     expect(res.status).toBe(403);
   });
 
   test('missing piece is 404', async () => {
     mockDb.query.mockResolvedValueOnce({ rows: [], rowCount: 0 });           // load piece: none
-    const res = await request(app).get('/api/portfolio-comments/item/pi-x').set('Authorization', `Bearer ${studentToken()}`);
+    const res = await request(app).get('/api/portfolio-comments/item/pi-x').set(authCookie(studentToken()));
     expect(res.status).toBe(404);
   });
 
   test('empty body is rejected 400', async () => {
     mockDb.query.mockResolvedValueOnce({ rows: [PIECE], rowCount: 1 });      // load piece (owner short-circuits access)
     const res = await request(app).post('/api/portfolio-comments/item/pi-1')
-      .set('Authorization', `Bearer ${studentToken()}`).send({ body: '   ' });
+      .set(authCookie(studentToken())).send({ body: '   ' });
     expect(res.status).toBe(400);
   });
 
@@ -84,7 +85,7 @@ describe('Portfolio comments — list + create', () => {
       .mockResolvedValueOnce({ rows: [PIECE], rowCount: 1 })     // load piece
       .mockResolvedValueOnce({ rows: [], rowCount: 0 })          // comments (empty ok)
       .mockResolvedValueOnce({ rows: [], rowCount: 1 });         // upsert read
-    const res = await request(app).get('/api/portfolio-comments/item/pi-1').set('Authorization', `Bearer ${adminToken()}`);
+    const res = await request(app).get('/api/portfolio-comments/item/pi-1').set(authCookie(adminToken()));
     expect(res.status).toBe(200);
     expect(res.body.canModerate).toBe(true);
   });
@@ -100,7 +101,7 @@ describe('Portfolio comments — delete', () => {
       .mockResolvedValueOnce({ rows: [PIECE], rowCount: 1 })   // resolveAccess: load piece (owner)
       .mockResolvedValueOnce({ rows: [], rowCount: 1 })        // UPDATE soft-delete
       .mockResolvedValueOnce({ rows: [], rowCount: 1 });       // INSERT audit_logs
-    const res = await request(app).delete('/api/portfolio-comments/c-1').set('Authorization', `Bearer ${studentToken()}`);
+    const res = await request(app).delete('/api/portfolio-comments/c-1').set(authCookie(studentToken()));
     expect(res.status).toBe(200);
     const upd = mockDb.query.mock.calls.find(c => /UPDATE portfolio_comments[\s\S]*deleted_at/i.test(c[0]));
     expect(upd).toBeTruthy();
@@ -118,7 +119,7 @@ describe('Portfolio comments — delete', () => {
       .mockResolvedValueOnce({ rows: [{ ok: 1 }], rowCount: 1 }) // inviter check -> canModerate
       .mockResolvedValueOnce({ rows: [], rowCount: 1 })        // UPDATE
       .mockResolvedValueOnce({ rows: [], rowCount: 1 });       // audit
-    const res = await request(app).delete('/api/portfolio-comments/c-2').set('Authorization', `Bearer ${teacherToken()}`);
+    const res = await request(app).delete('/api/portfolio-comments/c-2').set(authCookie(teacherToken()));
     expect(res.status).toBe(200);
   });
 
@@ -127,13 +128,13 @@ describe('Portfolio comments — delete', () => {
       .mockResolvedValueOnce({ rows: [{ id: 'c-3', portfolio_item_id: 'pi-1', author_user_id: 'tea-1' }], rowCount: 1 }) // comment by teacher
       .mockResolvedValueOnce({ rows: [{ id: 'pi-1', student_user_id: 'stu-9', school_id: 'school-1' }], rowCount: 1 })   // piece owned by someone else
       .mockResolvedValueOnce({ rows: [], rowCount: 0 });       // inviter check fails
-    const res = await request(app).delete('/api/portfolio-comments/c-3').set('Authorization', `Bearer ${otherTeacherToken()}`);
+    const res = await request(app).delete('/api/portfolio-comments/c-3').set(authCookie(otherTeacherToken()));
     expect(res.status).toBe(403);
   });
 
   test('missing comment is 404', async () => {
     mockDb.query.mockResolvedValueOnce({ rows: [], rowCount: 0 });
-    const res = await request(app).delete('/api/portfolio-comments/c-x').set('Authorization', `Bearer ${studentToken()}`);
+    const res = await request(app).delete('/api/portfolio-comments/c-x').set(authCookie(studentToken()));
     expect(res.status).toBe(404);
   });
 });

@@ -18,6 +18,7 @@ if (!process.env.JWT_REFRESH_SECRET) { process.env.JWT_REFRESH_SECRET = 'test-re
 const request = require('supertest');
 const createTestApp = require('../../helpers/createTestApp');
 const mockDb = require('../../helpers/mockDb');
+const { authCookie, extractAccessCookie } = require('../../helpers/authCookie');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -209,8 +210,11 @@ describe('TEACHER mandatory 2FA enforcement (Task 9)', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data.requiresTwoFactorSetup).toBe(true);
-    expect(res.body.data.setupToken).toBeDefined();
+    // setupToken is now in the twofa_token cookie, not the body
+    expect(res.body.data.setupToken).toBeUndefined();
     expect(res.body.data.accessToken).toBeUndefined();
+    const twofaCookie = res.headers['set-cookie']?.find(c => c.startsWith('twofa_token='));
+    expect(twofaCookie).toBeDefined();
   });
 
   test('TEACHER calling disable-2FA endpoint receives 403 (cannot disable mandatory 2FA)', async () => {
@@ -224,7 +228,7 @@ describe('TEACHER mandatory 2FA enforcement (Task 9)', () => {
 
     const res = await request(app)
       .post('/api/auth/2fa/disable')
-      .set('Authorization', `Bearer ${teacherToken}`);
+      .set(authCookie(teacherToken));
 
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('admin_2fa_mandatory');
@@ -370,9 +374,10 @@ describe('Access token carries schoolId (fix/schoolid-in-jwt)', () => {
       .send({ email: 'student-jwt@example.com', password });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.accessToken).toBeDefined();
+    const accessToken = extractAccessCookie(res);
+    expect(accessToken).toBeTruthy();
 
-    const decoded = jwt.verify(res.body.data.accessToken, process.env.JWT_ACCESS_SECRET, { algorithms: ['HS256'] });
+    const decoded = jwt.verify(accessToken, process.env.JWT_ACCESS_SECRET, { algorithms: ['HS256'] });
     expect(decoded.schoolId).toBe('school-42');
   });
 });

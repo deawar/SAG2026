@@ -1,17 +1,47 @@
 /**
  * Authentication Manager
- * Handles user authentication, registration, and token management
+ * Handles user authentication, registration, and auth state.
+ * The access token is an httpOnly cookie — JS never reads or stores it.
+ * A non-sensitive expiry HINT (auth_expires_at epoch ms) is kept in
+ * localStorage so isAuthenticated() can return false when the cookie has
+ * likely expired, without exposing the token itself.
  */
 
 class AuthManager {
   constructor() {
     this.user = this.loadUser();
-    this.token = localStorage.getItem('auth_token');
     this.refreshToken = null; // refresh token is an httpOnly cookie, not JS-readable
     this.require2FA = localStorage.getItem('2fa_required') === 'true';
 
+    // Load the non-sensitive expiry hint
+    this._loadAuthExpiry();
+
     // Auto-refresh token before expiry
     this.setupTokenRefresh();
+  }
+
+  // ===== Expiry Hint Helpers =====
+
+  /**
+   * Store a non-sensitive expiry hint in localStorage.
+   * @param {number|string} expiresIn - seconds (number) or a string like '15m'; default 15m.
+   */
+  _setAuthExpiry(expiresIn) {
+    let ms = 15 * 60 * 1000;
+    if (typeof expiresIn === 'number') { ms = expiresIn * 1000; }
+    // string form: only '15m' style supported; fall through to default for anything else
+    this.authExpiresAt = Date.now() + ms;
+    localStorage.setItem('auth_expires_at', String(this.authExpiresAt));
+  }
+
+  /**
+   * Load the expiry hint from localStorage into memory.
+   * @returns {number} epoch ms, or 0 if absent/invalid.
+   */
+  _loadAuthExpiry() {
+    const v = Number(localStorage.getItem('auth_expires_at'));
+    this.authExpiresAt = Number.isFinite(v) ? v : 0;
+    return this.authExpiresAt;
   }
 
   /**
@@ -32,15 +62,11 @@ class AuthManager {
 
       // Handle successful registration response from server
       if (response.success && response.data) {
-        const { accessToken, refreshToken, ...userInfo } = response.data;
+        // accessToken and refreshToken are httpOnly cookies — not in JS-visible data.
+        const { expiresIn, ...userInfo } = response.data;
 
-        // Store tokens
-        this.setToken(accessToken);
-        if (refreshToken) {
-          this.setRefreshToken(refreshToken);
-        }
-
-        // Store user data
+        // Store expiry hint and user data
+        this._setAuthExpiry(expiresIn);
         this.setUser(userInfo);
 
         return { success: true, user: userInfo };
@@ -72,21 +98,18 @@ class AuthManager {
       }
 
       // Handle successful login with new response format
-      if (response.data?.accessToken) {
-        this.setToken(response.data.accessToken);
-        this.setRefreshToken(response.data.refreshToken);
+      if (response.data?.userId || response.data?.email) {
+        this._setAuthExpiry(response.data.expiresIn);
 
         // Set user object from response data
-        if (response.data.userId || response.data.email) {
-          this.setUser({
-            id: response.data.userId,
-            email: response.data.email,
-            firstName: response.data.firstName || '',
-            lastName: response.data.lastName || '',
-            role: response.data.role,
-            schoolId: response.data.schoolId || null
-          });
-        }
+        this.setUser({
+          id: response.data.userId,
+          email: response.data.email,
+          firstName: response.data.firstName || '',
+          lastName: response.data.lastName || '',
+          role: response.data.role,
+          schoolId: response.data.schoolId || null
+        });
 
         this.require2FA = false;
         localStorage.removeItem('2fa_required');
@@ -96,11 +119,8 @@ class AuthManager {
 
       // Handle old response format for backward compatibility
       if (response.token) {
-        this.setToken(response.token);
+        this._setAuthExpiry(response.expiresIn);
         this.setUser(response.user);
-        if (response.refresh_token) {
-          this.setRefreshToken(response.refresh_token);
-        }
         this.require2FA = false;
         localStorage.removeItem('2fa_required');
         localStorage.removeItem('2fa_token');
@@ -122,16 +142,20 @@ class AuthManager {
     try {
       const response = await apiClient.verify2FA(code);
 
-      if (response.token) {
-        this.setToken(response.token);
-        this.setUser(response.user);
-        if (response.refresh_token) {
-          this.setRefreshToken(response.refresh_token);
-        }
+      if (response.success && response.data) {
+        this._setAuthExpiry(response.data.expiresIn);
+        this.setUser({
+          id: response.data.userId,
+          email: response.data.email,
+          firstName: response.data.firstName || '',
+          lastName: response.data.lastName || '',
+          role: response.data.role,
+          schoolId: response.data.schoolId || null
+        });
         this.require2FA = false;
         localStorage.removeItem('2fa_required');
         localStorage.removeItem('2fa_token');
-        return { success: true, user: response.user };
+        return { success: true, user: this.user };
       }
 
       return { success: false, error: response.message };
@@ -156,11 +180,12 @@ class AuthManager {
 
   /**
      * Refresh authentication token
-     * The refresh token is an httpOnly cookie — the browser sends it automatically.
-     * @returns {Promise}
+     * The access token is an httpOnly cookie — the browser sends it automatically.
+     * Gates on this.user (presence of a user session) rather than a JS-visible token.
+     * @returns {Promise<boolean>}
      */
   async refreshAccessToken() {
-    if (!this.token) {
+    if (!this.user) {
       this.clearAuth();
       return false;
     }
@@ -168,11 +193,8 @@ class AuthManager {
     try {
       const response = await apiClient.refreshToken();
 
-      // Server returns { success: true, data: { accessToken, expiresIn } }
-      // Refresh token lives in an httpOnly cookie handled by the browser — not in the response body.
-      const newToken = response.data?.accessToken || response.token;
-      if (newToken) {
-        this.setToken(newToken);
+      if (response?.data) {
+        this._setAuthExpiry(response.data.expiresIn);
         return true;
       }
 
@@ -190,16 +212,16 @@ class AuthManager {
      */
   setupTokenRefresh() {
     setInterval(async () => {
-      // Refresh while token exists — fires at 14 min so token is still valid
-      // when the 15-min expiry hits
-      if (this.token) {
+      // Refresh while user session exists — fires at 14 min so the cookie is
+      // still valid when the 15-min expiry hits
+      if (this.user) {
         await this.refreshAccessToken();
       }
     }, 14 * 60 * 1000); // 14 minutes (1 min before the 15-min access token expires)
   }
 
   /**
-     * Get current user
+     * Get current user from server
      * @returns {Promise}
      */
   async getCurrentUser() {
@@ -272,84 +294,6 @@ class AuthManager {
     }
   }
 
-  // ===== Token Management =====
-
-  /**
-     * Set authentication token
-     * @param {string} token - JWT token
-     */
-  setToken(token) {
-    this.token = token;
-    if (token) {
-      localStorage.setItem('auth_token', token);
-      apiClient.setToken(token);
-    } else {
-      localStorage.removeItem('auth_token');
-      apiClient.setToken(null);
-    }
-  }
-
-  /**
-     * Set refresh token
-     * @param {string} token - Refresh token
-     */
-  setRefreshToken(token) {
-    // The refresh token now lives only in an httpOnly cookie set by the server.
-    // Keep it in memory for backward compat; never persist to localStorage.
-    this.refreshToken = token || null;
-  }
-
-  /**
-     * Get authentication token
-     * @returns {string|null}
-     */
-  getToken() {
-    return this.token;
-  }
-
-  /**
-     * Decode JWT token
-     * @param {string} token - JWT token
-     * @returns {object|null}
-     */
-  decodeToken(token = this.token) {
-    if (!token) {return null;}
-
-    try {
-      const parts = token.split('.');
-      if (parts.length !== 3) {return null;}
-
-      const decoded = JSON.parse(atob(parts[1]));
-      return decoded;
-    } catch (error) {
-      console.error('Failed to decode token:', error);
-      return null;
-    }
-  }
-
-  /**
-     * Check if token is expired
-     * @returns {boolean}
-     */
-  isTokenExpired() {
-    const decoded = this.decodeToken();
-    if (!decoded || !decoded.exp) {return true;}
-
-    const now = Math.floor(Date.now() / 1000);
-    return decoded.exp <= now;
-  }
-
-  /**
-     * Get token expiration time
-     * @returns {Date|null}
-     */
-  getTokenExpiration() {
-    const decoded = this.decodeToken();
-    if (!decoded || !decoded.exp) {return null;}
-
-    return new Date(decoded.exp * 1000);
-  }
-
   // ===== User Management =====
 
   /**
@@ -370,7 +314,7 @@ class AuthManager {
     try {
       const stored = localStorage.getItem('user');
       return stored ? JSON.parse(stored) : null;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -421,11 +365,13 @@ class AuthManager {
   // ===== Authentication State =====
 
   /**
-     * Check if user is authenticated
+     * Check if user is authenticated.
+     * Uses the non-sensitive expiry hint: true only when a user session exists
+     * AND the hint indicates the cookie has not yet expired.
      * @returns {boolean}
      */
   isAuthenticated() {
-    return !!this.token && !this.isTokenExpired();
+    return !!this.user && Date.now() < (this.authExpiresAt || 0);
   }
 
   /**
@@ -441,17 +387,15 @@ class AuthManager {
      */
   clearAuth() {
     this.user = null;
-    this.token = null;
     this.refreshToken = null;
     this.require2FA = false;
+    this.authExpiresAt = 0;
 
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('auth_expires_at');
     localStorage.removeItem('user');
     localStorage.removeItem('2fa_required');
     localStorage.removeItem('2fa_token');
 
-    apiClient.setToken(null);
     this.emitUserChange();
   }
 
@@ -503,7 +447,7 @@ window.authManager = new AuthManager();
 
 // Listen for storage changes in other tabs
 window.addEventListener('storage', (event) => {
-  if (event.key === 'auth_token') {
+  if (event.key === 'user' || event.key === 'auth_expires_at') {
     window.location.reload();
   }
 });

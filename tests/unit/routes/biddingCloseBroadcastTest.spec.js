@@ -41,6 +41,7 @@ const createApp = require('../../../src/app');
 const mockDb = require('../../helpers/mockDb');
 const biddingService = require('../../../src/services/biddingService');
 const realtimeService = require('../../../src/services/realtimeService');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 
@@ -78,7 +79,7 @@ describe('Finding 2 — auction-close broadcast winner reduction', () => {
 
     const res = await request(app)
       .post('/api/bidding/auction/auction-99/close')
-      .set('Authorization', `Bearer ${makeAdminToken()}`);
+      .set(authCookie(makeAdminToken()));
 
     expect(res.status).toBe(200);
 
@@ -116,7 +117,7 @@ describe('Finding 2 — auction-close broadcast winner reduction', () => {
 
     const res = await request(app)
       .post('/api/bidding/auction/auction-100/close')
-      .set('Authorization', `Bearer ${makeAdminToken()}`);
+      .set(authCookie(makeAdminToken()));
 
     expect(res.status).toBe(200);
     expect(realtimeService.broadcastAuctionStatusChange).toHaveBeenCalledTimes(1);
@@ -145,7 +146,7 @@ describe('Finding 2 — auction-close broadcast winner reduction', () => {
 
     const res = await request(app)
       .post('/api/bidding/auction/auction-99/close')
-      .set('Authorization', `Bearer ${makeAdminToken()}`);
+      .set(authCookie(makeAdminToken()));
 
     expect(res.status).toBe(200);
     // Admin HTTP response keeps the full winner object untouched

@@ -9,6 +9,8 @@ const crypto = require('crypto');
 const ValidationUtils = require('../utils/validationUtils');
 const { tokenBlacklist } = require('../services/authenticationService');
 const { setRefreshCookie, clearRefreshCookie } = require('../utils/refreshCookie');
+const { setAccessCookie, clearAccessCookie } = require('../utils/accessCookie');
+const { setTwofaCookie, clearTwofaCookie } = require('../utils/twofaCookie');
 
 // Per-account 2FA failure tracker (in-memory; resets on restart).
 // Provides account-level lockout independent of IP so rotating IPs cannot
@@ -350,12 +352,12 @@ class UserController {
           twoFaEnabled: false
         });
 
+        setTwofaCookie(res, setupToken.token);
         return res.status(200).json({
           success: true,
           message: '2FA setup required',
           data: {
             requiresTwoFactorSetup: true,
-            setupToken: setupToken.token,
             userId: user.id
           }
         });
@@ -371,12 +373,12 @@ class UserController {
           purpose: '2fa_challenge'
         });
 
+        setTwofaCookie(res, tempToken.token);
         return res.status(200).json({
           success: true,
           message: '2FA verification required',
           data: {
             requiresMfa: true,
-            tempToken: tempToken.token,
             userId: user.id
           }
         });
@@ -398,8 +400,9 @@ class UserController {
       // 8b. Session tracking (non-fatal: failure does not block login)
       await this._createSessionRecord(user.id, refreshTokenResult.jti, req);
 
-      // 9. Refresh token → httpOnly cookie; only the access token is returned.
+      // 9. Refresh token + access token → httpOnly cookies; tokens are NOT in the body.
       setRefreshCookie(res, refreshTokenResult.token);
+      setAccessCookie(res, accessTokenResult.token);
       return res.json({
         success: true,
         message: 'Login successful',
@@ -410,7 +413,6 @@ class UserController {
           lastName: user.last_name || '',
           role: user.role,
           schoolId: user.school_id || null,
-          accessToken: accessTokenResult.token,
           expiresIn: accessTokenResult.expiresIn
         }
       });
@@ -467,6 +469,8 @@ class UserController {
       }
 
       clearRefreshCookie(res);
+      clearAccessCookie(res);
+      clearTwofaCookie(res);
       return res.json({
         success: true,
         message: 'Logged out successfully'
@@ -558,13 +562,13 @@ class UserController {
       // 5. Register the new refresh token as a session
       await this._createSessionRecord(user.id, newRefreshTokenResult.jti, req);
 
-      // 6. Rotated refresh token → cookie; only the access token is returned.
+      // 6. Rotated refresh token + access token → cookies; tokens are NOT in the body.
       setRefreshCookie(res, newRefreshTokenResult.token);
+      setAccessCookie(res, accessTokenResult.token);
       return res.json({
         success: true,
         message: 'Token refreshed successfully',
         data: {
-          accessToken: accessTokenResult.token,
           expiresIn: accessTokenResult.expiresIn
         }
       });
@@ -591,9 +595,8 @@ class UserController {
     try {
       const { code } = req.body;
 
-      // Extract the temp token from the Authorization header
-      const authHeader = req.headers.authorization;
-      const tempToken = authHeader && authHeader.split(' ')[1];
+      // Extract the temp token from the twofa_token cookie
+      const tempToken = req.cookies?.twofa_token;
 
       if (!tempToken || !code) {
         return res.status(400).json({
@@ -673,13 +676,14 @@ class UserController {
       // 4b. Session tracking
       await this._createSessionRecord(user.id, refreshTokenResult.jti, req);
 
-      // 5. Refresh token → httpOnly cookie; return access token + user info.
+      // 5. Refresh token + access token → cookies; return user info without tokens in body.
       setRefreshCookie(res, refreshTokenResult.token);
+      setAccessCookie(res, accessTokenResult.token);
+      clearTwofaCookie(res);
       return res.json({
         success: true,
         message: '2FA verification successful',
         data: {
-          accessToken: accessTokenResult.token,
           expiresIn: accessTokenResult.expiresIn,
           userId: user.id,
           email: user.email,

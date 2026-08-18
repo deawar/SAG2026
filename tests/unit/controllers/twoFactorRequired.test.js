@@ -29,9 +29,10 @@ describe('requiresTwoFactor decision matrix', () => {
 
 function fakeRes() {
   return {
-    statusCode: 200, body: null,
+    statusCode: 200, body: null, cookies: [],
     status(c) { this.statusCode = c; return this; },
-    cookie() { return this; },
+    cookie(n, v, o) { this.cookies.push({ n, v, o }); return this; },
+    clearCookie() { return this; },
     json(p) { this.body = p; return this; }
   };
 }
@@ -86,7 +87,8 @@ describe('login gate — 2FA enforcement', () => {
     const res = fakeRes();
     await ctrl.login({ body: { email: 'u@e.com', password: 'pw' } }, res, jest.fn());
     expect(res.body.data.requiresTwoFactorSetup).toBeUndefined();
-    expect(res.body.data.accessToken).toBe('access-1');
+    expect(res.body.data.accessToken).toBeUndefined();
+    expect(res.cookies.find(c => c.n === 'access_token').v).toBe('access-1');
   });
 
   test('a user WITH 2FA gets the MFA challenge, not forced setup', async () => {

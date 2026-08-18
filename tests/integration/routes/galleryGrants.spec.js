@@ -20,6 +20,7 @@ const jwt = require('jsonwebtoken');
 const createApp = require('../../../src/app');
 const mockDb = require('../../helpers/mockDb');
 const { pool: mockPool } = require('../../../src/models/index');
+const { authCookie } = require('../../helpers/authCookie');
 const tok = (p) => jwt.sign(p, process.env.JWT_ACCESS_SECRET, { algorithm: 'HS256' });
 
 // Fixed IDs used throughout
@@ -58,7 +59,7 @@ describe('Gallery grant endpoints', () => {
 
     const res = await request(app)
       .post('/api/gallery/grants')
-      .set('Authorization', `Bearer ${hostToken}`)
+      .set(authCookie(hostToken))
       .send({ invitedEmail: 'invited@school.edu' });
 
     expect(res.status).toBe(201);
@@ -81,7 +82,7 @@ describe('Gallery grant endpoints', () => {
 
     const res = await request(app)
       .post('/api/gallery/grants')
-      .set('Authorization', `Bearer ${hostToken}`)
+      .set(authCookie(hostToken))
       .send({ invitedEmail: 'someone@school.edu' });
 
     expect(res.status).toBe(400);
@@ -106,7 +107,7 @@ describe('Gallery grant endpoints', () => {
 
     const res = await request(app)
       .post(`/api/gallery/grants/${GRANT_ID}/accept`)
-      .set('Authorization', `Bearer ${invitedToken}`)
+      .set(authCookie(invitedToken))
       .send({ token: rawToken });
 
     expect(res.status).toBe(200);
@@ -131,7 +132,7 @@ describe('Gallery grant endpoints', () => {
 
     const res = await request(app)
       .post(`/api/gallery/grants/${GRANT_ID}/accept`)
-      .set('Authorization', `Bearer ${invitedToken}`)
+      .set(authCookie(invitedToken))
       .send({ token: rawToken });
 
     expect(res.status).toBe(409);
@@ -151,7 +152,7 @@ describe('Gallery grant endpoints', () => {
 
     const res = await request(app)
       .post(`/api/gallery/grants/${GRANT_ID}/accept`)
-      .set('Authorization', `Bearer ${invitedToken}`)
+      .set(authCookie(invitedToken))
       .send({ token: 'badtoken' });
 
     expect(res.status).toBe(404);
@@ -175,7 +176,7 @@ describe('Gallery grant endpoints', () => {
 
     const res = await request(app)
       .post(`/api/gallery/grants/${GRANT_ID}/members`)
-      .set('Authorization', `Bearer ${invitedToken}`)
+      .set(authCookie(invitedToken))
       .send({ studentUserId: STUDENT_ID });
 
     expect(res.status).toBe(201);
@@ -195,7 +196,7 @@ describe('Gallery grant endpoints', () => {
 
     const res = await request(app)
       .post(`/api/gallery/grants/${GRANT_ID}/members`)
-      .set('Authorization', `Bearer ${invitedToken}`)
+      .set(authCookie(invitedToken))
       .send({ studentUserId: 'stu-other' });
 
     expect(res.status).toBe(403);
@@ -217,7 +218,7 @@ describe('Gallery grant endpoints', () => {
 
     const res = await request(app)
       .post(`/api/gallery/grants/${GRANT_ID}/revoke`)
-      .set('Authorization', `Bearer ${hostToken}`);
+      .set(authCookie(hostToken));
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -236,7 +237,7 @@ describe('Gallery grant endpoints', () => {
 
     const res = await request(app)
       .post(`/api/gallery/grants/${GRANT_ID}/revoke`)
-      .set('Authorization', `Bearer ${unrelatedToken}`);
+      .set(authCookie(unrelatedToken));
 
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('NOT_A_PARTY');
@@ -258,7 +259,7 @@ describe('Gallery grant endpoints', () => {
     const actorToken = tok({ userId: 't-1', role: 'TEACHER', schoolId: 'school-2' });
     const res = await request(app)
       .delete('/api/gallery/grants/grant-1/members/some-student')
-      .set('Authorization', `Bearer ${actorToken}`);
+      .set(authCookie(actorToken));
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -276,7 +277,7 @@ describe('Gallery grant endpoints', () => {
     const actorToken = tok({ userId: 't-1', role: 'TEACHER', schoolId: 'school-2' });
     const res = await request(app)
       .delete('/api/gallery/grants/grant-1/members/some-student')
-      .set('Authorization', `Bearer ${actorToken}`);
+      .set(authCookie(actorToken));
 
     expect(res.status).toBe(403);
     expect(res.body.success).toBe(false);

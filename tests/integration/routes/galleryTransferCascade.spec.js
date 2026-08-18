@@ -29,6 +29,7 @@ const jwt = require('jsonwebtoken');
 const createApp = require('../../../src/app');
 const mockDb = require('../../helpers/mockDb');
 const { pool: mockPool } = require('../../../src/models/index');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 function makeToken(payload) {
@@ -88,7 +89,7 @@ describe('Gallery transfer/drop cascade (PUT /api/admin/users/:userId/profile)',
 
     const res = await request(app)
       .put(`/api/admin/users/${STUDENT_ID}/profile`)
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({ schoolId: NEW_SCHOOL_ID });
 
     expect(res.status).toBe(200);
@@ -111,7 +112,7 @@ describe('Gallery transfer/drop cascade (PUT /api/admin/users/:userId/profile)',
 
     await request(app)
       .put(`/api/admin/users/${STUDENT_ID}/profile`)
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({ schoolId: NEW_SCHOOL_ID });
 
     const allSql = mockPool.query.mock.calls.map(([sql]) => (typeof sql === 'string' ? sql : ''));
@@ -141,7 +142,7 @@ describe('Gallery transfer/drop cascade (PUT /api/admin/users/:userId/profile)',
 
     const res = await request(app)
       .put(`/api/admin/users/${STUDENT_ID}/profile`)
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({ firstName: 'Kimberly' }); // no schoolId
 
     expect(res.status).toBe(200);
@@ -170,7 +171,7 @@ describe('Gallery transfer/drop cascade (PUT /api/admin/users/:userId/profile)',
 
     const res = await request(app)
       .put(`/api/admin/users/${STUDENT_ID}/profile`)
-      .set('Authorization', `Bearer ${token}`)
+      .set(authCookie(token))
       .send({ schoolId: OLD_SCHOOL_ID }); // same school — no cascade
 
     expect(res.status).toBe(200);

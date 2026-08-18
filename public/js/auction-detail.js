@@ -46,13 +46,11 @@ class AuctionDetail {
      * bid form is hidden and an auth-wall banner is shown instead.
      */
   async loadAuction() {
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
+    if (!window.authManager || !window.authManager.isAuthenticated()) {
       return this._loadPublicPreview();
     }
     try {
       const response = await fetch(`/api/auctions/${this.auctionId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
 
@@ -316,8 +314,7 @@ class AuctionDetail {
      * Check if user is logged in
      */
   checkLoginStatus() {
-    const token = localStorage.getItem('auth_token');
-    this.isUserLoggedIn = !!token;
+    this.isUserLoggedIn = !!(window.authManager && window.authManager.isAuthenticated());
 
     const authRequired = document.getElementById('auth-required');
     const biddingForm = document.getElementById('bidding-form-container');
@@ -831,11 +828,8 @@ class AuctionDetail {
       this.websocket.addEventListener('open', () => {
         console.log('WebSocket connected');
         this._wsReconnectCount = 0;
-        // Authenticate with JWT token
-        const token = localStorage.getItem('auth_token');
-        if (token) {
-          this.websocket.send(JSON.stringify({ type: 'authenticate', payload: { token } }));
-        }
+        // Authentication is handled via the httpOnly access-token cookie at the
+        // handshake level — no explicit authenticate message needed.
       });
 
       this.websocket.addEventListener('message', (event) => {

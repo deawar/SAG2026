@@ -21,6 +21,7 @@ const jwt = require('jsonwebtoken');
 const createApp = require('../../../src/app');
 const mockDb = require('../../helpers/mockDb');
 const { pool: mockPool } = require('../../../src/models/index');
+const { authCookie } = require('../../helpers/authCookie');
 
 const SECRET = process.env.JWT_ACCESS_SECRET;
 
@@ -60,7 +61,7 @@ describe('GET /api/admin/auctions/search', () => {
     const token = makeToken({ userId: 'user-1', role: 'BIDDER', schoolId: null });
     const res = await request(app)
       .get('/api/admin/auctions/search?q=art')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
     expect(res.status).toBe(403);
   });
 
@@ -75,7 +76,7 @@ describe('GET /api/admin/auctions/search', () => {
 
     const res = await request(app)
       .get('/api/admin/auctions/search')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -98,7 +99,7 @@ describe('GET /api/admin/auctions/search', () => {
 
     const res = await request(app)
       .get('/api/admin/auctions/search?q=art')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
     expect(res.body.auctions[0].title).toBe('Art Show 2026');
@@ -124,7 +125,7 @@ describe('GET /api/admin/auctions/search', () => {
 
     const res = await request(app)
       .get('/api/admin/auctions/search?q=art')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     expect(res.status).toBe(200);
 
@@ -146,7 +147,7 @@ describe('GET /api/admin/auctions/search', () => {
 
     await request(app)
       .get('/api/admin/auctions/search?q=spring')
-      .set('Authorization', `Bearer ${token}`);
+      .set(authCookie(token));
 
     const searchCall = mockPool.query.mock.calls.find(
       ([sql]) => sql && sql.includes('FROM auctions')
