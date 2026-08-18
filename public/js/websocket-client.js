@@ -64,12 +64,6 @@ class WebSocketClient {
           this.emit('connect');
           this.startHeartbeat();
 
-          // Authenticate if token exists
-          const token = localStorage.getItem('auth_token');
-          if (token) {
-            this.authenticate(token);
-          }
-
           resolve();
         };
 
@@ -215,17 +209,6 @@ class WebSocketClient {
       console.error('Error sending WebSocket message:', error);
       this.emit('error', error);
     }
-  }
-
-  /**
-     * Authenticate WebSocket connection
-     * @param {string} token - JWT token
-     */
-  authenticate(token) {
-    this.send({
-      type: 'authenticate',
-      payload: { token }
-    });
   }
 
   /**
@@ -417,10 +400,10 @@ class WebSocketClient {
 // Create global instance
 window.websocketClient = new WebSocketClient();
 
-// Auto-connect if token exists, but only on pages that use real-time features
+// Auto-connect if user is authenticated, but only on pages that use real-time features
 // Skip auto-connect on admin dashboard since it doesn't need WebSocket
 const isAdminPage = window.location.pathname.includes('admin-dashboard');
-if (localStorage.getItem('auth_token') && !isAdminPage) {
+if (window.authManager?.isAuthenticated() && !isAdminPage) {
   window.websocketClient.connect().catch(() => {
     // Silently handle - WebSocket is optional, app works without it
   });
