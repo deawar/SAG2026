@@ -61,6 +61,7 @@ module.exports = (db) => {
     refreshTokenExpiry: '7d'
   });
   const authService = {
+    db, // getProfile() reads this to look up the school name for Account Settings
     jwtService,
     twoFactorService: new TwoFactorService({ db, jwtService }),
     rbacService: new RBACService(),
