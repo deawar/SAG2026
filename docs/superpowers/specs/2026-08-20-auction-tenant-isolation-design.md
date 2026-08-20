@@ -9,21 +9,21 @@ A `SCHOOL_ADMIN` is only authorized over their own school, but several auction
 paths enforce **role** without enforcing **school ownership**, so a SCHOOL_ADMIN
 at School A can act on School B's auctions and data. Three related gaps:
 
-1. **Auction action endpoints lack a school check.** The routes gate on
-   `verifyRole(['SITE_ADMIN','SCHOOL_ADMIN'])` (or the equivalent in-controller
-   role check) but never verify the auction's `school_id` matches the actor's.
-   Affected (all reachable by any SCHOOL_ADMIN, any school):
-   - `POST /api/admin/auctions/:id/approve` → `adminController.approveAuction`
-   - `POST /api/admin/auctions/:id/activate` → `activateAuction`
-   - `POST /api/admin/auctions/:id/reject` → `rejectAuction`
-   - `PUT  /api/admin/auctions/:id/fee` → `setAuctionFee`
-   - `PUT  /api/admin/auctions/:id/extend` → `extendAuction`
-   - `POST /api/admin/auctions/:id/close` → `closeForcibly`
-   - `DELETE /api/admin/auctions/:id` → `deleteAuction`
-   - `POST /api/auctions/:id/start` → `auctionController.startAuction`
-   - `POST /api/auctions/:id/end` → `endAuction`
-   - `POST /api/auctions/:id/extend` → `extendAuction`
-   - `DELETE /api/auctions/:id` → `deleteAuction`
+1. **The public `/api/auctions` action endpoints lack a school check.** Their
+   in-controller role check allows SITE_ADMIN and SCHOOL_ADMIN, but they never
+   verify the auction's `school_id` matches the actor's, so a SCHOOL_ADMIN can
+   act on any school's auction:
+   - `POST   /api/auctions/:id/start`  → `auctionController.startAuction`
+   - `POST   /api/auctions/:id/end`    → `auctionController.endAuction`
+   - `POST   /api/auctions/:id/extend` → `auctionController.extendAuction`
+   - `DELETE /api/auctions/:id`        → `auctionController.deleteAuction`
+
+   **NOT affected (verified already safe — do not change):** the parallel
+   `/api/admin/auctions/*` actions (approve, activate, reject, fee, extend,
+   close, delete) already enforce tenancy in `adminService` — every method runs
+   `if (admin.role === 'SCHOOL_ADMIN' && auction.school_id !== admin.school_id)
+   throw 'CROSS_SCHOOL_ACCESS_DENIED'`. This spec must not touch those working
+   methods; it brings the public endpoints up to the same standard.
 
 2. **Create can target another tenant.** `auctionController.js:31`
    `const resolvedSchoolId = req.user.role === 'TEACHER' ? userSchoolId : (schoolId || userSchoolId);`
@@ -82,21 +82,18 @@ The helper is pure (no DB); each call site loads the auction's `school_id` and
 passes it in, so the helper is trivially testable and the DB read stays in the
 layer that already has a connection.
 
-### 2. Apply the guard to every auction action
+### 2. Apply the guard to the public auction actions
 
-**auctionController** (`start`, `end`, `extend`, `delete`): after the existing
-role check, load the auction's `school_id` via `pool`
-(`SELECT school_id FROM auctions WHERE id = $1 AND deleted_at IS NULL`); 404 if
-absent; call `schoolCanManage(req.user.role, req.user.schoolId, row.school_id)`;
-403 if false; otherwise proceed to the service call.
+**auctionController** (`startAuction`, `endAuction`, `extendAuction`,
+`deleteAuction`): after the existing role check, load the auction's `school_id`
+via `pool` (`SELECT school_id FROM auctions WHERE id = $1 AND deleted_at IS NULL`);
+404 if absent; call `schoolCanManage(req.user.role, req.user.schoolId,
+row.school_id)`; 403 if false; otherwise proceed to the existing service call.
 
-**adminService** (`approveAuction`, `activateAuction`, `rejectAuction`,
-`setAuctionFee`, `extendAuction`, `closeForcibly`, `deleteAuction`): these
-already load (or can load) the acting admin and the auction. After loading both,
-call `schoolCanManage(admin.role, admin.school_id, auction.school_id)`; throw a
-`CROSS_TENANT`/`FORBIDDEN` error (mapped to 403 by the controller's error map)
-when false. Enforcing in the service keeps all seven admin actions covered at one
-layer and mirrors the existing user-management pattern (adminService.js:45).
+**adminService is intentionally NOT modified** — its seven auction methods
+already run the equivalent SCHOOL_ADMIN school-match and throw
+`CROSS_SCHOOL_ACCESS_DENIED` (403). This design only closes the public-endpoint
+gap and reuses that same behavior via the shared helper.
 
 ### 3. Pin create to the actor's tenant
 
@@ -146,8 +143,9 @@ Chosen over silently dropping foreign ids so cross-tenant attempts surface.
 ## Testing
 
 Integration (supertest + mockDb, cookie auth via `authCookie` helper):
-- For each of the 11 guarded endpoints: a School-A SCHOOL_ADMIN acting on a
-  School-B auction → **403**, and a same-school action → not 403 (proceeds).
+- For each of the 4 newly guarded public endpoints (start, end, extend, delete):
+  a School-A SCHOOL_ADMIN acting on a School-B auction → **403**, and a
+  same-school action → not 403 (proceeds).
 - `createAuction`: a SCHOOL_ADMIN passing a different `schoolId` creates the
   auction under **their own** school, not the supplied one; SITE_ADMIN may still
   target another school.
@@ -163,11 +161,10 @@ Unit:
 - **New:** `src/utils/auctionTenancy.js` (+ unit test).
 - `src/controllers/auctionController.js` — create pin (line 31) + guard in
   start/end/extend/delete.
-- `src/services/adminService.js` — guard in approve/activate/reject/fee/extend/
-  close/delete auction methods.
 - `src/services/auctionService.js` — artwork ownership filter + fail-closed check.
-- Tests: unit for the helper; integration for the 11 endpoints, create pin, and
-  artwork rejection.
+- `src/services/adminService.js` — **NOT changed** (already enforces tenancy).
+- Tests: unit for the helper; integration for the 4 public endpoints, create pin,
+  and artwork rejection.
 
 ## Out of scope
 
