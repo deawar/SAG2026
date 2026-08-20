@@ -990,6 +990,26 @@ class UIComponents {
   }
 
   /**
+   * Map a user role to its Teacher Tools nav destination.
+   * Only SCHOOL_ADMINs get this: they can create/approve/activate auctions and
+   * use the teacher dashboard (student roster, submissions) for their own
+   * school, but their default nav points at the Admin Dashboard. SITE_ADMINs
+   * are excluded — the teacher dashboard is scoped to a single schoolId.
+   * @param {string} role
+   * @returns {{label:string, href:string}|null}
+   */
+  static teacherToolsNavTarget(role) {
+    if (role === 'SCHOOL_ADMIN') {
+      return { label: 'Teacher Tools', href: '/teacher-dashboard.html' };
+    }
+    return null;
+  }
+
+  static injectTeacherToolsLink(role) {
+    UIComponents._injectNavLink(UIComponents.teacherToolsNavTarget(role));
+  }
+
+  /**
    * Inject a role-derived link into the shared navbar (top nav list + user
    * dropdown), on every page. Idempotent: skips insertion if a link to the
    * same href already exists (pages that hardcode it).
@@ -1107,6 +1127,10 @@ class UIComponents {
 
       // School Gallery link — students + school staff
       UIComponents.injectGalleryLink(user.role);
+
+      // Teacher Tools link — SCHOOL_ADMIN only (reach the teacher dashboard,
+      // which their default Admin-Dashboard nav does not link to).
+      UIComponents.injectTeacherToolsLink(user.role);
     } else {
       if (loginBtn) {loginBtn.style.display = 'block';}
       if (registerBtn) {registerBtn.style.display = 'block';}
