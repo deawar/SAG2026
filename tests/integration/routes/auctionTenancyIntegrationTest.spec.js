@@ -38,6 +38,7 @@ describe('Auction tenant isolation — public actions', () => {
   beforeEach(() => { mockPool.query.mockReset(); mockDb.reset(); });
 
   const actions = [
+    ['put', '/api/auctions/auc-1'],
     ['post', '/api/auctions/auc-1/start'],
     ['post', '/api/auctions/auc-1/end'],
     ['post', '/api/auctions/auc-1/extend'],
