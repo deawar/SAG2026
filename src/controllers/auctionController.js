@@ -90,6 +90,12 @@ class AuctionController {
       return res.status(201).json(result);
     } catch (error) {
       console.error('Error creating auction:', error);
+      if (error.message === 'ARTWORK_NOT_IN_SCHOOL') {
+        return res.status(400).json({
+          success: false,
+          message: 'One or more selected artworks do not belong to your school'
+        });
+      }
       return res.status(400).json({
         success: false,
         message: error.message || 'Error creating auction'
