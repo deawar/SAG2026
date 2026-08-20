@@ -737,7 +737,9 @@ class UserController {
             [user.school_id]
           );
           schoolName = schoolResult.rows[0]?.name || null;
-        } catch (_err) {
+        } catch (err) {
+          // Non-fatal: the profile still loads without the school name.
+          console.error('[getProfile] school name lookup failed:', err.message);
           schoolName = null;
         }
       }
