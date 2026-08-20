@@ -229,9 +229,13 @@ class AdminDashboard {
     // Logout
     const logoutBtn = document.getElementById('admin-logout-btn');
     if (logoutBtn) {
-      logoutBtn.addEventListener('click', () => {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user');
+      logoutBtn.addEventListener('click', async () => {
+        // Await the logout so the httpOnly auth cookies are cleared server-side
+        // before navigating; a synchronous redirect aborts that request and
+        // leaves the admin still logged in.
+        if (window.authManager) {
+          await window.authManager.logout();
+        }
         globalThis.location.href = '/';
       });
     }

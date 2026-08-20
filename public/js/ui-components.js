@@ -1185,10 +1185,13 @@ class UIComponents {
     // Logout button
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
-      logoutBtn.addEventListener('click', (e) => {
+      logoutBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         if (authManager) {
-          authManager.logout();
+          // Await the logout: it clears the httpOnly auth cookies server-side.
+          // Navigating before it resolves aborts that request and leaves the
+          // user still logged in (they'd have to click Logout again).
+          await authManager.logout();
           window.location.href = '/';
         }
       });
@@ -1197,10 +1200,10 @@ class UIComponents {
     // Admin logout button (if on admin page)
     const adminLogoutBtn = document.getElementById('admin-logout-btn');
     if (adminLogoutBtn) {
-      adminLogoutBtn.addEventListener('click', (e) => {
+      adminLogoutBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         if (authManager) {
-          authManager.logout();
+          await authManager.logout();
           window.location.href = '/';
         }
       });

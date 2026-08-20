@@ -766,8 +766,12 @@ class UserDashboard {
   /**
      * Logout
      */
-  logout() {
-    localStorage.removeItem('auth_token');
+  async logout() {
+    // Await the logout so the httpOnly auth cookies are cleared server-side
+    // before we navigate away; otherwise the session survives the redirect.
+    if (window.authManager) {
+      await window.authManager.logout();
+    }
     UIComponents.createToast({
       message: 'Logged out successfully',
       type: 'success'
