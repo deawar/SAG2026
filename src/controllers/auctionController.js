@@ -37,7 +37,7 @@ class AuctionController {
       if (req.user.role !== 'SITE_ADMIN' && !resolvedSchoolId) {
         return res.status(400).json({
           success: false,
-          message: 'Your teacher account has no school assigned. Please ask a school administrator to link your account to a school, then log out and back in.'
+          message: 'Your account has no school assigned. Please ask a site administrator to link your account to a school, then log out and back in.'
         });
       }
 
@@ -265,6 +265,21 @@ class AuctionController {
         return res.status(403).json({
           success: false,
           message: 'You do not have permission to update auctions'
+        });
+      }
+
+      // Tenant isolation: a SCHOOL_ADMIN may only act on their own school's auctions.
+      const ownerRow = await pool.query(
+        'SELECT school_id FROM auctions WHERE id = $1 AND deleted_at IS NULL',
+        [auctionId]
+      );
+      if (ownerRow.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Auction not found' });
+      }
+      if (!schoolCanManage(req.user.role, req.user.schoolId, ownerRow.rows[0].school_id)) {
+        return res.status(403).json({
+          success: false,
+          message: 'You can only manage auctions for your own school'
         });
       }
 
