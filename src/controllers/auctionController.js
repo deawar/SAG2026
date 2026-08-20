@@ -6,6 +6,7 @@
 
 const auctionService = require('../services/auctionService');
 const { pool } = require('../models/index');
+const { schoolCanManage } = require('../utils/auctionTenancy');
 const roleHierarchyUtils = require('../utils/roleHierarchyUtils');
 const { publicArtistName } = require('../utils/piiUtils');
 
@@ -28,13 +29,15 @@ class AuctionController {
 
       // Teachers can only create auctions for their own school
       const userSchoolId = req.user.schoolId || req.user.school_id;
-      const resolvedSchoolId = req.user.role === 'TEACHER' ? userSchoolId : (schoolId || userSchoolId);
+      // Only SITE_ADMIN may target another school; TEACHER and SCHOOL_ADMIN are
+      // pinned to their own tenant.
+      const resolvedSchoolId = req.user.role === 'SITE_ADMIN' ? (schoolId || userSchoolId) : userSchoolId;
 
-      // TEACHER with no school assigned — tell them clearly
-      if (req.user.role === 'TEACHER' && !resolvedSchoolId) {
+      // Non-SITE_ADMIN with no school assigned — tell them clearly
+      if (req.user.role !== 'SITE_ADMIN' && !resolvedSchoolId) {
         return res.status(400).json({
           success: false,
-          message: 'Your teacher account has no school assigned. Please ask a school administrator to link your account to a school, then log out and back in.'
+          message: 'Your account has no school assigned. Please ask a site administrator to link your account to a school, then log out and back in.'
         });
       }
 
@@ -87,6 +90,12 @@ class AuctionController {
       return res.status(201).json(result);
     } catch (error) {
       console.error('Error creating auction:', error);
+      if (error.message === 'ARTWORK_NOT_IN_SCHOOL') {
+        return res.status(400).json({
+          success: false,
+          message: 'One or more selected artworks do not belong to your school'
+        });
+      }
       return res.status(400).json({
         success: false,
         message: error.message || 'Error creating auction'
@@ -259,6 +268,21 @@ class AuctionController {
         });
       }
 
+      // Tenant isolation: a SCHOOL_ADMIN may only act on their own school's auctions.
+      const ownerRow = await pool.query(
+        'SELECT school_id FROM auctions WHERE id = $1 AND deleted_at IS NULL',
+        [auctionId]
+      );
+      if (ownerRow.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Auction not found' });
+      }
+      if (!schoolCanManage(req.user.role, req.user.schoolId, ownerRow.rows[0].school_id)) {
+        return res.status(403).json({
+          success: false,
+          message: 'You can only manage auctions for your own school'
+        });
+      }
+
       // Teachers may only update their own DRAFT auctions
       if (req.user.role === 'TEACHER') {
         const ownerCheck = await pool.query(
@@ -305,6 +329,21 @@ class AuctionController {
         });
       }
 
+      // Tenant isolation: a SCHOOL_ADMIN may only act on their own school's auctions.
+      const ownerRow = await pool.query(
+        'SELECT school_id FROM auctions WHERE id = $1 AND deleted_at IS NULL',
+        [auctionId]
+      );
+      if (ownerRow.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Auction not found' });
+      }
+      if (!schoolCanManage(req.user.role, req.user.schoolId, ownerRow.rows[0].school_id)) {
+        return res.status(403).json({
+          success: false,
+          message: 'You can only manage auctions for your own school'
+        });
+      }
+
       const result = await auctionService.startAuction(auctionId);
 
       return res.status(200).json(result);
@@ -330,6 +369,21 @@ class AuctionController {
         return res.status(403).json({
           success: false,
           message: 'Only admins can end auctions'
+        });
+      }
+
+      // Tenant isolation: a SCHOOL_ADMIN may only act on their own school's auctions.
+      const ownerRow = await pool.query(
+        'SELECT school_id FROM auctions WHERE id = $1 AND deleted_at IS NULL',
+        [auctionId]
+      );
+      if (ownerRow.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Auction not found' });
+      }
+      if (!schoolCanManage(req.user.role, req.user.schoolId, ownerRow.rows[0].school_id)) {
+        return res.status(403).json({
+          success: false,
+          message: 'You can only manage auctions for your own school'
         });
       }
 
@@ -362,6 +416,21 @@ class AuctionController {
         });
       }
 
+      // Tenant isolation: a SCHOOL_ADMIN may only act on their own school's auctions.
+      const ownerRow = await pool.query(
+        'SELECT school_id FROM auctions WHERE id = $1 AND deleted_at IS NULL',
+        [auctionId]
+      );
+      if (ownerRow.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Auction not found' });
+      }
+      if (!schoolCanManage(req.user.role, req.user.schoolId, ownerRow.rows[0].school_id)) {
+        return res.status(403).json({
+          success: false,
+          message: 'You can only manage auctions for your own school'
+        });
+      }
+
       const result = await auctionService.autoExtendAuction(auctionId, minutesToExtend);
 
       return res.status(200).json(result);
@@ -387,6 +456,21 @@ class AuctionController {
         return res.status(403).json({
           success: false,
           message: 'Only admins can delete auctions'
+        });
+      }
+
+      // Tenant isolation: a SCHOOL_ADMIN may only act on their own school's auctions.
+      const ownerRow = await pool.query(
+        'SELECT school_id FROM auctions WHERE id = $1 AND deleted_at IS NULL',
+        [auctionId]
+      );
+      if (ownerRow.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Auction not found' });
+      }
+      if (!schoolCanManage(req.user.role, req.user.schoolId, ownerRow.rows[0].school_id)) {
+        return res.status(403).json({
+          success: false,
+          message: 'You can only manage auctions for your own school'
         });
       }
 
