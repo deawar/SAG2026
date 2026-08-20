@@ -77,16 +77,19 @@ class AuctionService {
 
       // Add artwork to auction if provided
       if (artworkIds && artworkIds.length > 0) {
-        const _placeholders = artworkIds
-          .map((_, i) => `($1, $${i + 2})`)
-          .join(',');
-
-        await client.query(
-          `UPDATE artwork SET auction_id = $1 WHERE id IN (${artworkIds
-            .map((_, i) => `$${i + 2}`)
-            .join(',')})`,
-          [auction.id, ...artworkIds]
+        // Only attach artwork whose creator belongs to this auction's school.
+        // artwork has no school_id, so scope through created_by_user_id.
+        // Fail closed: if any requested id is foreign/ineligible, roll back.
+        const idParams = artworkIds.map((_, i) => `$${i + 2}`).join(',');
+        const attach = await client.query(
+          `UPDATE artwork SET auction_id = $1
+             WHERE id IN (${idParams})
+               AND created_by_user_id IN (SELECT id FROM users WHERE school_id = $${artworkIds.length + 2})`,
+          [auction.id, ...artworkIds, schoolId]
         );
+        if (attach.rowCount !== artworkIds.length) {
+          throw new Error('ARTWORK_NOT_IN_SCHOOL');
+        }
       }
 
       // Generate QR code for auction
