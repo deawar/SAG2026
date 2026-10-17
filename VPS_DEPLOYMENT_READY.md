@@ -12,7 +12,7 @@
 ### 1. **`.env.prod`** - Production Environment Configuration
 - **Size:** 5.8 KB
 - **Contains:**
-  - Database: `postgres` / `***REMOVED***`
+  - Database: `postgres` / `(set in .env as DB_PASSWORD — not committed)`
   - Domain: `SAG.live`
   - JWT secrets (32+ chars for HS256)
   - Encryption key for sensitive data
@@ -63,7 +63,7 @@
 - **Updated:** Database credentials configured
   - Container: `silent-auction-gallery-db`
   - User: `postgres`
-  - Password: `***REMOVED***`
+  - Password: `(set in .env as DB_PASSWORD — not committed)`
   - Database: `silent_auction_gallery`
 - **Features:**
   - Health checks (app & database)
@@ -127,7 +127,7 @@ bash setup-vps.sh
 | **Docker Compose** | Installed |
 | **PostgreSQL** | Latest (15+) |
 | **PostgreSQL User** | postgres |
-| **PostgreSQL Password** | ***REMOVED*** |
+| **PostgreSQL Password** | (set in .env as DB_PASSWORD — not committed) |
 | **Domain** | SAG.live |
 | **Application Port** | 3000 |
 | **Database Port** | 5432 (internal) |
@@ -265,7 +265,7 @@ docker system prune -a  # Clean up unused images/containers
 
 - [x] SSH key authentication configured
 - [x] .env file created with strong database password
-- [x] Database password: `***REMOVED***` (32+ chars)
+- [x] Database password: `(set in .env as DB_PASSWORD — not committed)` (32+ chars)
 - [x] JWT secrets configured (HS256 compatible)
 - [x] Encryption key configured
 - [ ] Setup firewall (UFW) - commands in VPS_DEPLOYMENT_INSTRUCTIONS.md

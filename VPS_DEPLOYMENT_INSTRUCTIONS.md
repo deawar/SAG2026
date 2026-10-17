@@ -37,7 +37,7 @@ This automated script will:
 | **SSH User** | dean |
 | **PostgreSQL** | Installed (latest) |
 | **PostgreSQL User** | postgres |
-| **PostgreSQL Password** | ***REMOVED*** |
+| **PostgreSQL Password** | (set in .env as DB_PASSWORD — not committed) |
 | **Docker** | v28.2.2 installed |
 | **Docker Compose** | Available |
 
@@ -409,7 +409,7 @@ Test connection:
 psql -U postgres -h localhost -d silent_auction_gallery -c "SELECT 1;"
 ```
 
-If prompted for password, enter: `***REMOVED***`
+If prompted for password, enter the value of `DB_PASSWORD` from your `.env` file.
 
 ### Application Not Responding
 
