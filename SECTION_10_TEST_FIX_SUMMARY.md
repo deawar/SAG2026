@@ -131,7 +131,7 @@ Pass Rate:   100%
 ✅ **Port**: 5432  
 ✅ **Database**: silent_auction_gallery  
 ✅ **User**: SAG_DB  
-✅ **Password**: Loaded from .env (***REMOVED***)  
+✅ **Password**: Loaded from .env (not committed)  
 ✅ **Environment Variables**: Properly loaded via dotenv  
 
 ---

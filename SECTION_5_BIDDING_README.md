@@ -302,7 +302,7 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=silent_auction_gallery
 DB_USER=SAG_DB
-DB_PASSWORD=***REMOVED***
+DB_PASSWORD=<set in .env — not committed>
 JWT_SECRET=<long-random-string>
 ```
 

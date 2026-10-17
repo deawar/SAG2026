@@ -109,7 +109,7 @@ DB_HOST=db
 DB_PORT=5432
 DB_NAME=silent_auction_gallery
 DB_USER=postgres
-DB_PASSWORD=***REMOVED***
+DB_PASSWORD=<set in .env — not committed>
 ```
 
 ### Docker Compose Variables (FIXED)
